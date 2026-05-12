@@ -27,3 +27,10 @@ jobs:
 
       - name: Submit NuGet dependencies (incl. transitive)
         uses: advanced-security/component-detection-dependency-submission-action@v0.0.2
+        with:
+          # Action v0.0.2 quebra com TypeError ao montar packageUrl pra
+          # componentes Docker (Dockerfile / docker-compose). Como so
+          # queremos NuGet, pulamos o detector via --DetectorArgs
+          # e tambem excluimos a pasta docker/.
+          directoryExclusionList: docker
+
