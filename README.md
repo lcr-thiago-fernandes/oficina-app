@@ -76,7 +76,7 @@ Api  ──►  Aplicacao  ──►  Dominio  ◄──  Infraestrutura
 
 ```bash
 git clone https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1
-cd oficina-mecanica
+cd fiap_15SOAT_fase1
 cp .env.example .env
 ```
 
@@ -147,7 +147,7 @@ Os testes de integração usam **Testcontainers** — sobem um Postgres real ef�
 ## Estrutura de pastas
 
 ```
-oficina-mecanica/
+fiap_15SOAT_fase1/
 ├── .github/             # workflows CI + Dependabot
 ├── docker/              # Dockerfile + docker-compose
 ├── docs/

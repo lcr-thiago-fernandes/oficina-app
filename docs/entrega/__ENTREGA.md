@@ -63,7 +63,7 @@ Detalhamento completo em [https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fa
 
 ```bash
 git clone https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1
-cd oficina-mecanica
+cd fiap_15SOAT_fase1
 cp .env.example .env  # ajustar ADMIN_BOOTSTRAP_PASSWORD
 docker compose -f docker/docker-compose.yml --env-file .env up -d --build
 # API:     http://localhost:8080

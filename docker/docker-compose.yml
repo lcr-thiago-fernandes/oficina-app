@@ -1,4 +1,4 @@
-name: oficina-mecanica
+name: fiap_15SOAT_fase1
 
 services:
   postgres:
