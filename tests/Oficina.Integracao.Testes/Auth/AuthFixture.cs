@@ -24,20 +24,16 @@ public class AuthFixture : IAsyncLifetime
     {
         await Postgres.StartAsync();
 
-        Factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureAppConfiguration((_, cfg) =>
-            {
-                cfg.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["ConnectionStrings:Default"] = Postgres.GetConnectionString(),
-                    ["Jwt:Secret"] = new string('a', 64),
-                    ["Jwt:Issuer"] = "oficina-api-test",
-                    ["Jwt:Audience"] = "oficina-clients-test",
-                    ["AdminBootstrap:Password"] = "AlteraMe@123"
-                });
-            });
-        });
+        // Env vars precisam ser definidas ANTES de instanciar WebApplicationFactory,
+        // porque Program.cs lê ConnectionStrings:Default durante CreateBuilder (síncrono),
+        // e isso acontece antes de qualquer callback de WithWebHostBuilder rodar.
+        Environment.SetEnvironmentVariable("ConnectionStrings__Default", Postgres.GetConnectionString());
+        Environment.SetEnvironmentVariable("Jwt__Secret", new string('a', 64));
+        Environment.SetEnvironmentVariable("Jwt__Issuer", "oficina-api-test");
+        Environment.SetEnvironmentVariable("Jwt__Audience", "oficina-clients-test");
+        Environment.SetEnvironmentVariable("AdminBootstrap__Password", "AlteraMe@123");
+
+        Factory = new WebApplicationFactory<Program>();
 
         // dispara o startup, que aplica migrations e cria admin
         _ = Factory.CreateClient();
