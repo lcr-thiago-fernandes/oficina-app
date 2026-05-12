@@ -6,6 +6,7 @@
       "token": "",
       "clienteId": "",
       "veiculoPlaca": "",
+      "veiculoId":"",
       "servicoId": "",
       "pecaId": "",
       "ordemServicoId": ""
