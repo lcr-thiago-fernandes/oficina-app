@@ -34,10 +34,11 @@ public class IniciarExecucaoUseCase
                     ?? throw new OrdemInvalidaException(
                         $"Peça {item.PecaId} referenciada na OS não existe mais.");
 
-                peca.RegistrarSaida(
+                var mov = peca.RegistrarSaida(
                     quantidade: item.Quantidade,
                     motivo: $"OS #{ordem.Numero}",
                     ordemServicoId: ordem.Id);
+                _pecas.MarcarMovimentacaoComoNova(mov);
             }
 
             // 3) persiste tudo na mesma transação

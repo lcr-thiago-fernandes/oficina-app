@@ -144,8 +144,16 @@ public class OrdensServicoFluxoTestes
         var http = await AutenticadoAsync();
 
         // OS já com itens e enviada para aprovação (sem aprovar)
-        var cli = await (await http.GetAsync("/api/v1/clientes?documento=11144477735"))
-            .Content.ReadFromJsonAsync<ClienteResponse>();
+        var cliResp = await http.GetAsync("/api/v1/clientes?documento=11144477735");
+        ClienteResponse? cli;
+        if (cliResp.StatusCode == HttpStatusCode.OK)
+            cli = await cliResp.Content.ReadFromJsonAsync<ClienteResponse>();
+        else
+        {
+            var criar = await http.PostAsJsonAsync("/api/v1/clientes",
+                new CriarClienteRequest("Cli IE", "11144477735", $"ie{Guid.NewGuid():N}@x.com", "11987654321"));
+            cli = await criar.Content.ReadFromJsonAsync<ClienteResponse>();
+        }
         var v = await (await http.PostAsJsonAsync($"/api/v1/clientes/{cli!.Id}/veiculos",
             new AdicionarVeiculoRequest($"WAI{new Random().Next(1000,9999)}", "F", "U", 2020)))
             .Content.ReadFromJsonAsync<VeiculoResponse>();
