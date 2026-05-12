@@ -75,7 +75,7 @@ Api  ──►  Aplicacao  ──►  Dominio  ◄──  Infraestrutura
 ### 1. Clonar e configurar
 
 ```bash
-git clone <url-do-repo>
+git clone https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1
 cd oficina-mecanica
 cp .env.example .env
 ```
