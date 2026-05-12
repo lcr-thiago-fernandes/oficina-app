@@ -1,0 +1,16 @@
+**/bin
+**/obj
+**/.vs
+**/.idea
+**/.vscode
+**/TestResults
+**/coverage
+.git
+.gitignore
+README.md
+docs/
+tests/
+http/
+.env
+.env.local
+docker/docker-compose.yml

@@ -1,0 +1,18 @@
+### Consultar OS pelo número (cliente — sem JWT)
+GET {{baseUrl}}/consulta/{{numeroOs}}?documento=390.533.447-05
+
+### OS inexistente (esperado 404)
+GET {{baseUrl}}/consulta/9999999?documento=390.533.447-05
+
+### Documento incorreto para OS existente (esperado 404 — mesmo response)
+GET {{baseUrl}}/consulta/{{numeroOs}}?documento=111.444.777-35
+
+### Aprovar orçamento (cliente)
+POST {{baseUrl}}/consulta/{{numeroOs}}/aprovar?documento=390.533.447-05
+
+### Rejeitar orçamento (cliente)
+POST {{baseUrl}}/consulta/{{numeroOs}}/rejeitar?documento=390.533.447-05
+
+### Métricas — tempo médio (admin)
+GET {{baseUrl}}/ordens-servico/metricas/tempo-medio
+Authorization: Bearer {{token}}

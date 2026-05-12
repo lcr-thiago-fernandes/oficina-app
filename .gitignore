@@ -1,0 +1,38 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.pdb
+[Dd]ebug/
+[Rr]elease/
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+## EF Core migrations bundle output
+*.zip
+
+## IDE
+.vs/
+.vscode/
+.idea/
+*.swp
+
+## OS
+.DS_Store
+Thumbs.db
+
+## env
+.env
+.env.local
+
+## Claude Code / Serena
+.claude/
+CLAUDE.md
+.serena/
+.serena-cache/
+memory/

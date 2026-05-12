@@ -1,0 +1,96 @@
+### Criar cliente PF
+# @name criarCliente
+POST {{baseUrl}}/clientes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "João da Silva",
+  "documento": "39053344705",
+  "email": "joao@example.com",
+  "telefone": "11987654321"
+}
+
+### Capturar id: @clienteId = {{criarCliente.response.body.id}}
+
+### Buscar cliente por documento (com máscara)
+GET {{baseUrl}}/clientes?documento=390.533.447-05
+Authorization: Bearer {{token}}
+
+### Obter cliente por id
+GET {{baseUrl}}/clientes/{{clienteId}}
+Authorization: Bearer {{token}}
+
+### Listar clientes paginado
+GET {{baseUrl}}/clientes?pagina=1&tamanhoPagina=10
+Authorization: Bearer {{token}}
+
+### Atualizar cliente
+PUT {{baseUrl}}/clientes/{{clienteId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "João Silva",
+  "email": "joao.silva@example.com",
+  "telefone": "11988887777"
+}
+
+### Adicionar veículo
+# @name addVeic
+POST {{baseUrl}}/clientes/{{clienteId}}/veiculos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "placa": "ABC1234",
+  "marca": "Fiat",
+  "modelo": "Uno",
+  "ano": 2020
+}
+
+### Listar veículos do cliente
+GET {{baseUrl}}/clientes/{{clienteId}}/veiculos
+Authorization: Bearer {{token}}
+
+### Atualizar veículo
+PUT {{baseUrl}}/clientes/{{clienteId}}/veiculos/ABC1234
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "marca": "Volkswagen",
+  "modelo": "Gol",
+  "ano": 2018
+}
+
+### Remover veículo
+DELETE {{baseUrl}}/clientes/{{clienteId}}/veiculos/ABC1234
+Authorization: Bearer {{token}}
+
+### Inativar cliente (soft delete)
+DELETE {{baseUrl}}/clientes/{{clienteId}}
+Authorization: Bearer {{token}}
+
+### Tentar criar cliente com CPF inválido (esperado 422)
+POST {{baseUrl}}/clientes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Inválido",
+  "documento": "11111111111",
+  "email": "x@y.com",
+  "telefone": "11987654321"
+}
+
+### Tentar criar cliente sem token (esperado 401)
+POST {{baseUrl}}/clientes
+Content-Type: application/json
+
+{
+  "nome": "Sem auth",
+  "documento": "39053344705",
+  "email": "x@y.com",
+  "telefone": "11987654321"
+}

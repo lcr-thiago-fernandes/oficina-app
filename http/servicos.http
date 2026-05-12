@@ -1,0 +1,54 @@
+### Criar serviço
+# @name criarServico
+POST {{baseUrl}}/servicos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Troca de óleo",
+  "descricao": "Troca completa com filtro",
+  "precoBase": 150.00,
+  "tempoEstimadoMinutos": 30
+}
+
+### @servicoId = {{criarServico.response.body.id}}
+
+### Listar serviços (todos ativos)
+GET {{baseUrl}}/servicos?pagina=1&tamanhoPagina=20
+Authorization: Bearer {{token}}
+
+### Listar serviços filtrando por nome
+GET {{baseUrl}}/servicos?nome=óleo
+Authorization: Bearer {{token}}
+
+### Obter serviço por id
+GET {{baseUrl}}/servicos/{{servicoId}}
+Authorization: Bearer {{token}}
+
+### Atualizar serviço
+PUT {{baseUrl}}/servicos/{{servicoId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Troca de óleo (sintético)",
+  "descricao": "Troca com óleo sintético + filtro",
+  "precoBase": 220.00,
+  "tempoEstimadoMinutos": 45
+}
+
+### Inativar serviço
+DELETE {{baseUrl}}/servicos/{{servicoId}}
+Authorization: Bearer {{token}}
+
+### Tentar criar serviço com preço zero (esperado 422)
+POST {{baseUrl}}/servicos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Inválido",
+  "descricao": "x",
+  "precoBase": 0,
+  "tempoEstimadoMinutos": 30
+}

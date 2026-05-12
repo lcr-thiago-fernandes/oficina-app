@@ -1,0 +1,71 @@
+### 1) Criar OS (precisa de clienteId e veiculoId existentes)
+# @name criarOs
+POST {{baseUrl}}/ordens-servico
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteId": "{{clienteId}}",
+  "veiculoId": "{{veiculoId}}",
+  "observacoes": "Cliente reportou ruído no motor."
+}
+
+### @ordemServicoId = {{criarOs.response.body.id}}
+
+### 2) Obter OS
+GET {{baseUrl}}/ordens-servico/{{ordemServicoId}}
+Authorization: Bearer {{token}}
+
+### 3) Listar OS por status
+GET {{baseUrl}}/ordens-servico?status=Recebida
+Authorization: Bearer {{token}}
+
+### 4) Iniciar diagnóstico
+PATCH {{baseUrl}}/ordens-servico/{{ordemServicoId}}/diagnostico
+Authorization: Bearer {{token}}
+
+### 5) Adicionar serviço
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/servicos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "servicoId": "{{servicoId}}",
+  "quantidade": 1
+}
+
+### 6) Adicionar peça
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/pecas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "pecaId": "{{pecaId}}",
+  "quantidade": 2
+}
+
+### 7) Enviar orçamento para aprovação
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/enviar
+Authorization: Bearer {{token}}
+
+### 8) (cliente aprova — endpoint do Plano 7)
+
+### 9) Iniciar execução (baixa estoque)
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/execucao/iniciar
+Authorization: Bearer {{token}}
+
+### 10) Finalizar
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/finalizar
+Authorization: Bearer {{token}}
+
+### 11) Entregar
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/entregar
+Authorization: Bearer {{token}}
+
+### Tentar enviar para aprovação sem itens (esperado 422)
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/enviar
+Authorization: Bearer {{token}}
+
+### Tentar iniciar execução sem aprovação (esperado 422)
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/execucao/iniciar
+Authorization: Bearer {{token}}

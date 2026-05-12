@@ -1,0 +1,39 @@
+### Login admin (use o ADMIN_BOOTSTRAP_PASSWORD do .env na primeira execução)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "AlteraMe@123"
+}
+
+### Capturar o token desta resposta e setar @token em http/_env.http
+###   @token = {{login.response.body.accessToken}}
+
+### Login com senha errada (esperado 401)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "errada1234"
+}
+
+### Login com username inexistente (esperado 401)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "naoexiste",
+  "password": "qualquerXY9"
+}
+
+### Verificar rate limit (executar 6x rápido — última deve ser 429)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "errada1"
+}

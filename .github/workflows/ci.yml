@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test with coverage
+        run: dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage" --settings coverlet.runsettings --results-directory ./TestResults
+
+      - name: Install ReportGenerator
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+
+      - name: Generate coverage report
+        run: |
+          reportgenerator \
+            -reports:"./TestResults/**/coverage.cobertura.xml" \
+            -targetdir:"./TestResults/CoverageReport" \
+            -reporttypes:"HtmlInline;TextSummary;Cobertura"
+
+      - name: Show coverage summary
+        run: cat ./TestResults/CoverageReport/Summary.txt
+
+      - name: Enforce minimum coverage (80%)
+        run: |
+          line_rate=$(grep -oP 'Line coverage:\s*\K[0-9.]+' ./TestResults/CoverageReport/Summary.txt | head -1)
+          echo "Coverage: $line_rate%"
+          awk -v cov="$line_rate" 'BEGIN { if (cov+0 < 80) { print "FAIL: coverage below 80%"; exit 1 } else print "OK: coverage >= 80%" }'
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: ./TestResults/CoverageReport
+          if-no-files-found: error
+
+      - name: List vulnerable packages
+        run: dotnet list package --vulnerable --include-transitive || true
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -f docker/Dockerfile -t oficina-api:ci .
+
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+          build-mode: autobuild
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:csharp"

@@ -1,0 +1,15 @@
+### Variáveis compartilhadas pelos arquivos .http
+### Use a extensão "REST Client" do VS Code, Visual Studio ou Rider.
+
+@host = http://localhost:8080
+@baseUrl = {{host}}/api/v1
+
+### Token JWT (preencher após login na auth.http)
+@token =
+
+### IDs reutilizáveis (preencher conforme criação)
+@clienteId =
+@veiculoPlaca =
+@servicoId =
+@pecaId =
+@ordemServicoId =

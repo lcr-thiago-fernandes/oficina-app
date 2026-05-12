@@ -1,0 +1,83 @@
+### Criar peça
+# @name criarPeca
+POST {{baseUrl}}/pecas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sku": "FILT-001",
+  "nome": "Filtro de óleo",
+  "precoUnitario": 25.00
+}
+
+### @pecaId = {{criarPeca.response.body.id}}
+
+### Listar peças
+GET {{baseUrl}}/pecas?pagina=1&tamanhoPagina=20
+Authorization: Bearer {{token}}
+
+### Obter peça (com saldo)
+GET {{baseUrl}}/pecas/{{pecaId}}
+Authorization: Bearer {{token}}
+
+### Atualizar peça (apenas dados — saldo não muda aqui)
+PUT {{baseUrl}}/pecas/{{pecaId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Filtro de óleo premium",
+  "precoUnitario": 35.00
+}
+
+### Registrar entrada (compra)
+POST {{baseUrl}}/pecas/{{pecaId}}/movimentacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tipo": "Entrada",
+  "quantidade": 50,
+  "motivo": "Compra fornecedor X"
+}
+
+### Registrar saída (sem OS)
+POST {{baseUrl}}/pecas/{{pecaId}}/movimentacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tipo": "Saida",
+  "quantidade": 5,
+  "motivo": "Ajuste manual"
+}
+
+### Listar movimentações da peça
+GET {{baseUrl}}/pecas/{{pecaId}}/movimentacoes
+Authorization: Bearer {{token}}
+
+### Tentativa de saída além do saldo (esperado 422)
+POST {{baseUrl}}/pecas/{{pecaId}}/movimentacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tipo": "Saida",
+  "quantidade": 99999,
+  "motivo": "tentativa"
+}
+
+### Inativar peça
+DELETE {{baseUrl}}/pecas/{{pecaId}}
+Authorization: Bearer {{token}}
+
+### Tentativa com SKU duplicado (esperado 409 — rode após criar a primeira)
+POST {{baseUrl}}/pecas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sku": "FILT-001",
+  "nome": "Outro filtro",
+  "precoUnitario": 10.00
+}
