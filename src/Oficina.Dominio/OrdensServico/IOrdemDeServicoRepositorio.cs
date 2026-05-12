@@ -12,6 +12,11 @@ public interface IOrdemDeServicoRepositorio
     Task EmTransacaoSerializadaAsync(Func<CancellationToken, Task> acao, CancellationToken ct);
 
     Task<MetricaTempoMedio> ObterTempoMedioExecucaoAsync(CancellationToken ct);
+
+    // Forca o estado Added para itens novos adicionados via navigation
+    // collection (workaround para bug de change detection com Id pre-setado).
+    void MarcarItemServicoComoNovo(ItemServico item);
+    void MarcarItemPecaComoNovo(ItemPeca item);
 }
 
 public sealed record MetricaTempoMedio(

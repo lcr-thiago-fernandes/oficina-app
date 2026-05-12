@@ -10,4 +10,10 @@ public interface IClienteRepositorio
     Task AdicionarAsync(Cliente cliente, CancellationToken ct);
     Task SalvarAsync(CancellationToken ct);
     void Remover(Cliente cliente);
+
+    // EF Core nao detecta entidades adicionadas via navigation collection
+    // como Added quando o Id ja vem preenchido — gera UPDATE em vez de
+    // INSERT, falhando com DbUpdateConcurrencyException. Esta sobrecarga
+    // marca a entidade como Added explicitamente no change tracker.
+    void MarcarVeiculoComoNovo(Veiculo veiculo);
 }

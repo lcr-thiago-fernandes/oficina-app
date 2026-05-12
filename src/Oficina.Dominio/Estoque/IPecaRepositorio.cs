@@ -15,4 +15,9 @@ public interface IPecaRepositorio
     /// consistência de saldo sob concorrência).
     /// </summary>
     Task EmTransacaoSerializadaAsync(Func<CancellationToken, Task> acao, CancellationToken ct);
+
+    // EF Core nao detecta entidades adicionadas via navigation collection
+    // como Added quando o Id ja vem preenchido — gera UPDATE em vez de
+    // INSERT. Marca a movimentacao como Added explicitamente.
+    void MarcarMovimentacaoComoNova(MovimentacaoEstoque movimentacao);
 }

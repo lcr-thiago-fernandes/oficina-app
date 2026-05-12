@@ -26,6 +26,7 @@ public class AdicionarItemServicoUseCase
             throw new OrdemInvalidaException("Serviço inativo.");
 
         var item = ordem.AdicionarItemServico(servico.Id, servico.Nome, servico.PrecoBase, req.Quantidade);
+        _ordens.MarcarItemServicoComoNovo(item);
         await _ordens.SalvarAsync(ct);
 
         return MapeadorOrdem.MapearServ(item);

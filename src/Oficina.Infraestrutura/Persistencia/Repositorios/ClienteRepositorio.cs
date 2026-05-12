@@ -48,4 +48,7 @@ public class ClienteRepositorio : IClienteRepositorio
     public Task SalvarAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 
     public void Remover(Cliente cliente) => _db.Clientes.Remove(cliente);
+
+    public void MarcarVeiculoComoNovo(Veiculo veiculo) =>
+        _db.Entry(veiculo).State = EntityState.Added;
 }

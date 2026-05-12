@@ -26,6 +26,7 @@ public class AdicionarItemPecaUseCase
             throw new OrdemInvalidaException("Peça inativa.");
 
         var item = ordem.AdicionarItemPeca(peca.Id, peca.Nome, peca.PrecoUnitario, req.Quantidade);
+        _ordens.MarcarItemPecaComoNovo(item);
         await _ordens.SalvarAsync(ct);
 
         return MapeadorOrdem.MapearPeca(item);

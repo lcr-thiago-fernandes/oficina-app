@@ -59,6 +59,9 @@ public class PecaRepositorio : IPecaRepositorio
 
     public Task SalvarAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 
+    public void MarcarMovimentacaoComoNova(MovimentacaoEstoque movimentacao) =>
+        _db.Entry(movimentacao).State = EntityState.Added;
+
     public async Task EmTransacaoSerializadaAsync(Func<CancellationToken, Task> acao, CancellationToken ct)
     {
         IDbContextTransaction? tx = null;

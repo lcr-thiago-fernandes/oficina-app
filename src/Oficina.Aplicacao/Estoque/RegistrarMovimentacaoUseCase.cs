@@ -31,6 +31,7 @@ public class RegistrarMovimentacaoUseCase
             var mov = tipo == TipoMovimentacao.Entrada
                 ? peca.RegistrarEntrada(req.Quantidade, req.Motivo)
                 : peca.RegistrarSaida(req.Quantidade, req.Motivo, req.OrdemServicoId);
+            _repo.MarcarMovimentacaoComoNova(mov);
 
             await _repo.SalvarAsync(tx);
             resp = MapeadorEstoque.MapearMov(mov);
