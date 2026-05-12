@@ -20,7 +20,7 @@
 | Item | Link |
 |---|---|
 | Repositório (privado, acesso a `soat-architecture`) | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1 |
-| Vídeo de apresentação (YouTube unlisted, ≤ 15 min) | _(URL)_ |
+| Vídeo de apresentação | https://1drv.ms/v/c/fa2e7c7114d0ee1e/IQBnvt_g9AFhQKnVoKeJQzzuAUk0A4WCfI9GJiDfgnTHrPo?e=n6zU3K |
 | Documentos | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/tree/main/docs |
 | README | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/README.md |
 

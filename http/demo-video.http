@@ -1,6 +1,5 @@
 ### ============================================================
 ### DEMO TECH CHALLENGE — FIAP 15SOAT Fase 1
-### Fluxo completo para apresentação em vídeo (~10-15 min)
 ###
 ### PRÉ-REQUISITOS:
 ###   1. docker compose -f docker/docker-compose.yml --env-file .env up -d --build
@@ -9,11 +8,6 @@
 ###   4. Após cada @name, copie o valor retornado para o settings.json se
 ###      precisar usar em outra requisição mais adiante
 ###
-### ROTEIRO SUGERIDO:
-###   PARTE 1 — Autenticação e cadastros (3 min)
-###   PARTE 2 — Fluxo completo de OS, do recebimento à entrega (5 min)
-###   PARTE 3 — Validações e regras de domínio (3 min)
-###   PARTE 4 — Métricas administrativas (1 min)
 ### ============================================================
 
 
@@ -22,7 +16,6 @@
 ### ============================================================
 
 ### [1.1] Login admin
-### Mostrar no vídeo: usuário admin é criado no startup via BootstrapAdminHostedService.
 ### Senha vem da env ADMIN_BOOTSTRAP_PASSWORD. JWT HS256, expiração 60min.
 # @name login
 POST {{baseUrl}}/auth/login
@@ -330,5 +323,4 @@ Authorization: Bearer {{token}}
 GET {{host}}/health
 
 
-### [8.2] Swagger UI (abrir no browser durante o vídeo)
-### http://localhost:8080/swagger
+
