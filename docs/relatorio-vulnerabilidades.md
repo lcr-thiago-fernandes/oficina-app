@@ -1,16 +1,16 @@
 # Relatório de Análise de Vulnerabilidades
 
-**Repositório:** _(URL do repo privado — preencher após push para o GitHub)_
-**Data do scan:** 2026-05-03
+**Repositório:** [https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1)
+**Data do scan:** 2026-05-12
 **Branch analisada:** `main`
-**Responsável:** _(preencher)_
+**Responsável:** Thiago Fernandes da Cruz
 
 ## Ferramentas utilizadas
 
 | Ferramenta | Tipo | Periodicidade |
 |---|---|---|
-| **GitHub CodeQL** | SAST (Static Application Security Testing) | Em todo push e PR para `main`/`develop` |
-| **Dependabot** | SCA (Software Composition Analysis) | Diariamente, com PRs automáticos |
+| **GitHub CodeQL** | SAST (Static Application Security Testing) | * |
+| **Dependabot** | SCA (Software Composition Analysis) | * |
 | **`dotnet list package --vulnerable`** | SCA local | Em todo build local + CI |
 
 ## Configuração
@@ -37,25 +37,11 @@
 
 ### CodeQL (SAST)
 
-> **Pendente de execução remota.** O scan CodeQL roda automaticamente no GitHub Actions em todo push para `main`. Como este repositório ainda não foi publicado em remoto no momento desta entrega, o resultado será preenchido após o primeiro `git push` para a branch `main` e a primeira execução do workflow `.github/workflows/ci.yml`.
-
-_(Preencher após o scan rodar — exemplo de formato:)_
-
-| ID | Severidade | Categoria | Arquivo | Status | Observação |
-|---|---|---|---|---|---|
-| `cs/log-forging` | Aviso | Logging | `src/Oficina.Api/Controllers/AuthController.cs` | ✅ Falso positivo | Mensagem é constante; não há `string.Format` com input |
-
-📎 **Screenshot:** `docs/imagens/codeql-summary.png` _(a ser adicionado pelo grupo após a primeira execução do workflow no GitHub)_
+📎 **Screenshot:** `docs/relatorio-vulnerabilidades-codeql-summary.png` 
 
 ### Dependabot (SCA)
 
-> **Pendente de execução remota.** Dependabot só roda no GitHub.com após o push do repositório. As findings serão consolidadas após o primeiro scan diário.
-
-| Pacote | Versão atual | Severidade | CVE | Status |
-|---|---|---|---|---|
-| _(pacote)_ | _(versão)_ | _(severidade)_ | _(CVE)_ | _(mitigada/aberta)_ |
-
-📎 **Screenshot:** `docs/imagens/dependabot-summary.png` _(a ser adicionado pelo grupo após a primeira execução do Dependabot no GitHub)_
+📎 **Screenshot:** `docs/relatorio-vulnerabilidades-dependabot-summary.png` 
 
 ### `dotnet list package --vulnerable`
 
@@ -74,20 +60,20 @@ O projeto fornecido `Oficina.Aplicacao` não tem nenhum pacote vulnerável, cons
 O projeto fornecido `Oficina.Infraestrutura` não tem nenhum pacote vulnerável, considerando as fontes atuais.
 O projeto fornecido `Oficina.Api` não tem nenhum pacote vulnerável, considerando as fontes atuais.
 O projeto `Oficina.Dominio.Testes` tem os pacotes vulneráveis a seguir
-   [net8.0]:
-   Pacote Transitivo                     Resolvido   Severidade   URL do aviso
+   [net8.0]: 
+   Pacote Transitivo                     Resolvido   Severidade   URL do aviso                                     
    > System.Net.Http                     4.3.0       High         https://github.com/advisories/GHSA-7jgj-8wvc-jh57
    > System.Text.RegularExpressions      4.3.0       High         https://github.com/advisories/GHSA-cmhx-cq75-c4mj
 
 O projeto `Oficina.Aplicacao.Testes` tem os pacotes vulneráveis a seguir
-   [net8.0]:
-   Pacote Transitivo                     Resolvido   Severidade   URL do aviso
+   [net8.0]: 
+   Pacote Transitivo                     Resolvido   Severidade   URL do aviso                                     
    > System.Net.Http                     4.3.0       High         https://github.com/advisories/GHSA-7jgj-8wvc-jh57
    > System.Text.RegularExpressions      4.3.0       High         https://github.com/advisories/GHSA-cmhx-cq75-c4mj
 
 O projeto `Oficina.Integracao.Testes` tem os pacotes vulneráveis a seguir
-   [net8.0]:
-   Pacote Transitivo                     Resolvido   Severidade   URL do aviso
+   [net8.0]: 
+   Pacote Transitivo                     Resolvido   Severidade   URL do aviso                                     
    > System.Net.Http                     4.3.0       High         https://github.com/advisories/GHSA-7jgj-8wvc-jh57
    > System.Text.RegularExpressions      4.3.0       High         https://github.com/advisories/GHSA-cmhx-cq75-c4mj
 ```
