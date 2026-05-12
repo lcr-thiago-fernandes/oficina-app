@@ -1,0 +1,334 @@
+### ============================================================
+### DEMO TECH CHALLENGE — FIAP 15SOAT Fase 1
+### Fluxo completo para apresentação em vídeo (~10-15 min)
+###
+### PRÉ-REQUISITOS:
+###   1. docker compose -f docker/docker-compose.yml --env-file .env up -d --build
+###   2. Selecione o ambiente "local" no canto inferior direito do VS Code
+###   3. Execute as requests EM ORDEM clicando em "Send Request" acima de cada
+###   4. Após cada @name, copie o valor retornado para o settings.json se
+###      precisar usar em outra requisição mais adiante
+###
+### ROTEIRO SUGERIDO:
+###   PARTE 1 — Autenticação e cadastros (3 min)
+###   PARTE 2 — Fluxo completo de OS, do recebimento à entrega (5 min)
+###   PARTE 3 — Validações e regras de domínio (3 min)
+###   PARTE 4 — Métricas administrativas (1 min)
+### ============================================================
+
+
+### ============================================================
+### PARTE 1 — AUTENTICAÇÃO
+### ============================================================
+
+### [1.1] Login admin
+### Mostrar no vídeo: usuário admin é criado no startup via BootstrapAdminHostedService.
+### Senha vem da env ADMIN_BOOTSTRAP_PASSWORD. JWT HS256, expiração 60min.
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "AlteraMe@123"
+}
+
+### >>> COPIE o accessToken da resposta acima e cole em .vscode/settings.json no campo "token"
+### >>> Daqui pra frente todas as requests autenticadas usam {{token}}
+
+
+### [1.2] Tentativa de login com senha errada (esperado 401)
+### Mostrar: BCrypt valida hash; resposta genérica para anti-enumeração.
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "senha-errada-1234"
+}
+
+
+### ============================================================
+### PARTE 2 — CADASTROS BASE
+### ============================================================
+
+### [2.1] Criar cliente PF (CPF válido com dígitos verificadores)
+### Mostrar: validação real de CPF (não aceita 111.111.111-11 ou similares).
+# @name criarCliente
+POST {{baseUrl}}/clientes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "João da Silva",
+  "documento": "39053344705",
+  "email": "joao.silva@example.com",
+  "telefone": "11987654321"
+}
+
+### >>> COPIE o "id" do cliente da resposta para .vscode/settings.json em "clienteId"
+
+
+### [2.2] Adicionar veículo ao cliente (placa formato antigo: ABC1234)
+# @name criarVeiculo
+POST {{baseUrl}}/clientes/{{clienteId}}/veiculos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "placa": "ABC1A23",
+  "marca": "Fiat",
+  "modelo": "Uno",
+  "ano": 2020
+}
+
+### >>> COPIE o "id" do veículo para .vscode/settings.json em "veiculoId"
+
+
+### [2.3] Criar serviço no catálogo
+# @name criarServico
+POST {{baseUrl}}/servicos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Troca de óleo + filtro",
+  "descricao": "Inclui óleo 5W30 sintético",
+  "precoBase": 180.00,
+  "tempoEstimadoMinutos": 45
+}
+
+### >>> COPIE o "id" do serviço para .vscode/settings.json em "servicoId"
+
+
+### [2.4] Criar peça no estoque (inicia com saldo 0)
+# @name criarPeca
+POST {{baseUrl}}/pecas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sku": "FLT-OL-001",
+  "nome": "Filtro de óleo Tecfil",
+  "precoUnitario": 35.00
+}
+
+### >>> COPIE o "id" da peça para .vscode/settings.json em "pecaId"
+
+
+### [2.5] Registrar ENTRADA de estoque (10 unidades — compra de fornecedor)
+### Mostrar: saldo vai de 0 para 10. Toda movimentação é auditada.
+POST {{baseUrl}}/pecas/{{pecaId}}/movimentacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tipo": "Entrada",
+  "quantidade": 10,
+  "motivo": "Compra fornecedor Tecfil — NF 12345"
+}
+
+
+### [2.6] Conferir saldo da peça
+GET {{baseUrl}}/pecas/{{pecaId}}
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### PARTE 3 — FLUXO COMPLETO DE ORDEM DE SERVIÇO
+### Demonstrar a máquina de estados:
+###   Recebida → EmDiagnostico → AguardandoAprovacao → EmExecucao
+###            → Finalizada → Entregue
+### ============================================================
+
+### [3.1] Criar Ordem de Serviço (estado inicial: Recebida)
+### Mostrar: o "numero" é um BIGSERIAL gerado pelo banco (humano-amigável).
+# @name criarOs
+POST {{baseUrl}}/ordens-servico
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteId": "{{clienteId}}",
+  "veiculoId": "{{veiculoId}}",
+  "observacoes": "Cliente reportou ruído no motor e óleo escuro."
+}
+
+### >>> COPIE o "id" da OS para .vscode/settings.json em "ordemServicoId"
+
+
+### [3.2] Iniciar Diagnóstico (Recebida → EmDiagnostico)
+PATCH {{baseUrl}}/ordens-servico/{{ordemServicoId}}/diagnostico
+Authorization: Bearer {{token}}
+
+
+### [3.3] Adicionar item de serviço à OS
+### Mostrar: o nome e preço do serviço são SNAPSHOTADOS — se o catálogo
+### mudar depois, o orçamento histórico permanece intacto.
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/servicos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "servicoId": "{{servicoId}}",
+  "quantidade": 1
+}
+
+
+### [3.4] Adicionar item de peça à OS (3 filtros)
+### Mostrar: ainda NÃO baixa do estoque (só ao iniciar execução).
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/pecas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "pecaId": "{{pecaId}}",
+  "quantidade": 3
+}
+
+
+### [3.5] Verificar estado da OS (totalGeral = serviços + peças)
+GET {{baseUrl}}/ordens-servico/{{ordemServicoId}}
+Authorization: Bearer {{token}}
+
+
+### [3.6] Enviar para aprovação do cliente (EmDiagnostico → AguardandoAprovacao)
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/enviar
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### PARTE 4 — APROVAÇÃO PÚBLICA (sem JWT)
+### Demonstrar: rota acessada pelo cliente final, exige o CPF do dono
+### como proteção (anti-enumeração: 404 idêntico para OS inexistente
+### e para documento que não bate).
+### ============================================================
+
+### [4.1] Consulta pública pelo cliente (status do orçamento)
+### URL: /consulta/{numero}?documento={cpf}
+### Substitua {{ordemServicoId}} pelo NUMERO da OS (ex: 1) e use o CPF do cliente.
+### NÃO usa Authorization header.
+GET {{baseUrl}}/consulta/1?documento=39053344705
+
+
+### [4.2] Tentativa com documento errado (deve retornar 404, igual a OS inexistente)
+GET {{baseUrl}}/consulta/1?documento=12345678909
+
+
+### [4.3] APROVAR orçamento pelo cliente (rota pública)
+POST {{baseUrl}}/consulta/1/aprovar?documento=39053344705
+
+
+### ============================================================
+### PARTE 5 — EXECUÇÃO COM BAIXA TRANSACIONAL DE ESTOQUE
+### ============================================================
+
+### [5.1] Iniciar execução (AguardandoAprovacao → EmExecucao)
+### Mostrar: o saldo da peça baixa de 10 para 7 EM UMA ÚNICA TRANSAÇÃO
+### serializável — se algo falhar, NADA é commitado.
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/execucao/iniciar
+Authorization: Bearer {{token}}
+
+
+### [5.2] Conferir que o saldo da peça foi decrementado (10 → 7)
+GET {{baseUrl}}/pecas/{{pecaId}}
+Authorization: Bearer {{token}}
+
+
+### [5.3] Listar movimentações da peça (deve ter ENTRADA inicial + SAIDA da OS)
+GET {{baseUrl}}/pecas/{{pecaId}}/movimentacoes
+Authorization: Bearer {{token}}
+
+
+### [5.4] Finalizar execução (EmExecucao → Finalizada)
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/finalizar
+Authorization: Bearer {{token}}
+
+
+### [5.5] Entregar ao cliente (Finalizada → Entregue)
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/entregar
+Authorization: Bearer {{token}}
+
+
+### [5.6] Estado final da OS — todos os timestamps preenchidos
+GET {{baseUrl}}/ordens-servico/{{ordemServicoId}}
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### PARTE 6 — VALIDAÇÕES E REGRAS DE DOMÍNIO
+### Mostrar que o sistema rejeita dados inválidos com mensagens claras.
+### ============================================================
+
+### [6.1] CPF inválido (dígitos verificadores errados) — esperado 422
+POST {{baseUrl}}/clientes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "CPF Inválido",
+  "documento": "11111111111",
+  "email": "x@y.com",
+  "telefone": "11987654321"
+}
+
+
+### [6.2] Placa em formato inválido — esperado 422
+POST {{baseUrl}}/clientes/{{clienteId}}/veiculos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "placa": "INVALIDA-XYZ",
+  "marca": "Fiat",
+  "modelo": "Uno",
+  "ano": 2020
+}
+
+
+### [6.3] Saída de estoque acima do saldo — esperado 422
+### Saldo atual da peça é 7. Tentar tirar 100 fere a invariante de saldo não-negativo.
+POST {{baseUrl}}/pecas/{{pecaId}}/movimentacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tipo": "Saida",
+  "quantidade": 100,
+  "motivo": "tentativa que deve falhar"
+}
+
+
+### [6.4] CPF duplicado — esperado 409 Conflict
+POST {{baseUrl}}/clientes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Outro João",
+  "documento": "39053344705",
+  "email": "outro@x.com",
+  "telefone": "11987654321"
+}
+
+
+### ============================================================
+### PARTE 7 — MÉTRICAS ADMINISTRATIVAS
+### ============================================================
+
+### [7.1] Tempo médio de execução das OS finalizadas
+### (deve incluir a OS que acabamos de entregar)
+GET {{baseUrl}}/ordens-servico/metricas/tempo-medio
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### PARTE 8 — DOCUMENTAÇÃO E HEALTH
+### ============================================================
+
+### [8.1] Health check
+GET {{host}}/health
+
+
+### [8.2] Swagger UI (abrir no browser durante o vídeo)
+### http://localhost:8080/swagger
