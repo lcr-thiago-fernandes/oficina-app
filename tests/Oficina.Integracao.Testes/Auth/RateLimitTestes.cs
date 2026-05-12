@@ -6,12 +6,12 @@ using Xunit;
 
 namespace Oficina.Integracao.Testes.Auth;
 
-[Collection(nameof(AuthCollection))]
+[Collection(nameof(RateLimitCollection))]
 public class RateLimitTestes
 {
-    private readonly AuthFixture _fx;
+    private readonly RateLimitFixture _fx;
 
-    public RateLimitTestes(AuthFixture fx) => _fx = fx;
+    public RateLimitTestes(RateLimitFixture fx) => _fx = fx;
 
     [Fact]
     public async Task Login_AposCincoFalhas_DeveRetornar429()

@@ -7,8 +7,11 @@ public static class ConfiguracaoRateLimit
 {
     public const string PoliticaLogin = "login";
 
-    public static IServiceCollection AdicionarRateLimit(this IServiceCollection services)
+    public static IServiceCollection AdicionarRateLimit(this IServiceCollection services, IConfiguration configuration)
     {
+        var permitLimit = configuration.GetValue<int?>("RateLimit:Login:PermitLimit") ?? 5;
+        var windowMinutes = configuration.GetValue<int?>("RateLimit:Login:WindowMinutes") ?? 15;
+
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -17,8 +20,8 @@ public static class ConfiguracaoRateLimit
                 var ip = http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
                 return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 5,
-                    Window = TimeSpan.FromMinutes(15),
+                    PermitLimit = permitLimit,
+                    Window = TimeSpan.FromMinutes(windowMinutes),
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                     QueueLimit = 0
                 });

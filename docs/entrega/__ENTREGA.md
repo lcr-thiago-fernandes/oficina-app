@@ -2,19 +2,16 @@
 
 **Curso:** Pós-Tech FIAP — Arquitetura de Software (15SOAT)
 **Tema:** Sistema Integrado de Atendimento e Execução de Serviços para Oficina Mecânica
-**Data de entrega:** _(preencher)_
+**Data de entrega:** 12/05/2026
 
 ---
 
 ## Equipe
 
-**Nome do grupo:** _(preencher)_
-
 | Nome | Discord |
 |---|---|
-| _(nome)_ | _(@usuario)_ |
-| _(nome)_ | _(@usuario)_ |
-| _(nome)_ | _(@usuario)_ |
+| Thiago Fernandes da Cruz | @thiago_64271 |
+
 
 ---
 
@@ -22,10 +19,12 @@
 
 | Item | Link |
 |---|---|
-| Repositório (privado, acesso a `soat-architecture`) | _(URL)_ |
+| Repositório (privado, acesso a `soat-architecture`) | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1 |
 | Vídeo de apresentação (YouTube unlisted, ≤ 15 min) | _(URL)_ |
-| Documentação DDD (Miro — Event Storming) | _(URL)_ |
-| Documentação técnica (README) | _(URL do README no GitHub)_ |
+| Docs | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/tree/main/docs |
+| Readme do projeto | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/README.md |
+| Documentos da entrega | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/tree/main/docs/entrega |
+
 
 ---
 
@@ -57,25 +56,16 @@ MVP de back-end de oficina mecânica desenvolvido em **C# / .NET 8 / ASP.NET Cor
 
 ## Análise de vulnerabilidades
 
-Resumo executivo do scan executado em _(data)_ usando **CodeQL**, **Dependabot** e `dotnet list package --vulnerable`:
-
-| Severidade | Aberta | Mitigada |
-|---|---|---|
-| Crítica | _(N)_ | _(N)_ |
-| Alta | _(N)_ | _(N)_ |
-| Média | _(N)_ | _(N)_ |
-| Baixa | _(N)_ | _(N)_ |
-
-Detalhamento completo em [docs/relatorio-vulnerabilidades.md](../relatorio-vulnerabilidades.md).
+Detalhamento completo em [https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/docs/relatorio-vulnerabilidades.md](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/docs/relatorio-vulnerabilidades.md).
 
 ---
 
 ## Como executar
 
 ```bash
-git clone <url-do-repo>
+git clone https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1
 cd oficina-mecanica
-cp .env.example .env  # ajustar JWT_SECRET e ADMIN_BOOTSTRAP_PASSWORD
+cp .env.example .env  # ajustar ADMIN_BOOTSTRAP_PASSWORD
 docker compose -f docker/docker-compose.yml --env-file .env up -d --build
 # API:     http://localhost:8080
 # Swagger: http://localhost:8080/swagger
@@ -83,13 +73,3 @@ docker compose -f docker/docker-compose.yml --env-file .env up -d --build
 
 Login inicial: `admin` / valor do `ADMIN_BOOTSTRAP_PASSWORD` (forçará troca no primeiro login).
 
----
-
-## Anexos
-
-- README detalhado: [README.md](../../README.md)
-- Linguagem ubíqua: [docs/ddd/linguagem-ubiqua.md](../ddd/linguagem-ubiqua.md)
-- Diagrama de contextos: [docs/ddd/contextos-delimitados.md](../ddd/contextos-delimitados.md)
-- ADRs: [docs/arquitetura/](../arquitetura/)
-- Spec do projeto: [docs/superpowers/specs/2026-05-03-tech-challenge-fase1-design.md](../superpowers/specs/2026-05-03-tech-challenge-fase1-design.md)
-- Relatório de vulnerabilidades: [docs/relatorio-vulnerabilidades.md](../relatorio-vulnerabilidades.md)

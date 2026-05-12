@@ -53,7 +53,7 @@ builder.Services.AdicionarInfraestrutura(builder.Configuration);
 builder.Services.AdicionarAplicacao();
 builder.Services.AdicionarJwtBearer(builder.Configuration);
 builder.Services.AdicionarPoliticas();
-builder.Services.AdicionarRateLimit();
+builder.Services.AdicionarRateLimit(builder.Configuration);
 
 var app = builder.Build();
 
