@@ -89,6 +89,9 @@ public class MiddlewareDeExcecoes
                   Title = "Erro interno",
                   Status = 500,
                   Detail = $"{ex.GetType().FullName}: {ex.Message}"
+                          + (ex.InnerException is null
+                              ? string.Empty
+                              : $" | INNER: {ex.InnerException.GetType().FullName}: {ex.InnerException.Message}")
               })
     };
 }
