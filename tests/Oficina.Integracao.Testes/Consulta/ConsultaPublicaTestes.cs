@@ -39,7 +39,7 @@ public class ConsultaPublicaTestes
             cli = await r.Content.ReadFromJsonAsync<ClienteResponse>();
         }
         var v = await (await http.PostAsJsonAsync($"/api/v1/clientes/{cli!.Id}/veiculos",
-            new AdicionarVeiculoRequest($"OSC{new Random().Next(100,999)}A11", "F", "U", 2020)))
+            new AdicionarVeiculoRequest($"OSC{new Random().Next(1000,9999)}", "F", "U", 2020)))
             .Content.ReadFromJsonAsync<VeiculoResponse>();
 
         var os = await (await http.PostAsJsonAsync("/api/v1/ordens-servico",

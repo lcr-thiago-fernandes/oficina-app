@@ -47,7 +47,7 @@ public class OrdensServicoFluxoTestes
 
         // Veículo
         var veicResp = await http.PostAsJsonAsync($"/api/v1/clientes/{cliente!.Id}/veiculos",
-            new AdicionarVeiculoRequest($"OS{new Random().Next(1000, 9999)}A11", "Fiat", "Uno", 2020));
+            new AdicionarVeiculoRequest($"OSA{new Random().Next(1000, 9999)}", "Fiat", "Uno", 2020));
         var veiculo = await veicResp.Content.ReadFromJsonAsync<VeiculoResponse>();
 
         // Serviço
@@ -147,7 +147,7 @@ public class OrdensServicoFluxoTestes
         var cli = await (await http.GetAsync("/api/v1/clientes?documento=11144477735"))
             .Content.ReadFromJsonAsync<ClienteResponse>();
         var v = await (await http.PostAsJsonAsync($"/api/v1/clientes/{cli!.Id}/veiculos",
-            new AdicionarVeiculoRequest($"WAI{new Random().Next(100,999)}A11", "F", "U", 2020)))
+            new AdicionarVeiculoRequest($"WAI{new Random().Next(1000,9999)}", "F", "U", 2020)))
             .Content.ReadFromJsonAsync<VeiculoResponse>();
         var s = await (await http.PostAsJsonAsync("/api/v1/servicos",
             new CriarServicoRequest("X", "y", 10m, 10))).Content.ReadFromJsonAsync<ServicoResponse>();
