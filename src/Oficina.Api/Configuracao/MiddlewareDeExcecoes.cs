@@ -84,6 +84,11 @@ public class MiddlewareDeExcecoes
                 new ProblemDetails { Title = "Não encontrado", Detail = ex.Message, Status = 404 }),
 
         _ => (StatusCodes.Status500InternalServerError,
-              new ProblemDetails { Title = "Erro interno", Status = 500 })
+              new ProblemDetails
+              {
+                  Title = "Erro interno",
+                  Status = 500,
+                  Detail = $"{ex.GetType().FullName}: {ex.Message}"
+              })
     };
 }

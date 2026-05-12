@@ -41,7 +41,8 @@ public class PecasEndpointTestes
         // Entrada
         var entrada = await http.PostAsJsonAsync($"/api/v1/pecas/{p.Id}/movimentacoes",
             new RegistrarMovimentacaoRequest("Entrada", 10, "Compra", null));
-        entrada.StatusCode.Should().Be(HttpStatusCode.Created);
+        var entradaBody = await entrada.Content.ReadAsStringAsync();
+        entrada.StatusCode.Should().Be(HttpStatusCode.Created, "resposta: {0}", entradaBody);
 
         // Verificar saldo
         var get1 = await http.GetAsync($"/api/v1/pecas/{p.Id}");

@@ -36,7 +36,8 @@ public class VeiculosEndpointTestes
         // Adicionar
         var add = await http.PostAsJsonAsync($"/api/v1/clientes/{clienteId}/veiculos",
             new AdicionarVeiculoRequest("XYZ9988", "Fiat", "Uno", 2020));
-        add.StatusCode.Should().Be(HttpStatusCode.Created);
+        var addBody = await add.Content.ReadAsStringAsync();
+        add.StatusCode.Should().Be(HttpStatusCode.Created, "resposta: {0}", addBody);
 
         // Listar
         var listar = await http.GetAsync($"/api/v1/clientes/{clienteId}/veiculos");
