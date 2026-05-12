@@ -19,5 +19,11 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      # Restore gera obj/project.assets.json em cada projeto — a Component
+      # Detection action le esse arquivo pra descobrir as transitivas.
+      # Sem restore, ela so ve as PackageReference diretas no .csproj.
+      - name: Restore (gera project.assets.json com a arvore completa)
+        run: dotnet restore Oficina.sln
+
       - name: Submit NuGet dependencies (incl. transitive)
         uses: advanced-security/component-detection-dependency-submission-action@v0.0.2
