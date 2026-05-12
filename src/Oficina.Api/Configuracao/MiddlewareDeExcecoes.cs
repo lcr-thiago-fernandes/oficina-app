@@ -27,7 +27,10 @@ public class MiddlewareDeExcecoes
         catch (Exception ex)
         {
             var (status, problema) = MapearExcecao(ex);
-            _log.LogWarning(ex, "Falha de domínio: {Codigo}", problema.Title);
+            if (status >= 500)
+                _log.LogError(ex, "Erro nao mapeado: {Mensagem}", ex.Message);
+            else
+                _log.LogWarning(ex, "Falha de dominio: {Codigo}", problema.Title);
 
             context.Response.StatusCode = status;
             context.Response.ContentType = "application/problem+json";
