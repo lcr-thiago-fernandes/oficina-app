@@ -37,11 +37,11 @@
 
 ### CodeQL (SAST)
 
-📎 **Screenshot:** `docs/relatorio-vulnerabilidades-codeql-summary.png` 
+📎 **Screenshot:** `docs/entrega/4.2 - Relatório com análise de vulnerabilidades - relatorio-vulnerabilidades-codeql-summary.png` 
 
 ### Dependabot (SCA)
 
-📎 **Screenshot:** `docs/relatorio-vulnerabilidades-dependabot-summary.png` 
+📎 **Screenshot:** `docs/entrega/4.1 - Relatório com análise de vulnerabilidades - relatorio-vulnerabilidades-dependabot-summary.png` 
 
 ### `dotnet list package --vulnerable`
 

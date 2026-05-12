@@ -21,9 +21,8 @@
 |---|---|
 | Repositório (privado, acesso a `soat-architecture`) | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1 |
 | Vídeo de apresentação (YouTube unlisted, ≤ 15 min) | _(URL)_ |
-| Docs | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/tree/main/docs |
-| Readme do projeto | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/README.md |
-| Documentos da entrega | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/tree/main/docs/entrega |
+| Documentos | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/tree/main/docs |
+| README | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/README.md |
 
 
 ---
@@ -56,7 +55,7 @@ MVP de back-end de oficina mecânica desenvolvido em **C# / .NET 8 / ASP.NET Cor
 
 ## Análise de vulnerabilidades
 
-Detalhamento completo em [https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/docs/relatorio-vulnerabilidades.md](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/docs/relatorio-vulnerabilidades.md).
+Detalhamento completo em [https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/docs/entrega/4 - Relatório com análise de vulnerabilidades.md](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/docs/entrega/4 - Relatório com análise de vulnerabilidades.md).
 
 ---
 

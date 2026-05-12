@@ -152,7 +152,6 @@ oficina-mecanica/
 ├── docker/              # Dockerfile + docker-compose
 ├── docs/
 │   ├── entrega/         # entregáveis do Tech Challenge
-│   └── relatorio-vulnerabilidades.md
 ├── http/                # cenários REST Client
 ├── src/
 │   ├── Oficina.Api/
@@ -176,7 +175,7 @@ oficina-mecanica/
 - Saldo de peça nunca pode ficar negativo (invariante + check constraint SQL)
 - Anti-enumeração na consulta pública (404 idêntico para OS inexistente e documento não conferente)
 - Headers seguros, Swagger só em dev
-- CodeQL + Dependabot rodando no CI ([relatório](docs/relatorio-vulnerabilidades.md))
+- CodeQL + Dependabot rodando no CI ([relatório](docs/entrega/4 - Relatório com análise de vulnerabilidades.md))
 
 ---
 
