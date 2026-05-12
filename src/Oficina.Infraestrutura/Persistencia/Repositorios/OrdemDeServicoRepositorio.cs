@@ -54,10 +54,10 @@ public class OrdemDeServicoRepositorio : IOrdemDeServicoRepositorio
     public Task SalvarAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 
     public void MarcarItemServicoComoNovo(ItemServico item) =>
-        _db.Entry(item).State = EntityState.Added;
+        _db.Set<ItemServico>().Add(item);
 
     public void MarcarItemPecaComoNovo(ItemPeca item) =>
-        _db.Entry(item).State = EntityState.Added;
+        _db.Set<ItemPeca>().Add(item);
 
     public async Task EmTransacaoSerializadaAsync(Func<CancellationToken, Task> acao, CancellationToken ct)
     {

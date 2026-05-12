@@ -50,5 +50,7 @@ public class ClienteRepositorio : IClienteRepositorio
     public void Remover(Cliente cliente) => _db.Clientes.Remove(cliente);
 
     public void MarcarVeiculoComoNovo(Veiculo veiculo) =>
-        _db.Entry(veiculo).State = EntityState.Added;
+        // Set<Veiculo>().Add caminha a entity graph (inclui owned types como Placa);
+        // Entry(...).State = Added marca so o root e deixa owneds Detached -> NOT NULL constraint
+        _db.Set<Veiculo>().Add(veiculo);
 }
