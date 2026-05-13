@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Tech Challenge — Fase 1 — Documento de Entrega</title>
+<style>
+@page { size: A4; margin: 20mm 18mm; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 11pt;
+  line-height: 1.5;
+  color: #24292f;
+  max-width: 100%;
+}
+h1 { font-size: 22pt; margin-top: 0; border-bottom: 2px solid #d0d7de; padding-bottom: 8px; }
+h2 { font-size: 16pt; margin-top: 24px; border-bottom: 1px solid #d0d7de; padding-bottom: 4px; }
+h3 { font-size: 13pt; margin-top: 18px; }
+hr { border: none; border-top: 1px solid #d0d7de; margin: 20px 0; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 10pt; }
+th, td { border: 1px solid #d0d7de; padding: 6px 10px; text-align: left; vertical-align: top; }
+th { background: #f6f8fa; font-weight: 600; }
+code {
+  background: #f6f8fa;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: "Consolas", "Cascadia Code", monospace;
+  font-size: 9.5pt;
+}
+pre {
+  background: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: 4px;
+  padding: 12px;
+  overflow-x: auto;
+  font-family: "Consolas", "Cascadia Code", monospace;
+  font-size: 9pt;
+  line-height: 1.4;
+}
+pre code { background: none; padding: 0; }
+ul, ol { padding-left: 22px; }
+li { margin: 3px 0; }
+a { color: #0969da; text-decoration: none; word-break: break-all; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>Tech Challenge — Fase 1 — Documento de Entrega</h1>
+
+<p>
+<strong>Curso:</strong> Pós-Tech FIAP — Arquitetura de Software (15SOAT)<br>
+<strong>Tema:</strong> Sistema Integrado de Atendimento e Execução de Serviços para Oficina Mecânica<br>
+<strong>Data de entrega:</strong> 12/05/2026
+</p>
+
+<hr>
+
+<h2>Equipe</h2>
+
+<table>
+<thead><tr><th>Nome</th><th>Discord</th></tr></thead>
+<tbody>
+<tr><td>Thiago Fernandes da Cruz</td><td>@thiago_64271</td></tr>
+</tbody>
+</table>
+
+<hr>
+
+<h2>Links</h2>
+
+<table>
+<thead><tr><th>Item</th><th>Link</th></tr></thead>
+<tbody>
+<tr>
+  <td>Repositório (privado, acesso a <code>soat-architecture</code>)</td>
+  <td><a href="https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1">https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1</a></td>
+</tr>
+<tr>
+  <td>Vídeo de apresentação</td>
+  <td><a href="https://1drv.ms/v/c/fa2e7c7114d0ee1e/IQBnvt_g9AFhQKnVoKeJQzzuAUk0A4WCfI9GJiDfgnTHrPo?e=n6zU3K">https://1drv.ms/v/c/fa2e7c7114d0ee1e/IQBnvt_g9AFhQKnVoKeJQzzuAUk0A4WCfI9GJiDfgnTHrPo?e=n6zU3K</a></td>
+</tr>
+<tr>
+  <td>Documentos</td>
+  <td><a href="https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/tree/main/docs">https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/tree/main/docs</a></td>
+</tr>
+<tr>
+  <td>README</td>
+  <td><a href="https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/README.md">https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/README.md</a></td>
+</tr>
+</tbody>
+</table>
+
+<hr>
+
+<h2>Resumo da solução</h2>
+
+<p>
+MVP de back-end de oficina mecânica desenvolvido em <strong>C# / .NET 8 / ASP.NET Core</strong> sobre <strong>PostgreSQL 16</strong>, aplicando <strong>Domain-Driven Design</strong> (4 bounded contexts) e <strong>Clean Architecture</strong> (4 projetos com inversão de dependência).
+</p>
+
+<h3>Funcionalidades entregues</h3>
+
+<ul>
+<li>Gestão de clientes (PF/PJ) com veículos</li>
+<li>Catálogo de serviços com soft delete</li>
+<li>Controle de estoque com saldo (saldo nunca negativo, garantido por invariante + transação serializável)</li>
+<li>Ordem de Serviço com máquina de estados (Recebida → Em Diagnóstico → Aguardando Aprovação → Em Execução → Finalizada → Entregue, com Cancelada via rejeição do cliente)</li>
+<li>Snapshot de preço/nome nos itens da OS (preserva histórico)</li>
+<li>Aprovação/rejeição de orçamento pelo cliente via API pública (sem JWT)</li>
+<li>Baixa de estoque automática ao iniciar execução (transacional)</li>
+<li>Métricas administrativas (tempo médio de execução)</li>
+<li>Autenticação JWT com perfis Admin/Atendente, BCrypt, rate limiting</li>
+<li>Validação de CPF/CNPJ (dígitos verificadores), placa (formatos antigo + Mercosul)</li>
+</ul>
+
+<h3>Cobertura de testes</h3>
+
+<ul>
+<li><strong>Unitários do Domínio:</strong> ≥ 90% (invariantes dos agregados, máquina de estados, VOs)</li>
+<li><strong>Unitários da Aplicação:</strong> ≥ 80% (casos de uso com mocks)</li>
+<li><strong>Integração:</strong> WebApplicationFactory + Testcontainers (Postgres real)</li>
+<li><strong>Total:</strong> ≥ 80% (CI quebra se cair abaixo)</li>
+</ul>
+
+<hr>
+
+<h2>Análise de vulnerabilidades</h2>
+
+<p>
+Detalhamento completo em <a href="https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/docs/entrega/4%20-%20Relat%C3%B3rio%20com%20an%C3%A1lise%20de%20vulnerabilidades.md">docs/entrega/4 - Relatório com análise de vulnerabilidades.md</a>.
+</p>
+
+<hr>
+
+<h2>Como executar</h2>
+
+<pre><code>git clone https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1
+cd fiap_15SOAT_fase1
+cp .env.example .env  # ajustar ADMIN_BOOTSTRAP_PASSWORD
+docker compose -f docker/docker-compose.yml --env-file .env up -d --build
+# API:     http://localhost:8080
+# Swagger: http://localhost:8080/swagger
+</code></pre>
+
+<p>Login inicial: <code>admin</code> / valor do <code>ADMIN_BOOTSTRAP_PASSWORD</code> (forçará troca no primeiro login).</p>
+
+</body>
+</html>
