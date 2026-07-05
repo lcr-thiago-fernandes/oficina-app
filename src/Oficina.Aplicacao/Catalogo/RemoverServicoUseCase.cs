@@ -1,19 +1,19 @@
-using Oficina.Dominio.Catalogo;
+using Oficina.Aplicacao.Catalogo.Gateways;
 
 namespace Oficina.Aplicacao.Catalogo;
 
 public class RemoverServicoUseCase
 {
-    private readonly IServicoRepositorio _repo;
-    public RemoverServicoUseCase(IServicoRepositorio repo) => _repo = repo;
+    private readonly IServicoGateway _gateway;
+    public RemoverServicoUseCase(IServicoGateway gateway) => _gateway = gateway;
 
     public async Task<bool> ExecutarAsync(Guid id, CancellationToken ct)
     {
-        var s = await _repo.ObterPorIdAsync(id, ct);
-        if (s is null) return false;
+        var servico = await _gateway.ObterPorIdAsync(id, ct);
+        if (servico is null) return false;
 
-        s.Inativar();
-        await _repo.SalvarAsync(ct);
+        servico.Inativar();
+        await _gateway.SalvarAsync(ct);
         return true;
     }
 }

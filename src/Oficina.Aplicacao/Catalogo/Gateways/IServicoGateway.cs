@@ -1,6 +1,8 @@
-namespace Oficina.Dominio.Catalogo;
+using Oficina.Dominio.Catalogo;
 
-public interface IServicoRepositorio
+namespace Oficina.Aplicacao.Catalogo.Gateways;
+
+public interface IServicoGateway
 {
     Task<Servico?> ObterPorIdAsync(Guid id, CancellationToken ct);
     Task<IReadOnlyList<Servico>> ListarAsync(string? filtroNome, int pagina, int tamanhoPagina, bool incluirInativos, CancellationToken ct);

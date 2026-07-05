@@ -1,5 +1,5 @@
+using Oficina.Aplicacao.Catalogo.Gateways;
 using Oficina.Aplicacao.OrdensServico.Dtos;
-using Oficina.Dominio.Catalogo;
 using Oficina.Dominio.OrdensServico;
 
 namespace Oficina.Aplicacao.OrdensServico;
@@ -7,9 +7,9 @@ namespace Oficina.Aplicacao.OrdensServico;
 public class AdicionarItemServicoUseCase
 {
     private readonly IOrdemDeServicoRepositorio _ordens;
-    private readonly IServicoRepositorio _servicos;
+    private readonly IServicoGateway _servicos;
 
-    public AdicionarItemServicoUseCase(IOrdemDeServicoRepositorio ordens, IServicoRepositorio servicos)
+    public AdicionarItemServicoUseCase(IOrdemDeServicoRepositorio ordens, IServicoGateway servicos)
     {
         _ordens = ordens;
         _servicos = servicos;

@@ -1,4 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using Oficina.Adaptadores.Catalogo.Controllers;
+using Oficina.Adaptadores.Catalogo.Gateways;
+using Oficina.Aplicacao.Catalogo.Gateways;
 
 namespace Oficina.Adaptadores;
 
@@ -6,7 +9,9 @@ public static class DependencyInjectionAdaptadores
 {
     public static IServiceCollection AdicionarAdaptadores(this IServiceCollection services)
     {
-        // Registros de Controllers de aplicação e Gateways por contexto (preenchidos por contexto).
+        // Catálogo
+        services.AddScoped<IServicoGateway, ServicoGateway>();
+        services.AddScoped<ServicoController>();
         return services;
     }
 }

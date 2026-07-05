@@ -1,13 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using Oficina.Adaptadores.Catalogo.DataSources;
 using Oficina.Dominio.Catalogo;
 
-namespace Oficina.Infraestrutura.Persistencia.Repositorios;
+namespace Oficina.Infraestrutura.Persistencia.DataSources;
 
-public class ServicoRepositorio : IServicoRepositorio
+public class ServicoDataSource : IServicoDataSource
 {
     private readonly OficinaDbContext _db;
-
-    public ServicoRepositorio(OficinaDbContext db) => _db = db;
+    public ServicoDataSource(OficinaDbContext db) => _db = db;
 
     public Task<Servico?> ObterPorIdAsync(Guid id, CancellationToken ct) =>
         _db.Servicos.FirstOrDefaultAsync(s => s.Id == id, ct);

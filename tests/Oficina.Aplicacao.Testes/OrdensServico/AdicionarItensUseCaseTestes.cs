@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Moq;
+using Oficina.Aplicacao.Catalogo.Gateways;
 using Oficina.Aplicacao.OrdensServico;
 using Oficina.Aplicacao.OrdensServico.Dtos;
 using Oficina.Dominio.Catalogo;
@@ -19,7 +20,7 @@ public class AdicionarItensUseCaseTestes
 
         var ordens = new Mock<IOrdemDeServicoRepositorio>();
         ordens.Setup(r => r.ObterPorIdAsync(ordem.Id, It.IsAny<CancellationToken>())).ReturnsAsync(ordem);
-        var servicos = new Mock<IServicoRepositorio>();
+        var servicos = new Mock<IServicoGateway>();
         servicos.Setup(s => s.ObterPorIdAsync(serv.Id, It.IsAny<CancellationToken>())).ReturnsAsync(serv);
 
         var resp = await new AdicionarItemServicoUseCase(ordens.Object, servicos.Object)
@@ -60,7 +61,7 @@ public class AdicionarItensUseCaseTestes
 
         var ordens = new Mock<IOrdemDeServicoRepositorio>();
         ordens.Setup(r => r.ObterPorIdAsync(ordem.Id, It.IsAny<CancellationToken>())).ReturnsAsync(ordem);
-        var servicos = new Mock<IServicoRepositorio>();
+        var servicos = new Mock<IServicoGateway>();
         servicos.Setup(s => s.ObterPorIdAsync(serv.Id, It.IsAny<CancellationToken>())).ReturnsAsync(serv);
 
         var act = async () => await new AdicionarItemServicoUseCase(ordens.Object, servicos.Object)
