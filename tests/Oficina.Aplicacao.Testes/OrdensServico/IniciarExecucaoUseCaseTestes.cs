@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Moq;
+using Oficina.Aplicacao.Estoque.Gateways;
 using Oficina.Aplicacao.OrdensServico;
 using Oficina.Dominio.Estoque;
 using Oficina.Dominio.OrdensServico;
@@ -10,7 +11,7 @@ namespace Oficina.Aplicacao.Testes.OrdensServico;
 public class IniciarExecucaoUseCaseTestes
 {
     private readonly Mock<IOrdemDeServicoRepositorio> _ordens = new();
-    private readonly Mock<IPecaRepositorio> _pecas = new();
+    private readonly Mock<IPecaGateway> _pecas = new();
 
     private void TransacaoIdentidade()
     {

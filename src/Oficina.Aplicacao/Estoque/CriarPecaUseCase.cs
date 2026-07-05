@@ -1,24 +1,25 @@
 using Oficina.Aplicacao.Estoque.Dtos;
+using Oficina.Aplicacao.Estoque.Gateways;
 using Oficina.Dominio.Estoque;
 
 namespace Oficina.Aplicacao.Estoque;
 
 public class CriarPecaUseCase
 {
-    private readonly IPecaRepositorio _repo;
-    public CriarPecaUseCase(IPecaRepositorio repo) => _repo = repo;
+    private readonly IPecaGateway _gateway;
+    public CriarPecaUseCase(IPecaGateway gateway) => _gateway = gateway;
 
-    public async Task<PecaResponse> ExecutarAsync(CriarPecaRequest req, CancellationToken ct)
+    public async Task<Peca> ExecutarAsync(CriarPecaRequest req, CancellationToken ct)
     {
         var sku = Sku.Criar(req.Sku);
 
-        if (await _repo.ExisteSkuAsync(sku, ct))
+        if (await _gateway.ExisteSkuAsync(sku, ct))
             throw new SkuJaCadastradoException(sku.Valor);
 
         var peca = Peca.Criar(sku, req.Nome, req.PrecoUnitario);
-        await _repo.AdicionarAsync(peca, ct);
-        await _repo.SalvarAsync(ct);
+        await _gateway.AdicionarAsync(peca, ct);
+        await _gateway.SalvarAsync(ct);
 
-        return MapeadorEstoque.Mapear(peca);
+        return peca;
     }
 }

@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Moq;
 using Oficina.Aplicacao.Catalogo.Gateways;
+using Oficina.Aplicacao.Estoque.Gateways;
 using Oficina.Aplicacao.OrdensServico;
 using Oficina.Aplicacao.OrdensServico.Dtos;
 using Oficina.Dominio.Catalogo;
@@ -40,7 +41,7 @@ public class AdicionarItensUseCaseTestes
 
         var ordens = new Mock<IOrdemDeServicoRepositorio>();
         ordens.Setup(r => r.ObterPorIdAsync(ordem.Id, It.IsAny<CancellationToken>())).ReturnsAsync(ordem);
-        var pecas = new Mock<IPecaRepositorio>();
+        var pecas = new Mock<IPecaGateway>();
         pecas.Setup(p => p.ObterPorIdAsync(peca.Id, It.IsAny<CancellationToken>())).ReturnsAsync(peca);
 
         var resp = await new AdicionarItemPecaUseCase(ordens.Object, pecas.Object)

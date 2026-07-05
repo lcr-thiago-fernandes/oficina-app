@@ -1,15 +1,16 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Oficina.Adaptadores.Estoque.DataSources;
 using Oficina.Dominio.Estoque;
 
-namespace Oficina.Infraestrutura.Persistencia.Repositorios;
+namespace Oficina.Infraestrutura.Persistencia.DataSources;
 
-public class PecaRepositorio : IPecaRepositorio
+public class PecaDataSource : IPecaDataSource
 {
     private readonly OficinaDbContext _db;
 
-    public PecaRepositorio(OficinaDbContext db) => _db = db;
+    public PecaDataSource(OficinaDbContext db) => _db = db;
 
     public Task<Peca?> ObterPorIdAsync(Guid id, CancellationToken ct) =>
         _db.Pecas.Include(p => p.Movimentacoes).FirstOrDefaultAsync(p => p.Id == id, ct);

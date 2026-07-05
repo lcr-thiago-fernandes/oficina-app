@@ -3,8 +3,11 @@ using Oficina.Adaptadores.Catalogo.Controllers;
 using Oficina.Adaptadores.Catalogo.Gateways;
 using Oficina.Adaptadores.Clientes.Controllers;
 using Oficina.Adaptadores.Clientes.Gateways;
+using Oficina.Adaptadores.Estoque.Controllers;
+using Oficina.Adaptadores.Estoque.Gateways;
 using Oficina.Aplicacao.Catalogo.Gateways;
 using Oficina.Aplicacao.Clientes.Gateways;
+using Oficina.Aplicacao.Estoque.Gateways;
 
 namespace Oficina.Adaptadores;
 
@@ -19,6 +22,10 @@ public static class DependencyInjectionAdaptadores
         // Clientes
         services.AddScoped<IClienteGateway, ClienteGateway>();
         services.AddScoped<ClienteController>();
+
+        // Estoque
+        services.AddScoped<IPecaGateway, PecaGateway>();
+        services.AddScoped<PecaController>();
         return services;
     }
 }

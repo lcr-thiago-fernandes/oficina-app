@@ -1,14 +1,15 @@
 using Oficina.Aplicacao.Estoque.Dtos;
+using Oficina.Aplicacao.Estoque.Gateways;
 using Oficina.Dominio.Estoque;
 
 namespace Oficina.Aplicacao.Estoque;
 
 public class RegistrarMovimentacaoUseCase
 {
-    private readonly IPecaRepositorio _repo;
-    public RegistrarMovimentacaoUseCase(IPecaRepositorio repo) => _repo = repo;
+    private readonly IPecaGateway _gateway;
+    public RegistrarMovimentacaoUseCase(IPecaGateway gateway) => _gateway = gateway;
 
-    public async Task<MovimentacaoResponse?> ExecutarAsync(
+    public async Task<MovimentacaoEstoque?> ExecutarAsync(
         Guid pecaId,
         RegistrarMovimentacaoRequest req,
         CancellationToken ct)
@@ -21,22 +22,21 @@ public class RegistrarMovimentacaoUseCase
                 "Tipo de movimentação inválido. Use 'Entrada' ou 'Saida'.")
         };
 
-        MovimentacaoResponse? resp = null;
+        MovimentacaoEstoque? mov = null;
 
-        await _repo.EmTransacaoSerializadaAsync(async tx =>
+        await _gateway.EmTransacaoSerializadaAsync(async tx =>
         {
-            var peca = await _repo.ObterPorIdAsync(pecaId, tx);
+            var peca = await _gateway.ObterPorIdAsync(pecaId, tx);
             if (peca is null) return;
 
-            var mov = tipo == TipoMovimentacao.Entrada
+            mov = tipo == TipoMovimentacao.Entrada
                 ? peca.RegistrarEntrada(req.Quantidade, req.Motivo)
                 : peca.RegistrarSaida(req.Quantidade, req.Motivo, req.OrdemServicoId);
-            _repo.MarcarMovimentacaoComoNova(mov);
+            _gateway.MarcarMovimentacaoComoNova(mov);
 
-            await _repo.SalvarAsync(tx);
-            resp = MapeadorEstoque.MapearMov(mov);
+            await _gateway.SalvarAsync(tx);
         }, ct);
 
-        return resp;
+        return mov;
     }
 }

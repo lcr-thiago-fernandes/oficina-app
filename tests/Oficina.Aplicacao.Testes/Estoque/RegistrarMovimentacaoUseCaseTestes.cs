@@ -2,6 +2,7 @@ using FluentAssertions;
 using Moq;
 using Oficina.Aplicacao.Estoque;
 using Oficina.Aplicacao.Estoque.Dtos;
+using Oficina.Aplicacao.Estoque.Gateways;
 using Oficina.Dominio.Estoque;
 using Xunit;
 
@@ -9,11 +10,11 @@ namespace Oficina.Aplicacao.Testes.Estoque;
 
 public class RegistrarMovimentacaoUseCaseTestes
 {
-    private readonly Mock<IPecaRepositorio> _repo = new();
+    private readonly Mock<IPecaGateway> _gateway = new();
 
     private void ConfigurarTransacaoIdentidade()
     {
-        _repo.Setup(r => r.EmTransacaoSerializadaAsync(
+        _gateway.Setup(r => r.EmTransacaoSerializadaAsync(
                 It.IsAny<Func<CancellationToken, Task>>(),
                 It.IsAny<CancellationToken>()))
             .Returns<Func<CancellationToken, Task>, CancellationToken>((f, ct) => f(ct));
@@ -23,15 +24,15 @@ public class RegistrarMovimentacaoUseCaseTestes
     public async Task Executar_Entrada_DeveAumentarSaldoEPersistir()
     {
         var p = Peca.Criar(Sku.Criar("ABC-123"), "Filtro", 10m);
-        _repo.Setup(r => r.ObterPorIdAsync(p.Id, It.IsAny<CancellationToken>())).ReturnsAsync(p);
+        _gateway.Setup(r => r.ObterPorIdAsync(p.Id, It.IsAny<CancellationToken>())).ReturnsAsync(p);
         ConfigurarTransacaoIdentidade();
 
-        var resp = await new RegistrarMovimentacaoUseCase(_repo.Object).ExecutarAsync(
+        var resp = await new RegistrarMovimentacaoUseCase(_gateway.Object).ExecutarAsync(
             p.Id, new RegistrarMovimentacaoRequest("Entrada", 5, "Compra", null), default);
 
         resp.Should().NotBeNull();
         p.SaldoAtual.Should().Be(5);
-        _repo.Verify(r => r.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _gateway.Verify(r => r.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -39,10 +40,10 @@ public class RegistrarMovimentacaoUseCaseTestes
     {
         var p = Peca.Criar(Sku.Criar("ABC-123"), "Filtro", 10m);
         p.RegistrarEntrada(10, "compra inicial");
-        _repo.Setup(r => r.ObterPorIdAsync(p.Id, It.IsAny<CancellationToken>())).ReturnsAsync(p);
+        _gateway.Setup(r => r.ObterPorIdAsync(p.Id, It.IsAny<CancellationToken>())).ReturnsAsync(p);
         ConfigurarTransacaoIdentidade();
 
-        var resp = await new RegistrarMovimentacaoUseCase(_repo.Object).ExecutarAsync(
+        var resp = await new RegistrarMovimentacaoUseCase(_gateway.Object).ExecutarAsync(
             p.Id, new RegistrarMovimentacaoRequest("Saida", 3, "OS", Guid.NewGuid()), default);
 
         resp.Should().NotBeNull();
@@ -54,10 +55,10 @@ public class RegistrarMovimentacaoUseCaseTestes
     {
         var p = Peca.Criar(Sku.Criar("ABC-123"), "Filtro", 10m);
         p.RegistrarEntrada(2, "compra");
-        _repo.Setup(r => r.ObterPorIdAsync(p.Id, It.IsAny<CancellationToken>())).ReturnsAsync(p);
+        _gateway.Setup(r => r.ObterPorIdAsync(p.Id, It.IsAny<CancellationToken>())).ReturnsAsync(p);
         ConfigurarTransacaoIdentidade();
 
-        var act = async () => await new RegistrarMovimentacaoUseCase(_repo.Object).ExecutarAsync(
+        var act = async () => await new RegistrarMovimentacaoUseCase(_gateway.Object).ExecutarAsync(
             p.Id, new RegistrarMovimentacaoRequest("Saida", 5, "x", null), default);
 
         await act.Should().ThrowAsync<SaldoInsuficienteException>();
@@ -67,11 +68,11 @@ public class RegistrarMovimentacaoUseCaseTestes
     [Fact]
     public async Task Executar_PecaInexistente_DeveRetornarNull()
     {
-        _repo.Setup(r => r.ObterPorIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        _gateway.Setup(r => r.ObterPorIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Peca?)null);
         ConfigurarTransacaoIdentidade();
 
-        var resp = await new RegistrarMovimentacaoUseCase(_repo.Object).ExecutarAsync(
+        var resp = await new RegistrarMovimentacaoUseCase(_gateway.Object).ExecutarAsync(
             Guid.NewGuid(), new RegistrarMovimentacaoRequest("Entrada", 1, "x", null), default);
 
         resp.Should().BeNull();
@@ -81,7 +82,7 @@ public class RegistrarMovimentacaoUseCaseTestes
     public async Task Executar_TipoInvalido_DeveLancar()
     {
         ConfigurarTransacaoIdentidade();
-        var act = async () => await new RegistrarMovimentacaoUseCase(_repo.Object).ExecutarAsync(
+        var act = async () => await new RegistrarMovimentacaoUseCase(_gateway.Object).ExecutarAsync(
             Guid.NewGuid(), new RegistrarMovimentacaoRequest("Bagulho", 1, "x", null), default);
 
         await act.Should().ThrowAsync<MovimentacaoInvalidaException>();

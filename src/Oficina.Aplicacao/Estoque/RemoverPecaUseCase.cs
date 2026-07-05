@@ -1,19 +1,19 @@
-using Oficina.Dominio.Estoque;
+using Oficina.Aplicacao.Estoque.Gateways;
 
 namespace Oficina.Aplicacao.Estoque;
 
 public class RemoverPecaUseCase
 {
-    private readonly IPecaRepositorio _repo;
-    public RemoverPecaUseCase(IPecaRepositorio repo) => _repo = repo;
+    private readonly IPecaGateway _gateway;
+    public RemoverPecaUseCase(IPecaGateway gateway) => _gateway = gateway;
 
     public async Task<bool> ExecutarAsync(Guid id, CancellationToken ct)
     {
-        var p = await _repo.ObterPorIdAsync(id, ct);
+        var p = await _gateway.ObterPorIdAsync(id, ct);
         if (p is null) return false;
 
-        p.Inativar();
-        await _repo.SalvarAsync(ct);
+        p.Inativar(); // soft delete
+        await _gateway.SalvarAsync(ct);
         return true;
     }
 }

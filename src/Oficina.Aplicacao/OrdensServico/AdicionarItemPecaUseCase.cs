@@ -1,5 +1,5 @@
+using Oficina.Aplicacao.Estoque.Gateways;
 using Oficina.Aplicacao.OrdensServico.Dtos;
-using Oficina.Dominio.Estoque;
 using Oficina.Dominio.OrdensServico;
 
 namespace Oficina.Aplicacao.OrdensServico;
@@ -7,9 +7,9 @@ namespace Oficina.Aplicacao.OrdensServico;
 public class AdicionarItemPecaUseCase
 {
     private readonly IOrdemDeServicoRepositorio _ordens;
-    private readonly IPecaRepositorio _pecas;
+    private readonly IPecaGateway _pecas;
 
-    public AdicionarItemPecaUseCase(IOrdemDeServicoRepositorio ordens, IPecaRepositorio pecas)
+    public AdicionarItemPecaUseCase(IOrdemDeServicoRepositorio ordens, IPecaGateway pecas)
     {
         _ordens = ordens;
         _pecas = pecas;

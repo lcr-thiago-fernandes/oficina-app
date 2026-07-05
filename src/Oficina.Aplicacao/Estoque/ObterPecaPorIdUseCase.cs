@@ -1,16 +1,12 @@
-using Oficina.Aplicacao.Estoque.Dtos;
+using Oficina.Aplicacao.Estoque.Gateways;
 using Oficina.Dominio.Estoque;
 
 namespace Oficina.Aplicacao.Estoque;
 
 public class ObterPecaPorIdUseCase
 {
-    private readonly IPecaRepositorio _repo;
-    public ObterPecaPorIdUseCase(IPecaRepositorio repo) => _repo = repo;
+    private readonly IPecaGateway _gateway;
+    public ObterPecaPorIdUseCase(IPecaGateway gateway) => _gateway = gateway;
 
-    public async Task<PecaResponse?> ExecutarAsync(Guid id, CancellationToken ct)
-    {
-        var p = await _repo.ObterPorIdAsync(id, ct);
-        return p is null ? null : MapeadorEstoque.Mapear(p);
-    }
+    public Task<Peca?> ExecutarAsync(Guid id, CancellationToken ct) => _gateway.ObterPorIdAsync(id, ct);
 }
