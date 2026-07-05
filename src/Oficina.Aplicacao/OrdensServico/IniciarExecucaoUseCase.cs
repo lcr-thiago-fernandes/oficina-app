@@ -43,7 +43,6 @@ public class IniciarExecucaoUseCase
 
             // 3) persiste tudo na mesma transação
             await _ordens.SalvarAsync(tx);
-            ordem.LimparEventos();
 
             resposta = MapeadorOrdem.Mapear(ordem);
         }, ct);

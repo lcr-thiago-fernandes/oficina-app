@@ -163,7 +163,7 @@ public class OrdemDeServicoTestes
     }
 
     [Fact]
-    public void IniciarExecucao_AposAprovacao_DeveAvancarEDispararEvento()
+    public void IniciarExecucao_AposAprovacao_DeveAvancar()
     {
         var os = ComItens();
         os.IniciarDiagnostico();
@@ -174,7 +174,6 @@ public class OrdemDeServicoTestes
 
         os.Status.Should().Be(StatusOrdemDeServico.EmExecucao);
         os.IniciadaEm.Should().NotBeNull();
-        os.EventosNaoPublicados.Should().Contain(e => e is ExecucaoIniciadaEvent);
     }
 
     [Fact]

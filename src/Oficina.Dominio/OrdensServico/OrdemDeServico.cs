@@ -4,7 +4,6 @@ public sealed class OrdemDeServico
 {
     private readonly List<ItemServico> _itensServico = new();
     private readonly List<ItemPeca> _itensPeca = new();
-    private readonly List<EventoOs> _eventos = new();
 
     public Guid Id { get; private set; }
     public long Numero { get; private set; }            // BIGSERIAL — preenchido pelo banco
@@ -24,7 +23,6 @@ public sealed class OrdemDeServico
 
     public IReadOnlyCollection<ItemServico> ItensServico => _itensServico.AsReadOnly();
     public IReadOnlyCollection<ItemPeca> ItensPeca => _itensPeca.AsReadOnly();
-    public IReadOnlyList<EventoOs> EventosNaoPublicados => _eventos.AsReadOnly();
 
     public decimal TotalServicos => _itensServico.Sum(i => i.Subtotal);
     public decimal TotalPecas => _itensPeca.Sum(i => i.Subtotal);
@@ -52,7 +50,6 @@ public sealed class OrdemDeServico
             CriadaEm = DateTimeOffset.UtcNow,
             Observacoes = observacoes?.Trim()
         };
-        os._eventos.Add(new OrdemDeServicoCriadaEvent(os.Id, os.CriadaEm));
         return os;
     }
 
@@ -130,11 +127,6 @@ public sealed class OrdemDeServico
 
         Status = StatusOrdemDeServico.EmExecucao;
         IniciadaEm = DateTimeOffset.UtcNow;
-
-        var pecas = _itensPeca
-            .Select(i => (i.PecaId, i.Quantidade))
-            .ToList();
-        _eventos.Add(new ExecucaoIniciadaEvent(Id, pecas, IniciadaEm.Value));
     }
 
     public void Finalizar()
@@ -143,7 +135,6 @@ public sealed class OrdemDeServico
             throw new TransicaoDeStatusInvalidaException(Status, "finalizar");
         Status = StatusOrdemDeServico.Finalizada;
         FinalizadaEm = DateTimeOffset.UtcNow;
-        _eventos.Add(new OrdemFinalizadaEvent(Id, FinalizadaEm.Value));
     }
 
     public void Entregar()
@@ -152,10 +143,7 @@ public sealed class OrdemDeServico
             throw new TransicaoDeStatusInvalidaException(Status, "entregar");
         Status = StatusOrdemDeServico.Entregue;
         EntregueEm = DateTimeOffset.UtcNow;
-        _eventos.Add(new OrdemEntregueEvent(Id, EntregueEm.Value));
     }
-
-    public void LimparEventos() => _eventos.Clear();
 
     private void GarantirEditavel()
     {

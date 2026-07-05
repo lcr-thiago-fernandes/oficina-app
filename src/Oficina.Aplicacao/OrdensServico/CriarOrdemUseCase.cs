@@ -35,7 +35,6 @@ public class CriarOrdemUseCase
         var os = OrdemDeServico.Criar(cliente.Id, veiculo.Id, req.Observacoes);
         await _repo.AdicionarAsync(os, ct);
         await _repo.SalvarAsync(ct);
-        os.LimparEventos();
 
         // Recarrega para popular Numero (BIGSERIAL preenchido pelo banco)
         var carregada = await _repo.ObterPorIdAsync(os.Id, ct)

@@ -34,9 +34,3 @@ public class OrdemImutavelException : Exception
     public OrdemImutavelException()
         : base("Itens só podem ser modificados antes do início da execução.") { }
 }
-
-public abstract record EventoOs(DateTimeOffset Ocorreu);
-public sealed record OrdemDeServicoCriadaEvent(Guid OrdemId, DateTimeOffset Ocorreu) : EventoOs(Ocorreu);
-public sealed record ExecucaoIniciadaEvent(Guid OrdemId, IReadOnlyList<(Guid PecaId, int Quantidade)> Pecas, DateTimeOffset Ocorreu) : EventoOs(Ocorreu);
-public sealed record OrdemFinalizadaEvent(Guid OrdemId, DateTimeOffset Ocorreu) : EventoOs(Ocorreu);
-public sealed record OrdemEntregueEvent(Guid OrdemId, DateTimeOffset Ocorreu) : EventoOs(Ocorreu);

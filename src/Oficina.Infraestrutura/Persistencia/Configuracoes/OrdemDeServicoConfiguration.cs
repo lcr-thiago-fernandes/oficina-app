@@ -42,7 +42,6 @@ public class OrdemDeServicoConfiguration : IEntityTypeConfiguration<OrdemDeServi
         b.Ignore(x => x.TotalPecas);
         b.Ignore(x => x.TotalGeral);
         b.Ignore(x => x.DuracaoExecucao);
-        b.Ignore(x => x.EventosNaoPublicados);
 
         b.HasMany(x => x.ItensServico)
             .WithOne()
