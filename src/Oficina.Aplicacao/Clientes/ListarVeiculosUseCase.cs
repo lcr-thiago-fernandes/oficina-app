@@ -1,17 +1,17 @@
-using Oficina.Aplicacao.Clientes.Dtos;
+using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Dominio.Clientes;
 
 namespace Oficina.Aplicacao.Clientes;
 
 public class ListarVeiculosUseCase
 {
-    private readonly IClienteRepositorio _repo;
-    public ListarVeiculosUseCase(IClienteRepositorio repo) => _repo = repo;
+    private readonly IClienteGateway _gateway;
+    public ListarVeiculosUseCase(IClienteGateway gateway) => _gateway = gateway;
 
-    public async Task<IReadOnlyList<VeiculoResponse>?> ExecutarAsync(Guid clienteId, CancellationToken ct)
+    public async Task<IReadOnlyList<Veiculo>?> ExecutarAsync(Guid clienteId, CancellationToken ct)
     {
-        var cliente = await _repo.ObterPorIdAsync(clienteId, ct);
+        var cliente = await _gateway.ObterPorIdAsync(clienteId, ct);
         if (cliente is null) return null;
-        return cliente.Veiculos.Select(MapeadorClienteResponse.MapearVeiculo).ToList();
+        return cliente.Veiculos.ToList();
     }
 }

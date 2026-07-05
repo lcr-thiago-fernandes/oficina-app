@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Oficina.Aplicacao.Clientes;
+using Oficina.Adaptadores.Clientes.Controllers;
 using Oficina.Aplicacao.Clientes.Dtos;
 using Oficina.Api.Configuracao;
 
@@ -14,27 +14,26 @@ public class ClientesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Criar(
         [FromBody] CriarClienteRequest req,
-        [FromServices] CriarClienteUseCase uc,
+        [FromServices] ClienteController controller,
         CancellationToken ct)
     {
-        var resp = await uc.ExecutarAsync(req, ct);
+        var resp = await controller.CriarAsync(req, ct);
         return CreatedAtAction(nameof(Obter), new { id = resp.Id }, resp);
     }
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> Obter(
         Guid id,
-        [FromServices] ObterClientePorIdUseCase uc,
+        [FromServices] ClienteController controller,
         CancellationToken ct)
     {
-        var resp = await uc.ExecutarAsync(id, ct);
+        var resp = await controller.ObterPorIdAsync(id, ct);
         return resp is null ? NotFound() : Ok(resp);
     }
 
     [HttpGet]
     public async Task<IActionResult> Buscar(
-        [FromServices] BuscarClientePorDocumentoUseCase buscar,
-        [FromServices] ListarClientesUseCase listar,
+        [FromServices] ClienteController controller,
         [FromQuery] string? documento = null,
         [FromQuery] int pagina = 1,
         [FromQuery] int tamanhoPagina = 20,
@@ -42,10 +41,10 @@ public class ClientesController : ControllerBase
     {
         if (!string.IsNullOrWhiteSpace(documento))
         {
-            var c = await buscar.ExecutarAsync(documento, ct);
+            var c = await controller.BuscarPorDocumentoAsync(documento, ct);
             return c is null ? NotFound() : Ok(c);
         }
-        var resultado = await listar.ExecutarAsync(pagina, tamanhoPagina, ct);
+        var resultado = await controller.ListarAsync(pagina, tamanhoPagina, ct);
         return Ok(resultado);
     }
 
@@ -53,20 +52,20 @@ public class ClientesController : ControllerBase
     public async Task<IActionResult> Atualizar(
         Guid id,
         [FromBody] AtualizarClienteRequest req,
-        [FromServices] AtualizarClienteUseCase uc,
+        [FromServices] ClienteController controller,
         CancellationToken ct)
     {
-        var resp = await uc.ExecutarAsync(id, req, ct);
+        var resp = await controller.AtualizarAsync(id, req, ct);
         return resp is null ? NotFound() : Ok(resp);
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Remover(
         Guid id,
-        [FromServices] RemoverClienteUseCase uc,
+        [FromServices] ClienteController controller,
         CancellationToken ct)
     {
-        var ok = await uc.ExecutarAsync(id, ct);
+        var ok = await controller.RemoverAsync(id, ct);
         return ok ? NoContent() : NotFound();
     }
 
@@ -75,10 +74,10 @@ public class ClientesController : ControllerBase
     [HttpGet("{id:guid}/veiculos")]
     public async Task<IActionResult> ListarVeiculos(
         Guid id,
-        [FromServices] ListarVeiculosUseCase uc,
+        [FromServices] ClienteController controller,
         CancellationToken ct)
     {
-        var lista = await uc.ExecutarAsync(id, ct);
+        var lista = await controller.ListarVeiculosAsync(id, ct);
         return lista is null ? NotFound() : Ok(lista);
     }
 
@@ -86,10 +85,10 @@ public class ClientesController : ControllerBase
     public async Task<IActionResult> AdicionarVeiculo(
         Guid id,
         [FromBody] AdicionarVeiculoRequest req,
-        [FromServices] AdicionarVeiculoUseCase uc,
+        [FromServices] ClienteController controller,
         CancellationToken ct)
     {
-        var resp = await uc.ExecutarAsync(id, req, ct);
+        var resp = await controller.AdicionarVeiculoAsync(id, req, ct);
         return resp is null
             ? NotFound()
             : CreatedAtAction(nameof(ListarVeiculos), new { id }, resp);
@@ -100,10 +99,10 @@ public class ClientesController : ControllerBase
         Guid id,
         string placa,
         [FromBody] AtualizarVeiculoRequest req,
-        [FromServices] AtualizarVeiculoUseCase uc,
+        [FromServices] ClienteController controller,
         CancellationToken ct)
     {
-        var resp = await uc.ExecutarAsync(id, placa, req, ct);
+        var resp = await controller.AtualizarVeiculoAsync(id, placa, req, ct);
         return resp is null ? NotFound() : Ok(resp);
     }
 
@@ -111,10 +110,10 @@ public class ClientesController : ControllerBase
     public async Task<IActionResult> RemoverVeiculo(
         Guid id,
         string placa,
-        [FromServices] RemoverVeiculoUseCase uc,
+        [FromServices] ClienteController controller,
         CancellationToken ct)
     {
-        var ok = await uc.ExecutarAsync(id, placa, ct);
+        var ok = await controller.RemoverVeiculoAsync(id, placa, ct);
         return ok ? NoContent() : NotFound();
     }
 }

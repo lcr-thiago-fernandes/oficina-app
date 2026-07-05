@@ -1,13 +1,14 @@
 using Microsoft.EntityFrameworkCore;
+using Oficina.Adaptadores.Clientes.DataSources;
 using Oficina.Dominio.Clientes;
 
-namespace Oficina.Infraestrutura.Persistencia.Repositorios;
+namespace Oficina.Infraestrutura.Persistencia.DataSources;
 
-public class ClienteRepositorio : IClienteRepositorio
+public class ClienteDataSource : IClienteDataSource
 {
     private readonly OficinaDbContext _db;
 
-    public ClienteRepositorio(OficinaDbContext db) => _db = db;
+    public ClienteDataSource(OficinaDbContext db) => _db = db;
 
     public Task<Cliente?> ObterPorIdAsync(Guid id, CancellationToken ct) =>
         _db.Clientes.Include(c => c.Veiculos).FirstOrDefaultAsync(c => c.Id == id, ct);

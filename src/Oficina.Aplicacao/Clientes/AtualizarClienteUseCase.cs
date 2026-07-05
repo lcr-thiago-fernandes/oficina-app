@@ -1,16 +1,17 @@
 using Oficina.Aplicacao.Clientes.Dtos;
+using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Dominio.Clientes;
 
 namespace Oficina.Aplicacao.Clientes;
 
 public class AtualizarClienteUseCase
 {
-    private readonly IClienteRepositorio _repo;
-    public AtualizarClienteUseCase(IClienteRepositorio repo) => _repo = repo;
+    private readonly IClienteGateway _gateway;
+    public AtualizarClienteUseCase(IClienteGateway gateway) => _gateway = gateway;
 
-    public async Task<ClienteResponse?> ExecutarAsync(Guid id, AtualizarClienteRequest req, CancellationToken ct)
+    public async Task<Cliente?> ExecutarAsync(Guid id, AtualizarClienteRequest req, CancellationToken ct)
     {
-        var cliente = await _repo.ObterPorIdAsync(id, ct);
+        var cliente = await _gateway.ObterPorIdAsync(id, ct);
         if (cliente is null) return null;
 
         cliente.AtualizarContato(
@@ -18,7 +19,7 @@ public class AtualizarClienteUseCase
             Email.Criar(req.Email),
             Telefone.Criar(req.Telefone));
 
-        await _repo.SalvarAsync(ct);
-        return MapeadorClienteResponse.Mapear(cliente);
+        await _gateway.SalvarAsync(ct);
+        return cliente;
     }
 }

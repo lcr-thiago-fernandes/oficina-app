@@ -1,3 +1,4 @@
+using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Aplicacao.Consulta.Dtos;
 using Oficina.Dominio.Clientes;
 using Oficina.Dominio.OrdensServico;
@@ -7,10 +8,10 @@ namespace Oficina.Aplicacao.Consulta;
 public class RejeitarOrcamentoPorClienteUseCase
 {
     private readonly IOrdemDeServicoRepositorio _ordens;
-    private readonly IClienteRepositorio _clientes;
+    private readonly IClienteGateway _clientes;
 
     public RejeitarOrcamentoPorClienteUseCase(
-        IOrdemDeServicoRepositorio ordens, IClienteRepositorio clientes)
+        IOrdemDeServicoRepositorio ordens, IClienteGateway clientes)
     {
         _ordens = ordens;
         _clientes = clientes;

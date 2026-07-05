@@ -1,19 +1,20 @@
 using Oficina.Aplicacao.Clientes.Dtos;
+using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Dominio.Clientes;
 
 namespace Oficina.Aplicacao.Clientes;
 
 public class CriarClienteUseCase
 {
-    private readonly IClienteRepositorio _repo;
+    private readonly IClienteGateway _gateway;
 
-    public CriarClienteUseCase(IClienteRepositorio repo) => _repo = repo;
+    public CriarClienteUseCase(IClienteGateway gateway) => _gateway = gateway;
 
-    public async Task<ClienteResponse> ExecutarAsync(CriarClienteRequest req, CancellationToken ct)
+    public async Task<Cliente> ExecutarAsync(CriarClienteRequest req, CancellationToken ct)
     {
         var documento = Documento.Criar(req.Documento);
 
-        if (await _repo.ExisteDocumentoAsync(documento, ct))
+        if (await _gateway.ExisteDocumentoAsync(documento, ct))
             throw new DocumentoJaCadastradoException(documento.Valor);
 
         var cliente = Cliente.Criar(
@@ -22,9 +23,9 @@ public class CriarClienteUseCase
             Email.Criar(req.Email),
             Telefone.Criar(req.Telefone));
 
-        await _repo.AdicionarAsync(cliente, ct);
-        await _repo.SalvarAsync(ct);
+        await _gateway.AdicionarAsync(cliente, ct);
+        await _gateway.SalvarAsync(ct);
 
-        return MapeadorClienteResponse.Mapear(cliente);
+        return cliente;
     }
 }

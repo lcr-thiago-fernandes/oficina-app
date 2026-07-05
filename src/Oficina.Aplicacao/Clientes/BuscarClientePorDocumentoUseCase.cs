@@ -1,17 +1,16 @@
-using Oficina.Aplicacao.Clientes.Dtos;
+using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Dominio.Clientes;
 
 namespace Oficina.Aplicacao.Clientes;
 
 public class BuscarClientePorDocumentoUseCase
 {
-    private readonly IClienteRepositorio _repo;
-    public BuscarClientePorDocumentoUseCase(IClienteRepositorio repo) => _repo = repo;
+    private readonly IClienteGateway _gateway;
+    public BuscarClientePorDocumentoUseCase(IClienteGateway gateway) => _gateway = gateway;
 
-    public async Task<ClienteResponse?> ExecutarAsync(string documentoBruto, CancellationToken ct)
+    public async Task<Cliente?> ExecutarAsync(string documentoBruto, CancellationToken ct)
     {
         var doc = Documento.Criar(documentoBruto);
-        var cliente = await _repo.ObterPorDocumentoAsync(doc, ct);
-        return cliente is null ? null : MapeadorClienteResponse.Mapear(cliente);
+        return await _gateway.ObterPorDocumentoAsync(doc, ct);
     }
 }

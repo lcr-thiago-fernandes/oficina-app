@@ -1,3 +1,4 @@
+using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Aplicacao.OrdensServico.Dtos;
 using Oficina.Dominio.Clientes;
 using Oficina.Dominio.OrdensServico;
@@ -12,9 +13,9 @@ public class OrdemInvalidaException : Exception
 public class CriarOrdemUseCase
 {
     private readonly IOrdemDeServicoRepositorio _repo;
-    private readonly IClienteRepositorio _clientes;
+    private readonly IClienteGateway _clientes;
 
-    public CriarOrdemUseCase(IOrdemDeServicoRepositorio repo, IClienteRepositorio clientes)
+    public CriarOrdemUseCase(IOrdemDeServicoRepositorio repo, IClienteGateway clientes)
     {
         _repo = repo;
         _clientes = clientes;

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Moq;
+using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Aplicacao.OrdensServico;
 using Oficina.Aplicacao.OrdensServico.Dtos;
 using Oficina.Dominio.Clientes;
@@ -11,7 +12,7 @@ namespace Oficina.Aplicacao.Testes.OrdensServico;
 public class CriarOrdemUseCaseTestes
 {
     private readonly Mock<IOrdemDeServicoRepositorio> _repo = new();
-    private readonly Mock<IClienteRepositorio> _clientes = new();
+    private readonly Mock<IClienteGateway> _clientes = new();
 
     [Fact]
     public async Task Executar_ComClienteEVeiculoValidos_DeveCriar()

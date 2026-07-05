@@ -1,23 +1,23 @@
 using Oficina.Aplicacao.Clientes.Dtos;
+using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Dominio.Clientes;
 
 namespace Oficina.Aplicacao.Clientes;
 
 public class AtualizarVeiculoUseCase
 {
-    private readonly IClienteRepositorio _repo;
-    public AtualizarVeiculoUseCase(IClienteRepositorio repo) => _repo = repo;
+    private readonly IClienteGateway _gateway;
+    public AtualizarVeiculoUseCase(IClienteGateway gateway) => _gateway = gateway;
 
-    public async Task<VeiculoResponse?> ExecutarAsync(Guid clienteId, string placaBruta, AtualizarVeiculoRequest req, CancellationToken ct)
+    public async Task<Veiculo?> ExecutarAsync(Guid clienteId, string placaBruta, AtualizarVeiculoRequest req, CancellationToken ct)
     {
-        var cliente = await _repo.ObterPorIdAsync(clienteId, ct);
+        var cliente = await _gateway.ObterPorIdAsync(clienteId, ct);
         if (cliente is null) return null;
 
         var placa = Placa.Criar(placaBruta);
         cliente.AtualizarVeiculo(placa, req.Marca, req.Modelo, req.Ano);
 
-        await _repo.SalvarAsync(ct);
-        var v = cliente.Veiculos.First(x => x.Placa.Equals(placa));
-        return MapeadorClienteResponse.MapearVeiculo(v);
+        await _gateway.SalvarAsync(ct);
+        return cliente.Veiculos.First(x => x.Placa.Equals(placa));
     }
 }

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Moq;
+using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Aplicacao.Consulta;
 using Oficina.Aplicacao.Consulta.Dtos;
 using Oficina.Dominio.Clientes;
@@ -11,7 +12,7 @@ namespace Oficina.Aplicacao.Testes.Consulta;
 public class AprovarOrcamentoPorClienteUseCaseTestes
 {
     private readonly Mock<IOrdemDeServicoRepositorio> _ordens = new();
-    private readonly Mock<IClienteRepositorio> _clientes = new();
+    private readonly Mock<IClienteGateway> _clientes = new();
 
     private (Cliente cliente, OrdemDeServico os) Cenario()
     {

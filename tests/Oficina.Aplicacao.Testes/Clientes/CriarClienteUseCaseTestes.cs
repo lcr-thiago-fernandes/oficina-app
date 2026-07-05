@@ -2,6 +2,7 @@ using FluentAssertions;
 using Moq;
 using Oficina.Aplicacao.Clientes;
 using Oficina.Aplicacao.Clientes.Dtos;
+using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Dominio.Clientes;
 using Xunit;
 
@@ -9,30 +10,30 @@ namespace Oficina.Aplicacao.Testes.Clientes;
 
 public class CriarClienteUseCaseTestes
 {
-    private readonly Mock<IClienteRepositorio> _repo = new();
+    private readonly Mock<IClienteGateway> _gateway = new();
 
-    private CriarClienteUseCase Construir() => new(_repo.Object);
+    private CriarClienteUseCase Construir() => new(_gateway.Object);
 
     [Fact]
-    public async Task Executar_ComDadosValidos_DeveCriarERetornarResponse()
+    public async Task Executar_ComDadosValidos_DeveCriarERetornarEntidade()
     {
-        _repo.Setup(r => r.ExisteDocumentoAsync(It.IsAny<Documento>(), It.IsAny<CancellationToken>()))
+        _gateway.Setup(r => r.ExisteDocumentoAsync(It.IsAny<Documento>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         var req = new CriarClienteRequest("João", "39053344705", "joao@x.com", "11987654321");
-        var resp = await Construir().ExecutarAsync(req, default);
+        var cliente = await Construir().ExecutarAsync(req, default);
 
-        resp.Nome.Should().Be("João");
-        resp.Documento.Should().Be("39053344705");
-        resp.TipoPessoa.Should().Be("PF");
-        _repo.Verify(r => r.AdicionarAsync(It.IsAny<Cliente>(), It.IsAny<CancellationToken>()), Times.Once);
-        _repo.Verify(r => r.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
+        cliente.Nome.Should().Be("João");
+        cliente.Documento.Valor.Should().Be("39053344705");
+        cliente.Documento.Tipo.Should().Be(TipoPessoa.PF);
+        _gateway.Verify(r => r.AdicionarAsync(It.IsAny<Cliente>(), It.IsAny<CancellationToken>()), Times.Once);
+        _gateway.Verify(r => r.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task Executar_ComDocumentoJaExistente_DeveLancar()
     {
-        _repo.Setup(r => r.ExisteDocumentoAsync(It.IsAny<Documento>(), It.IsAny<CancellationToken>()))
+        _gateway.Setup(r => r.ExisteDocumentoAsync(It.IsAny<Documento>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         var req = new CriarClienteRequest("João", "39053344705", "joao@x.com", "11987654321");
