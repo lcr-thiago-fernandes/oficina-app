@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Oficina.Aplicacao.OrdensServico;
+using Oficina.Adaptadores.OrdensServico.Controllers;
 using Oficina.Aplicacao.OrdensServico.Dtos;
 using Oficina.Api.Configuracao;
 
@@ -14,32 +14,32 @@ public class OrdensServicoController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Criar(
         [FromBody] CriarOrdemRequest req,
-        [FromServices] CriarOrdemUseCase uc,
+        [FromServices] OrdemDeServicoController controller,
         CancellationToken ct)
     {
-        var resp = await uc.ExecutarAsync(req, ct);
+        var resp = await controller.CriarAsync(req, ct);
         return CreatedAtAction(nameof(Obter), new { id = resp.Id }, resp);
     }
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> Obter(
         Guid id,
-        [FromServices] ObterOrdemPorIdUseCase uc,
+        [FromServices] OrdemDeServicoController controller,
         CancellationToken ct)
     {
-        var resp = await uc.ExecutarAsync(id, ct);
+        var resp = await controller.ObterPorIdAsync(id, ct);
         return resp is null ? NotFound() : Ok(resp);
     }
 
     [HttpGet]
     public async Task<IActionResult> Listar(
-        [FromQuery] string? status,
+        [FromServices] OrdemDeServicoController controller,
+        [FromQuery] string? status = null,
         [FromQuery] int pagina = 1,
         [FromQuery] int tamanhoPagina = 20,
-        [FromServices] ListarOrdensUseCase? uc = null,
         CancellationToken ct = default)
     {
-        var resp = await uc!.ExecutarAsync(status, pagina, tamanhoPagina, ct);
+        var resp = await controller.ListarAsync(status, pagina, tamanhoPagina, ct);
         return Ok(resp);
     }
 
@@ -49,20 +49,20 @@ public class OrdensServicoController : ControllerBase
     public async Task<IActionResult> AdicionarServico(
         Guid id,
         [FromBody] AdicionarItemServicoRequest req,
-        [FromServices] AdicionarItemServicoUseCase uc,
+        [FromServices] OrdemDeServicoController controller,
         CancellationToken ct)
     {
-        var resp = await uc.ExecutarAsync(id, req, ct);
+        var resp = await controller.AdicionarItemServicoAsync(id, req, ct);
         return resp is null ? NotFound() : Created(string.Empty, resp);
     }
 
     [HttpDelete("{id:guid}/servicos/{itemId:guid}")]
     public async Task<IActionResult> RemoverServico(
         Guid id, Guid itemId,
-        [FromServices] RemoverItemServicoUseCase uc,
+        [FromServices] OrdemDeServicoController controller,
         CancellationToken ct)
     {
-        var ok = await uc.ExecutarAsync(id, itemId, ct);
+        var ok = await controller.RemoverItemServicoAsync(id, itemId, ct);
         return ok ? NoContent() : NotFound();
     }
 
@@ -70,20 +70,20 @@ public class OrdensServicoController : ControllerBase
     public async Task<IActionResult> AdicionarPeca(
         Guid id,
         [FromBody] AdicionarItemPecaRequest req,
-        [FromServices] AdicionarItemPecaUseCase uc,
+        [FromServices] OrdemDeServicoController controller,
         CancellationToken ct)
     {
-        var resp = await uc.ExecutarAsync(id, req, ct);
+        var resp = await controller.AdicionarItemPecaAsync(id, req, ct);
         return resp is null ? NotFound() : Created(string.Empty, resp);
     }
 
     [HttpDelete("{id:guid}/pecas/{itemId:guid}")]
     public async Task<IActionResult> RemoverPeca(
         Guid id, Guid itemId,
-        [FromServices] RemoverItemPecaUseCase uc,
+        [FromServices] OrdemDeServicoController controller,
         CancellationToken ct)
     {
-        var ok = await uc.ExecutarAsync(id, itemId, ct);
+        var ok = await controller.RemoverItemPecaAsync(id, itemId, ct);
         return ok ? NoContent() : NotFound();
     }
 
@@ -92,50 +92,50 @@ public class OrdensServicoController : ControllerBase
     [HttpPatch("{id:guid}/diagnostico")]
     public async Task<IActionResult> IniciarDiagnostico(
         Guid id,
-        [FromServices] IniciarDiagnosticoUseCase uc,
+        [FromServices] OrdemDeServicoController controller,
         CancellationToken ct)
     {
-        var resp = await uc.ExecutarAsync(id, ct);
+        var resp = await controller.IniciarDiagnosticoAsync(id, ct);
         return resp is null ? NotFound() : Ok(resp);
     }
 
     [HttpPost("{id:guid}/orcamento/enviar")]
     public async Task<IActionResult> EnviarParaAprovacao(
         Guid id,
-        [FromServices] EnviarOrcamentoParaAprovacaoUseCase uc,
+        [FromServices] OrdemDeServicoController controller,
         CancellationToken ct)
     {
-        var resp = await uc.ExecutarAsync(id, ct);
+        var resp = await controller.EnviarOrcamentoParaAprovacaoAsync(id, ct);
         return resp is null ? NotFound() : Ok(resp);
     }
 
     [HttpPost("{id:guid}/execucao/iniciar")]
     public async Task<IActionResult> IniciarExecucao(
         Guid id,
-        [FromServices] IniciarExecucaoUseCase uc,
+        [FromServices] OrdemDeServicoController controller,
         CancellationToken ct)
     {
-        var resp = await uc.ExecutarAsync(id, ct);
+        var resp = await controller.IniciarExecucaoAsync(id, ct);
         return resp is null ? NotFound() : Ok(resp);
     }
 
     [HttpPost("{id:guid}/finalizar")]
     public async Task<IActionResult> Finalizar(
         Guid id,
-        [FromServices] FinalizarOrdemUseCase uc,
+        [FromServices] OrdemDeServicoController controller,
         CancellationToken ct)
     {
-        var resp = await uc.ExecutarAsync(id, ct);
+        var resp = await controller.FinalizarAsync(id, ct);
         return resp is null ? NotFound() : Ok(resp);
     }
 
     [HttpPost("{id:guid}/entregar")]
     public async Task<IActionResult> Entregar(
         Guid id,
-        [FromServices] EntregarOrdemUseCase uc,
+        [FromServices] OrdemDeServicoController controller,
         CancellationToken ct)
     {
-        var resp = await uc.ExecutarAsync(id, ct);
+        var resp = await controller.EntregarAsync(id, ct);
         return resp is null ? NotFound() : Ok(resp);
     }
 
@@ -144,10 +144,10 @@ public class OrdensServicoController : ControllerBase
     [HttpGet("metricas/tempo-medio")]
     [Authorize(Policy = PoliticasDeAutorizacao.RequerAdmin)]
     public async Task<IActionResult> TempoMedioExecucao(
-        [FromServices] ObterTempoMedioExecucaoUseCase uc,
+        [FromServices] OrdemDeServicoController controller,
         CancellationToken ct)
     {
-        var resp = await uc.ExecutarAsync(ct);
+        var resp = await controller.ObterTempoMedioExecucaoAsync(ct);
         return Ok(resp);
     }
 }

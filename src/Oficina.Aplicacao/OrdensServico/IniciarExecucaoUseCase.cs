@@ -1,23 +1,23 @@
 using Oficina.Aplicacao.Estoque.Gateways;
-using Oficina.Aplicacao.OrdensServico.Dtos;
+using Oficina.Aplicacao.OrdensServico.Gateways;
 using Oficina.Dominio.OrdensServico;
 
 namespace Oficina.Aplicacao.OrdensServico;
 
 public class IniciarExecucaoUseCase
 {
-    private readonly IOrdemDeServicoRepositorio _ordens;
+    private readonly IOrdemDeServicoGateway _ordens;
     private readonly IPecaGateway _pecas;
 
-    public IniciarExecucaoUseCase(IOrdemDeServicoRepositorio ordens, IPecaGateway pecas)
+    public IniciarExecucaoUseCase(IOrdemDeServicoGateway ordens, IPecaGateway pecas)
     {
         _ordens = ordens;
         _pecas = pecas;
     }
 
-    public async Task<OrdemResponse?> ExecutarAsync(Guid ordemId, CancellationToken ct)
+    public async Task<OrdemDeServico?> ExecutarAsync(Guid ordemId, CancellationToken ct)
     {
-        OrdemResponse? resposta = null;
+        OrdemDeServico? resultado = null;
 
         await _ordens.EmTransacaoSerializadaAsync(async tx =>
         {
@@ -44,9 +44,9 @@ public class IniciarExecucaoUseCase
             // 3) persiste tudo na mesma transação
             await _ordens.SalvarAsync(tx);
 
-            resposta = MapeadorOrdem.Mapear(ordem);
+            resultado = ordem;
         }, ct);
 
-        return resposta;
+        return resultado;
     }
 }

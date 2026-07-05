@@ -1,16 +1,13 @@
-using Oficina.Aplicacao.OrdensServico.Dtos;
+using Oficina.Aplicacao.OrdensServico.Gateways;
 using Oficina.Dominio.OrdensServico;
 
 namespace Oficina.Aplicacao.OrdensServico;
 
 public class ObterOrdemPorIdUseCase
 {
-    private readonly IOrdemDeServicoRepositorio _repo;
-    public ObterOrdemPorIdUseCase(IOrdemDeServicoRepositorio repo) => _repo = repo;
+    private readonly IOrdemDeServicoGateway _gateway;
+    public ObterOrdemPorIdUseCase(IOrdemDeServicoGateway gateway) => _gateway = gateway;
 
-    public async Task<OrdemResponse?> ExecutarAsync(Guid id, CancellationToken ct)
-    {
-        var o = await _repo.ObterPorIdAsync(id, ct);
-        return o is null ? null : MapeadorOrdem.Mapear(o);
-    }
+    public Task<OrdemDeServico?> ExecutarAsync(Guid id, CancellationToken ct) =>
+        _gateway.ObterPorIdAsync(id, ct);
 }

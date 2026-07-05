@@ -1,20 +1,12 @@
-using Oficina.Aplicacao.OrdensServico.Dtos;
-using Oficina.Dominio.OrdensServico;
+using Oficina.Aplicacao.OrdensServico.Gateways;
 
 namespace Oficina.Aplicacao.OrdensServico;
 
 public class ObterTempoMedioExecucaoUseCase
 {
-    private readonly IOrdemDeServicoRepositorio _repo;
-    public ObterTempoMedioExecucaoUseCase(IOrdemDeServicoRepositorio repo) => _repo = repo;
+    private readonly IOrdemDeServicoGateway _gateway;
+    public ObterTempoMedioExecucaoUseCase(IOrdemDeServicoGateway gateway) => _gateway = gateway;
 
-    public async Task<MetricasTempoMedioResponse> ExecutarAsync(CancellationToken ct)
-    {
-        var m = await _repo.ObterTempoMedioExecucaoAsync(ct);
-        return new MetricasTempoMedioResponse(
-            m.TotalOrdensConcluidas,
-            m.TempoMedio?.TotalMinutes,
-            m.TempoMinimo?.TotalMinutes,
-            m.TempoMaximo?.TotalMinutes);
-    }
+    public Task<MetricaTempoMedio> ExecutarAsync(CancellationToken ct) =>
+        _gateway.ObterTempoMedioExecucaoAsync(ct);
 }

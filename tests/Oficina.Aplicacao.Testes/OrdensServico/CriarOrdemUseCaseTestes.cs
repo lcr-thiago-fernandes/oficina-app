@@ -3,6 +3,7 @@ using Moq;
 using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Aplicacao.OrdensServico;
 using Oficina.Aplicacao.OrdensServico.Dtos;
+using Oficina.Aplicacao.OrdensServico.Gateways;
 using Oficina.Dominio.Clientes;
 using Oficina.Dominio.OrdensServico;
 using Xunit;
@@ -11,7 +12,7 @@ namespace Oficina.Aplicacao.Testes.OrdensServico;
 
 public class CriarOrdemUseCaseTestes
 {
-    private readonly Mock<IOrdemDeServicoRepositorio> _repo = new();
+    private readonly Mock<IOrdemDeServicoGateway> _gateway = new();
     private readonly Mock<IClienteGateway> _clientes = new();
 
     [Fact]
@@ -26,15 +27,15 @@ public class CriarOrdemUseCaseTestes
             .ReturnsAsync(cliente);
 
         // simular o re-fetch após criação
-        _repo.Setup(r => r.ObterPorIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        _gateway.Setup(r => r.ObterPorIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Guid id, CancellationToken _) =>
                 OrdemDeServico.Criar(cliente.Id, veiculo.Id));
 
-        var resp = await new CriarOrdemUseCase(_repo.Object, _clientes.Object)
+        var ordem = await new CriarOrdemUseCase(_gateway.Object, _clientes.Object)
             .ExecutarAsync(new CriarOrdemRequest(cliente.Id, veiculo.Id, "obs"), default);
 
-        resp.Status.Should().Be("Recebida");
-        _repo.Verify(r => r.AdicionarAsync(It.IsAny<OrdemDeServico>(), It.IsAny<CancellationToken>()), Times.Once);
+        ordem.Status.Should().Be(StatusOrdemDeServico.Recebida);
+        _gateway.Verify(r => r.AdicionarAsync(It.IsAny<OrdemDeServico>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -43,7 +44,7 @@ public class CriarOrdemUseCaseTestes
         _clientes.Setup(c => c.ObterPorIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Cliente?)null);
 
-        var act = async () => await new CriarOrdemUseCase(_repo.Object, _clientes.Object)
+        var act = async () => await new CriarOrdemUseCase(_gateway.Object, _clientes.Object)
             .ExecutarAsync(new CriarOrdemRequest(Guid.NewGuid(), Guid.NewGuid(), null), default);
 
         await act.Should().ThrowAsync<OrdemInvalidaException>().WithMessage("*Cliente*");
@@ -59,7 +60,7 @@ public class CriarOrdemUseCaseTestes
         _clientes.Setup(c => c.ObterPorIdAsync(cliente.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(cliente);
 
-        var act = async () => await new CriarOrdemUseCase(_repo.Object, _clientes.Object)
+        var act = async () => await new CriarOrdemUseCase(_gateway.Object, _clientes.Object)
             .ExecutarAsync(new CriarOrdemRequest(cliente.Id, Guid.NewGuid(), null), default);
 
         await act.Should().ThrowAsync<OrdemInvalidaException>().WithMessage("*Veículo*");

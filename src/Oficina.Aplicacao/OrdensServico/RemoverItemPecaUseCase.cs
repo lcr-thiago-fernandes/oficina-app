@@ -1,11 +1,11 @@
-using Oficina.Dominio.OrdensServico;
+using Oficina.Aplicacao.OrdensServico.Gateways;
 
 namespace Oficina.Aplicacao.OrdensServico;
 
 public class RemoverItemPecaUseCase
 {
-    private readonly IOrdemDeServicoRepositorio _ordens;
-    public RemoverItemPecaUseCase(IOrdemDeServicoRepositorio ordens) => _ordens = ordens;
+    private readonly IOrdemDeServicoGateway _ordens;
+    public RemoverItemPecaUseCase(IOrdemDeServicoGateway ordens) => _ordens = ordens;
 
     public async Task<bool> ExecutarAsync(Guid ordemId, Guid itemId, CancellationToken ct)
     {

@@ -1,14 +1,16 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Oficina.Adaptadores.OrdensServico.DataSources;
+using Oficina.Aplicacao.OrdensServico.Gateways;
 using Oficina.Dominio.OrdensServico;
 
-namespace Oficina.Infraestrutura.Persistencia.Repositorios;
+namespace Oficina.Infraestrutura.Persistencia.DataSources;
 
-public class OrdemDeServicoRepositorio : IOrdemDeServicoRepositorio
+public class OrdemDeServicoDataSource : IOrdemDeServicoDataSource
 {
     private readonly OficinaDbContext _db;
-    public OrdemDeServicoRepositorio(OficinaDbContext db) => _db = db;
+    public OrdemDeServicoDataSource(OficinaDbContext db) => _db = db;
 
     public Task<OrdemDeServico?> ObterPorIdAsync(Guid id, CancellationToken ct) =>
         _db.OrdensServico

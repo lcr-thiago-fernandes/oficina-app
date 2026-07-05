@@ -3,6 +3,7 @@ using Moq;
 using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Aplicacao.Consulta;
 using Oficina.Aplicacao.Consulta.Dtos;
+using Oficina.Aplicacao.OrdensServico.Gateways;
 using Oficina.Dominio.Clientes;
 using Oficina.Dominio.OrdensServico;
 using Xunit;
@@ -11,7 +12,7 @@ namespace Oficina.Aplicacao.Testes.Consulta;
 
 public class ConsultarOrdemPorNumeroUseCaseTestes
 {
-    private readonly Mock<IOrdemDeServicoRepositorio> _ordens = new();
+    private readonly Mock<IOrdemDeServicoGateway> _ordens = new();
     private readonly Mock<IClienteGateway> _clientes = new();
 
     [Fact]

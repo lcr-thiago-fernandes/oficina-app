@@ -1,21 +1,22 @@
 using Oficina.Aplicacao.Catalogo.Gateways;
 using Oficina.Aplicacao.OrdensServico.Dtos;
+using Oficina.Aplicacao.OrdensServico.Gateways;
 using Oficina.Dominio.OrdensServico;
 
 namespace Oficina.Aplicacao.OrdensServico;
 
 public class AdicionarItemServicoUseCase
 {
-    private readonly IOrdemDeServicoRepositorio _ordens;
+    private readonly IOrdemDeServicoGateway _ordens;
     private readonly IServicoGateway _servicos;
 
-    public AdicionarItemServicoUseCase(IOrdemDeServicoRepositorio ordens, IServicoGateway servicos)
+    public AdicionarItemServicoUseCase(IOrdemDeServicoGateway ordens, IServicoGateway servicos)
     {
         _ordens = ordens;
         _servicos = servicos;
     }
 
-    public async Task<ItemServicoResponse?> ExecutarAsync(Guid ordemId, AdicionarItemServicoRequest req, CancellationToken ct)
+    public async Task<ItemServico?> ExecutarAsync(Guid ordemId, AdicionarItemServicoRequest req, CancellationToken ct)
     {
         var ordem = await _ordens.ObterPorIdAsync(ordemId, ct);
         if (ordem is null) return null;
@@ -29,6 +30,6 @@ public class AdicionarItemServicoUseCase
         _ordens.MarcarItemServicoComoNovo(item);
         await _ordens.SalvarAsync(ct);
 
-        return MapeadorOrdem.MapearServ(item);
+        return item;
     }
 }
