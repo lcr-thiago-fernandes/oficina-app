@@ -1,4 +1,5 @@
 using FluentValidation.AspNetCore;
+using Oficina.Adaptadores;
 using Oficina.Aplicacao;
 using Oficina.Api.Configuracao;
 using Oficina.Infraestrutura;
@@ -51,6 +52,7 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AdicionarInfraestrutura(builder.Configuration);
 builder.Services.AdicionarAplicacao();
+builder.Services.AdicionarAdaptadores();
 builder.Services.AdicionarJwtBearer(builder.Configuration);
 builder.Services.AdicionarPoliticas();
 builder.Services.AdicionarRateLimit(builder.Configuration);

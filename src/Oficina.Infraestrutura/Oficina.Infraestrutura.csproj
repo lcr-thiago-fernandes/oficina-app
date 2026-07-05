@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Oficina.Dominio\Oficina.Dominio.csproj" />
     <ProjectReference Include="..\Oficina.Aplicacao\Oficina.Aplicacao.csproj" />
+    <ProjectReference Include="..\Oficina.Adaptadores\Oficina.Adaptadores.csproj" />
   </ItemGroup>
 
   <ItemGroup>

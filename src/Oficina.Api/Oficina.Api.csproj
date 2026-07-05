@@ -27,6 +27,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Oficina.Aplicacao\Oficina.Aplicacao.csproj" />
     <ProjectReference Include="..\Oficina.Infraestrutura\Oficina.Infraestrutura.csproj" />
+    <ProjectReference Include="..\Oficina.Adaptadores\Oficina.Adaptadores.csproj" />
   </ItemGroup>
 
 </Project>
