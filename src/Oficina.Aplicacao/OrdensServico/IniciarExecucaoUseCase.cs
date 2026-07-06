@@ -8,11 +8,14 @@ public class IniciarExecucaoUseCase
 {
     private readonly IOrdemDeServicoGateway _ordens;
     private readonly IPecaGateway _pecas;
+    private readonly INotificacaoGateway _notificacoes;
 
-    public IniciarExecucaoUseCase(IOrdemDeServicoGateway ordens, IPecaGateway pecas)
+    public IniciarExecucaoUseCase(
+        IOrdemDeServicoGateway ordens, IPecaGateway pecas, INotificacaoGateway notificacoes)
     {
         _ordens = ordens;
         _pecas = pecas;
+        _notificacoes = notificacoes;
     }
 
     public async Task<OrdemDeServico?> ExecutarAsync(Guid ordemId, CancellationToken ct)
@@ -46,6 +49,11 @@ public class IniciarExecucaoUseCase
 
             resultado = ordem;
         }, ct);
+
+        // 4) notifica fora da transação serializável (efeito colateral não deve
+        //    prender a transação nem provocar rollback se o "envio" falhar)
+        if (resultado is not null)
+            await _notificacoes.NotificarMudancaDeStatusAsync(resultado, ct);
 
         return resultado;
     }

@@ -19,21 +19,24 @@ public class OrdemDeServicoControllerTestes
         Mock<IOrdemDeServicoGateway> ordens,
         Mock<IClienteGateway> clientes,
         Mock<IServicoGateway> servicos,
-        Mock<IPecaGateway> pecas) =>
-        new(
+        Mock<IPecaGateway> pecas)
+    {
+        var notificacoes = new Mock<INotificacaoGateway>();
+        return new(
             new CriarOrdemUseCase(ordens.Object, clientes.Object),
             new ObterOrdemPorIdUseCase(ordens.Object),
             new ListarOrdensUseCase(ordens.Object),
-            new IniciarDiagnosticoUseCase(ordens.Object),
-            new EnviarOrcamentoParaAprovacaoUseCase(ordens.Object),
-            new IniciarExecucaoUseCase(ordens.Object, pecas.Object),
-            new FinalizarOrdemUseCase(ordens.Object),
-            new EntregarOrdemUseCase(ordens.Object),
+            new IniciarDiagnosticoUseCase(ordens.Object, notificacoes.Object),
+            new EnviarOrcamentoParaAprovacaoUseCase(ordens.Object, notificacoes.Object),
+            new IniciarExecucaoUseCase(ordens.Object, pecas.Object, notificacoes.Object),
+            new FinalizarOrdemUseCase(ordens.Object, notificacoes.Object),
+            new EntregarOrdemUseCase(ordens.Object, notificacoes.Object),
             new AdicionarItemServicoUseCase(ordens.Object, servicos.Object),
             new RemoverItemServicoUseCase(ordens.Object),
             new AdicionarItemPecaUseCase(ordens.Object, pecas.Object),
             new RemoverItemPecaUseCase(ordens.Object),
             new ObterTempoMedioExecucaoUseCase(ordens.Object));
+    }
 
     [Fact]
     public async Task CriarAsync_DeveRetornarOrdemResponseFormatada()

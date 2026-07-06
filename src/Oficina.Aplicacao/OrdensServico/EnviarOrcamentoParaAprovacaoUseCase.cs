@@ -6,7 +6,13 @@ namespace Oficina.Aplicacao.OrdensServico;
 public class EnviarOrcamentoParaAprovacaoUseCase
 {
     private readonly IOrdemDeServicoGateway _gateway;
-    public EnviarOrcamentoParaAprovacaoUseCase(IOrdemDeServicoGateway gateway) => _gateway = gateway;
+    private readonly INotificacaoGateway _notificacoes;
+
+    public EnviarOrcamentoParaAprovacaoUseCase(IOrdemDeServicoGateway gateway, INotificacaoGateway notificacoes)
+    {
+        _gateway = gateway;
+        _notificacoes = notificacoes;
+    }
 
     public async Task<OrdemDeServico?> ExecutarAsync(Guid id, CancellationToken ct)
     {
@@ -14,6 +20,7 @@ public class EnviarOrcamentoParaAprovacaoUseCase
         if (os is null) return null;
         os.EnviarOrcamentoParaAprovacao();
         await _gateway.SalvarAsync(ct);
+        await _notificacoes.NotificarMudancaDeStatusAsync(os, ct);
         return os;
     }
 }
