@@ -4,6 +4,7 @@ using Oficina.Aplicacao;
 using Oficina.Api.Configuracao;
 using Oficina.Infraestrutura;
 using Oficina.Infraestrutura.Persistencia;
+using OpenTelemetry.Metrics;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -59,6 +60,14 @@ builder.Services.AdicionarPoliticas();
 builder.Services.AdicionarRateLimit(builder.Configuration);
 builder.Services.AdicionarWebhook(builder.Configuration);
 
+// Observabilidade minima: OpenTelemetry expondo /metrics (Prometheus).
+// Instrumenta requests do ASP.NET Core + runtime .NET; Serilog segue para stdout.
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddPrometheusExporter());
+
 // Modo Job de migração (Kubernetes): "dotnet Oficina.Api.dll migrate" ou STARTUP_TASK=migrate.
 // Aplica migrations + bootstrap do admin e ENCERRA sem subir o servidor web.
 // Roda o inicializador diretamente (o HostedService não é iniciado neste caminho,
@@ -96,6 +105,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 app.MapControllers();
+
+// Endpoint de scraping do Prometheus (anonimo): expõe /metrics.
+app.MapPrometheusScrapingEndpoint();
 
 app.Run();
 
