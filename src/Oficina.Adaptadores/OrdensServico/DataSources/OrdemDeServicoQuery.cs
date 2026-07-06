@@ -6,14 +6,6 @@ namespace Oficina.Adaptadores.OrdensServico.DataSources;
 // traduzíveis pelo EF Core (CASE/WHERE) e testáveis em memória (LINQ-to-Objects).
 public static class OrdemDeServicoQuery
 {
-    // Status que NÃO aparecem na listagem padrão (sem filtro).
-    public static readonly IReadOnlyList<StatusOrdemDeServico> StatusTerminais = new[]
-    {
-        StatusOrdemDeServico.Finalizada,
-        StatusOrdemDeServico.Entregue,
-        StatusOrdemDeServico.Cancelada
-    };
-
     public static IQueryable<OrdemDeServico> AplicarFiltro(
         IQueryable<OrdemDeServico> query, StatusOrdemDeServico? statusFiltro)
     {

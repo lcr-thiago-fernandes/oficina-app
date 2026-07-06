@@ -11,7 +11,7 @@ permissions:
   id-token: write
   contents: read
 
-# Evita dois deploys simultaneos na mesma branch (o mais novo cancela o anterior).
+# Serializa deploys na mesma branch: um novo deploy aguarda o anterior concluir (nao cancela um rollout em voo).
 concurrency:
   group: cd-${{ github.ref }}
   cancel-in-progress: false
