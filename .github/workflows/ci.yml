@@ -2,13 +2,17 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    # Plano 10: adiciona fase-2 (mantendo main/develop) para o CI rodar na branch de trabalho.
+    branches: [main, develop, fase-2]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, fase-2]
 
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    # ubuntu-latest tem Docker EM EXECUCAO -> os testes de integracao (Testcontainers.PostgreSql),
+    # que nao rodam localmente, sao exercitados AQUI. O `dotnet test` roda a solution inteira,
+    # incluindo os projetos novos Oficina.Adaptadores.Testes e Oficina.Infraestrutura.Testes.
     steps:
       - uses: actions/checkout@v4
 
@@ -55,11 +59,33 @@ jobs:
       - name: List vulnerable packages
         run: dotnet list package --vulnerable --include-transitive || true
 
+  format:
+    # Qualidade de codigo (Modulo 3 - Aula 4): checagem de estilo com `dotnet format`.
+    # ADVISORY / NAO-BLOQUEANTE: `continue-on-error: true` evita quebrar o CI por estilo
+    # pre-existente. TODO: quando o codigo estiver 100% formatado, remover o continue-on-error
+    # (ou trocar --verify-no-changes por gate real) para torna-lo bloqueante.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: dotnet format (verificacao — advisory)
+        continue-on-error: true
+        run: dotnet format Oficina.sln --verify-no-changes --no-restore --verbosity diagnostic
+
   docker-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build Docker image
+        # Valida o Dockerfile do Plano 07 (agora inclui Oficina.Adaptadores no restore/publish).
         run: docker build -f docker/Dockerfile -t oficina-api:ci .
 
   codeql:

@@ -1,0 +1,66 @@
+# ==============================================================================================
+# Terraform MANUAL (conveniencia). ATENCAO ao chicken-and-egg:
+#   O role OIDC de INFRA (AWS_TERRAFORM_ROLE_ARN) precisa de permissoes AMPLAS (admin) para
+#   criar VPC/EKS/RDS/IAM. Esse role NAO existe antes do primeiro `terraform apply` e criar um
+#   role admin exige... um admin. Por isso o PROVISIONAMENTO INICIAL normalmente e LOCAL
+#   (`cd infra && terraform init/apply`, ver infra/README.md do Plano 09). Este workflow e
+#   conveniencia para re-apply/destroy QUANDO JA EXISTIR um role de infra admin (criado a mao
+#   ou por um bootstrap separado). A spec permite "workflow manual OU Terraform local" — se
+#   preferir, ignore este workflow e use o Terraform local.
+# ==============================================================================================
+name: Infra (Terraform manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      acao:
+        description: "Acao do Terraform a executar"
+        required: true
+        default: plan
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+# OIDC (sem chave estatica).
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    env:
+      # Variaveis do Terraform (TF_VAR_*). db_password e SENSIVEL -> vem de secret, nunca ecoada.
+      TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+      TF_VAR_db_username: ${{ secrets.DB_USER }}
+      TF_VAR_region: ${{ vars.AWS_REGION }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # OIDC com o role de INFRA (admin), SEPARADO do role de deploy (AWS_ROLE_ARN).
+      - name: Configurar credenciais AWS (OIDC — role de infra)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # init conecta ao backend S3+DynamoDB (Plano 09). -chdir aponta para infra/.
+      - name: Terraform init
+        run: terraform -chdir=infra init
+
+      - name: Terraform plan
+        if: ${{ inputs.acao == 'plan' }}
+        run: terraform -chdir=infra plan
+
+      - name: Terraform apply
+        if: ${{ inputs.acao == 'apply' }}
+        run: terraform -chdir=infra apply -auto-approve
+
+      - name: Terraform destroy
+        if: ${{ inputs.acao == 'destroy' }}
+        run: terraform -chdir=infra destroy -auto-approve
