@@ -29,11 +29,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Oficina.Adaptadores\Oficina.Adaptadores.csproj" />
-    <!-- Referência adicional (só para testes) ao Oficina.Api: cobre o
-         ValidacaoTokenWebhookFilter (IAuthorizationFilter), único jeito de
-         testá-lo localmente sem Docker (a alternativa seria só via
-         Oficina.Integracao.Testes, que exige Testcontainers). -->
-    <ProjectReference Include="..\..\src\Oficina.Api\Oficina.Api.csproj" />
   </ItemGroup>
 
 </Project>
