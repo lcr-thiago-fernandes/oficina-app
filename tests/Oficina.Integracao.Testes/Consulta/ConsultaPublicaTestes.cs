@@ -160,6 +160,25 @@ public class ConsultaPublicaTestes
     }
 
     [Fact]
+    public async Task Webhook_SemTokenESemBody_DeveRetornar401_NaoBadRequest()
+    {
+        // Regressão: com [ApiController], a auto-validação do [FromBody] roda
+        // como filtro ANTES do corpo da action. Sem o ValidacaoTokenWebhookFilter
+        // (IAuthorizationFilter, que roda ANTES do model binding), uma requisição
+        // sem body/Content-Type retornaria 400/415 em vez de 401 — vazando para um
+        // atacante sem token a informação de que o recurso existe/aceita a rota.
+        var os = await CriarOsEnviadaAsync();
+        var publico = _fx.Factory.CreateClient();
+
+        using var req = new HttpRequestMessage(
+            HttpMethod.Post, $"/api/v1/ordens-servico/{os.Id}/orcamento/aprovacao");
+        // Sem header X-Webhook-Token e sem body/Content-Type algum.
+        var resp = await publico.SendAsync(req);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
     public async Task Webhook_DecisaoInvalida_DeveRetornar422()
     {
         var os = await CriarOsEnviadaAsync();

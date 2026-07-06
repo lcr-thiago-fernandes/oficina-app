@@ -12,6 +12,7 @@ public static class ConfiguracaoWebhook
         this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<WebhookOptions>(configuration.GetSection(WebhookOptions.Secao));
+        services.AddScoped<ValidacaoTokenWebhookFilter>();
         return services;
     }
 }

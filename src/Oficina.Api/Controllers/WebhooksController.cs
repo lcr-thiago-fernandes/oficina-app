@@ -1,34 +1,28 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using Oficina.Adaptadores.OrdensServico.Controllers;
-using Oficina.Adaptadores.OrdensServico.Webhooks;
 using Oficina.Aplicacao.OrdensServico.Dtos;
 using Oficina.Api.Configuracao;
 
 namespace Oficina.Api.Controllers;
 
 // Webhook de aprovação externa de orçamento. Sem JWT ([AllowAnonymous]);
-// autenticação por token de header (X-Webhook-Token) validado contra Webhook:Token.
+// autenticação por token de header (X-Webhook-Token), validada pelo
+// ValidacaoTokenWebhookFilter (IAuthorizationFilter) ANTES do model binding,
+// garantindo que 401 tem precedência sobre 400/415 quando o corpo está ausente/inválido.
 [ApiController]
 [AllowAnonymous]
 [Route("api/v1/ordens-servico")]
 public class WebhooksController : ControllerBase
 {
-    public const string NomeHeaderToken = "X-Webhook-Token";
-
     [HttpPost("{id:guid}/orcamento/aprovacao")]
+    [ServiceFilter(typeof(ValidacaoTokenWebhookFilter))]
     public async Task<IActionResult> RegistrarDecisao(
         Guid id,
         [FromBody] DecisaoOrcamentoRequest req,
-        [FromHeader(Name = NomeHeaderToken)] string? token,
         [FromServices] OrdemDeServicoController controller,
-        [FromServices] IOptions<WebhookOptions> webhook,
         CancellationToken ct)
     {
-        if (!ValidadorTokenWebhook.EhTokenValido(token, webhook.Value.Token))
-            return Unauthorized();
-
         if (!TentarInterpretarDecisao(req.Decisao, out var aprovado))
             return UnprocessableEntity(new ProblemDetails
             {
