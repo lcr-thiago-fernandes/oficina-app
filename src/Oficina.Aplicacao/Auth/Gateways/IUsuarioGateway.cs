@@ -1,6 +1,8 @@
-namespace Oficina.Dominio.Auth;
+using Oficina.Dominio.Auth;
 
-public interface IUsuarioRepositorio
+namespace Oficina.Aplicacao.Auth.Gateways;
+
+public interface IUsuarioGateway
 {
     Task<Usuario?> ObterPorUsernameAsync(Username username, CancellationToken cancellationToken);
     Task<bool> ExisteAsync(Username username, CancellationToken cancellationToken);

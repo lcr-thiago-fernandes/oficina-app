@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Oficina.Aplicacao.Auth;
+using Oficina.Aplicacao.Auth.Gateways;
 using Oficina.Dominio.Auth;
 using Oficina.Dominio.ServicosCompartilhados;
 using Xunit;
@@ -10,11 +11,11 @@ namespace Oficina.Aplicacao.Testes.Auth;
 
 public class LoginUseCaseTestes
 {
-    private readonly Mock<IUsuarioRepositorio> _repo = new();
+    private readonly Mock<IUsuarioGateway> _gateway = new();
     private readonly Mock<IGeradorTokenJwt> _gerador = new();
 
     private LoginUseCase Construir() =>
-        new(_repo.Object, _gerador.Object, NullLogger<LoginUseCase>.Instance);
+        new(_gateway.Object, _gerador.Object, NullLogger<LoginUseCase>.Instance);
 
     [Fact]
     public async Task Executar_ComCredenciaisCorretas_DeveRetornarSucesso()
@@ -22,7 +23,7 @@ public class LoginUseCaseTestes
         var senha = Senha.DeTextoPuro("AlteraMe@123");
         var u = Usuario.Criar(Username.Criar("admin"), senha, Perfil.Admin);
 
-        _repo.Setup(r => r.ObterPorUsernameAsync(
+        _gateway.Setup(r => r.ObterPorUsernameAsync(
                 It.Is<Username>(x => x.Valor == "admin"),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(u);
@@ -39,7 +40,7 @@ public class LoginUseCaseTestes
     [Fact]
     public async Task Executar_ComUsuarioInexistente_DeveRetornarCredenciaisInvalidas()
     {
-        _repo.Setup(r => r.ObterPorUsernameAsync(It.IsAny<Username>(), It.IsAny<CancellationToken>()))
+        _gateway.Setup(r => r.ObterPorUsernameAsync(It.IsAny<Username>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Usuario?)null);
 
         var resultado = await Construir().ExecutarAsync(
@@ -54,7 +55,7 @@ public class LoginUseCaseTestes
         var u = Usuario.Criar(Username.Criar("admin"),
             Senha.DeTextoPuro("AlteraMe@123"), Perfil.Admin);
 
-        _repo.Setup(r => r.ObterPorUsernameAsync(It.IsAny<Username>(), It.IsAny<CancellationToken>()))
+        _gateway.Setup(r => r.ObterPorUsernameAsync(It.IsAny<Username>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(u);
 
         var resultado = await Construir().ExecutarAsync(
@@ -70,7 +71,7 @@ public class LoginUseCaseTestes
             Senha.DeTextoPuro("AlteraMe@123"), Perfil.Admin);
         u.Inativar();
 
-        _repo.Setup(r => r.ObterPorUsernameAsync(It.IsAny<Username>(), It.IsAny<CancellationToken>()))
+        _gateway.Setup(r => r.ObterPorUsernameAsync(It.IsAny<Username>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(u);
 
         var resultado = await Construir().ExecutarAsync(

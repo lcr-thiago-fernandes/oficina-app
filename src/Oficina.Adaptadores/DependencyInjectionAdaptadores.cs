@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using Oficina.Adaptadores.Auth.Controllers;
+using Oficina.Adaptadores.Auth.Gateways;
 using Oficina.Adaptadores.Catalogo.Controllers;
 using Oficina.Adaptadores.Catalogo.Gateways;
 using Oficina.Adaptadores.Clientes.Controllers;
@@ -7,6 +9,7 @@ using Oficina.Adaptadores.Estoque.Controllers;
 using Oficina.Adaptadores.Estoque.Gateways;
 using Oficina.Adaptadores.OrdensServico.Controllers;
 using Oficina.Adaptadores.OrdensServico.Gateways;
+using Oficina.Aplicacao.Auth.Gateways;
 using Oficina.Aplicacao.Catalogo.Gateways;
 using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Aplicacao.Estoque.Gateways;
@@ -18,6 +21,10 @@ public static class DependencyInjectionAdaptadores
 {
     public static IServiceCollection AdicionarAdaptadores(this IServiceCollection services)
     {
+        // Auth
+        services.AddScoped<IUsuarioGateway, UsuarioGateway>();
+        services.AddScoped<AutenticacaoController>();
+
         // Catálogo
         services.AddScoped<IServicoGateway, ServicoGateway>();
         services.AddScoped<ServicoController>();

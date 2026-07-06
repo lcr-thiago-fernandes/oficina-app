@@ -1,13 +1,14 @@
 using Microsoft.EntityFrameworkCore;
+using Oficina.Adaptadores.Auth.DataSources;
 using Oficina.Dominio.Auth;
 
-namespace Oficina.Infraestrutura.Persistencia.Repositorios;
+namespace Oficina.Infraestrutura.Persistencia.DataSources;
 
-public class UsuarioRepositorio : IUsuarioRepositorio
+public class UsuarioDataSource : IUsuarioDataSource
 {
     private readonly OficinaDbContext _db;
 
-    public UsuarioRepositorio(OficinaDbContext db) => _db = db;
+    public UsuarioDataSource(OficinaDbContext db) => _db = db;
 
     public Task<Usuario?> ObterPorUsernameAsync(Username username, CancellationToken ct)
     {

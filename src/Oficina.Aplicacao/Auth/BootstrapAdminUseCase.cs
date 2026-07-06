@@ -1,16 +1,17 @@
 using Microsoft.Extensions.Logging;
+using Oficina.Aplicacao.Auth.Gateways;
 using Oficina.Dominio.Auth;
 
 namespace Oficina.Aplicacao.Auth;
 
 public class BootstrapAdminUseCase
 {
-    private readonly IUsuarioRepositorio _repo;
+    private readonly IUsuarioGateway _gateway;
     private readonly ILogger<BootstrapAdminUseCase> _log;
 
-    public BootstrapAdminUseCase(IUsuarioRepositorio repo, ILogger<BootstrapAdminUseCase> log)
+    public BootstrapAdminUseCase(IUsuarioGateway gateway, ILogger<BootstrapAdminUseCase> log)
     {
-        _repo = repo;
+        _gateway = gateway;
         _log = log;
     }
 
@@ -22,15 +23,15 @@ public class BootstrapAdminUseCase
 
         var username = Username.Criar("admin");
 
-        if (await _repo.ExisteAsync(username, ct))
+        if (await _gateway.ExisteAsync(username, ct))
         {
             _log.LogInformation("Usuário admin já existe — bootstrap ignorado.");
             return;
         }
 
         var usuario = Usuario.CriarParaBootstrap(username, Senha.DeTextoPuro(senhaInicial));
-        await _repo.AdicionarAsync(usuario, ct);
-        await _repo.SalvarAsync(ct);
+        await _gateway.AdicionarAsync(usuario, ct);
+        await _gateway.SalvarAsync(ct);
 
         _log.LogWarning("Usuário admin criado pelo bootstrap. Troca de senha exigida no primeiro login.");
     }

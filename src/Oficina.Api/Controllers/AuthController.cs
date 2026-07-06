@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Oficina.Adaptadores.Auth.Controllers;
 using Oficina.Api.Configuracao;
 using Oficina.Aplicacao.Auth;
 
@@ -9,21 +10,20 @@ namespace Oficina.Api.Controllers;
 [Route("api/v1/auth")]
 public class AuthController : ControllerBase
 {
-    private readonly LoginUseCase _login;
-
-    public AuthController(LoginUseCase login) => _login = login;
-
     [HttpPost("login")]
     [EnableRateLimiting(ConfiguracaoRateLimit.PoliticaLogin)]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Login([FromBody] LoginRequest req, CancellationToken ct)
+    public async Task<IActionResult> Login(
+        [FromBody] LoginRequest req,
+        [FromServices] AutenticacaoController controller,
+        CancellationToken ct)
     {
         if (req is null || string.IsNullOrWhiteSpace(req.Username) || string.IsNullOrWhiteSpace(req.Password))
             return BadRequest(new { erro = "Username e password são obrigatórios." });
 
-        var resultado = await _login.ExecutarAsync(req, ct);
+        var resultado = await controller.LoginAsync(req, ct);
         return resultado switch
         {
             ResultadoLogin.Sucesso s => Ok(s.Response),

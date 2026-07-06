@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Oficina.Aplicacao.Auth.Gateways;
 using Oficina.Dominio.Auth;
 using Oficina.Dominio.ServicosCompartilhados;
 
@@ -6,16 +7,16 @@ namespace Oficina.Aplicacao.Auth;
 
 public class LoginUseCase
 {
-    private readonly IUsuarioRepositorio _repo;
+    private readonly IUsuarioGateway _gateway;
     private readonly IGeradorTokenJwt _gerador;
     private readonly ILogger<LoginUseCase> _log;
 
     public LoginUseCase(
-        IUsuarioRepositorio repo,
+        IUsuarioGateway gateway,
         IGeradorTokenJwt gerador,
         ILogger<LoginUseCase> log)
     {
-        _repo = repo;
+        _gateway = gateway;
         _gerador = gerador;
         _log = log;
     }
@@ -33,7 +34,7 @@ public class LoginUseCase
             return new ResultadoLogin.CredenciaisInvalidas();
         }
 
-        var usuario = await _repo.ObterPorUsernameAsync(username, ct);
+        var usuario = await _gateway.ObterPorUsernameAsync(username, ct);
         if (usuario is null)
         {
             _log.LogWarning("Tentativa de login com username inexistente.");
