@@ -34,10 +34,11 @@ public class OrdemDeServicoDataSource : IOrdemDeServicoDataSource
             .Include(o => o.ItensServico)
             .Include(o => o.ItensPeca)
             .AsQueryable();
-        if (status.HasValue) q = q.Where(o => o.Status == status.Value);
+
+        q = OrdemDeServicoQuery.AplicarFiltro(q, status);
+        q = OrdemDeServicoQuery.AplicarOrdenacao(q);
 
         return await q
-            .OrderByDescending(o => o.CriadaEm)
             .Skip((pagina - 1) * tamanhoPagina)
             .Take(tamanhoPagina)
             .ToListAsync(ct);
@@ -45,8 +46,7 @@ public class OrdemDeServicoDataSource : IOrdemDeServicoDataSource
 
     public Task<int> ContarAsync(StatusOrdemDeServico? status, CancellationToken ct)
     {
-        var q = _db.OrdensServico.AsQueryable();
-        if (status.HasValue) q = q.Where(o => o.Status == status.Value);
+        var q = OrdemDeServicoQuery.AplicarFiltro(_db.OrdensServico.AsQueryable(), status);
         return q.CountAsync(ct);
     }
 
