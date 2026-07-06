@@ -31,6 +31,7 @@ services:
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
       AdminBootstrap__Password: ${ADMIN_BOOTSTRAP_PASSWORD}
+      Webhook__Token: ${WEBHOOK_TOKEN}
     ports:
       - "8080:8080"
     depends_on:

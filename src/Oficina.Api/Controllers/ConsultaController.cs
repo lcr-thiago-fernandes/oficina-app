@@ -24,34 +24,6 @@ public class ConsultaController : ControllerBase
         return MapearResultado(r);
     }
 
-    [HttpPost("{numeroOs:long}/aprovar")]
-    public async Task<IActionResult> Aprovar(
-        long numeroOs,
-        [FromQuery] string documento,
-        [FromServices] AprovarOrcamentoPorClienteUseCase uc,
-        CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(documento))
-            return BadRequest(new { erro = "Parâmetro 'documento' é obrigatório." });
-
-        var r = await uc.ExecutarAsync(numeroOs, documento, ct);
-        return MapearResultado(r);
-    }
-
-    [HttpPost("{numeroOs:long}/rejeitar")]
-    public async Task<IActionResult> Rejeitar(
-        long numeroOs,
-        [FromQuery] string documento,
-        [FromServices] RejeitarOrcamentoPorClienteUseCase uc,
-        CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(documento))
-            return BadRequest(new { erro = "Parâmetro 'documento' é obrigatório." });
-
-        var r = await uc.ExecutarAsync(numeroOs, documento, ct);
-        return MapearResultado(r);
-    }
-
     private IActionResult MapearResultado(ResultadoConsulta r) => r switch
     {
         ResultadoConsulta.Sucesso s => Ok(s.Response),

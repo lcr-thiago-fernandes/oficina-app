@@ -56,6 +56,7 @@ builder.Services.AdicionarAdaptadores();
 builder.Services.AdicionarJwtBearer(builder.Configuration);
 builder.Services.AdicionarPoliticas();
 builder.Services.AdicionarRateLimit(builder.Configuration);
+builder.Services.AdicionarWebhook(builder.Configuration);
 
 var app = builder.Build();
 

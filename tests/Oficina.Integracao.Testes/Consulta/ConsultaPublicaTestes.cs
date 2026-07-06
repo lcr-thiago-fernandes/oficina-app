@@ -99,29 +99,77 @@ public class ConsultaPublicaTestes
         resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
-    [Fact]
-    public async Task Aprovar_PeloCliente_DeveTransitar()
+    private async Task<OrdemResponse> CriarOsEnviadaAsync()
     {
-        var (numero, doc) = await CriarOsParaConsultaAsync();
-        var publico = _fx.Factory.CreateClient();
+        var http = await AdminAsync();
+        var doc = "11144477735";
 
-        var resp = await publico.PostAsync($"/api/v1/consulta/{numero}/aprovar?documento={doc}", null);
+        var cli = await (await http.GetAsync($"/api/v1/clientes?documento={doc}"))
+            .Content.ReadFromJsonAsync<ClienteResponse>();
+        if (cli is null)
+        {
+            var r = await http.PostAsJsonAsync("/api/v1/clientes",
+                new CriarClienteRequest("Cli OS", doc, $"c{Guid.NewGuid():N}@x.com", "11987654321"));
+            cli = await r.Content.ReadFromJsonAsync<ClienteResponse>();
+        }
+        var v = await (await http.PostAsJsonAsync($"/api/v1/clientes/{cli!.Id}/veiculos",
+            new AdicionarVeiculoRequest($"WHK{new Random().Next(1000,9999)}", "F", "U", 2020)))
+            .Content.ReadFromJsonAsync<VeiculoResponse>();
+        var s = await (await http.PostAsJsonAsync("/api/v1/servicos",
+            new CriarServicoRequest("S webhook", "x", 10m, 10)))
+            .Content.ReadFromJsonAsync<ServicoResponse>();
+
+        var os = await (await http.PostAsJsonAsync("/api/v1/ordens-servico",
+            new AbrirOrdemRequest(
+                new ClienteDadosDto(doc, "Cli OS", $"c{Guid.NewGuid():N}@x.com", "11987654321"),
+                new VeiculoDadosDto(v!.Placa, "F", "U", 2020),
+                new[] { new ItemServicoDto(s!.Id, 1) },
+                Array.Empty<ItemPecaDto>()))).Content.ReadFromJsonAsync<OrdemResponse>();
+        await http.PatchAsync($"/api/v1/ordens-servico/{os!.Id}/diagnostico", null);
+        await http.PostAsync($"/api/v1/ordens-servico/{os.Id}/orcamento/enviar", null);
+        return os;
+    }
+
+    [Fact]
+    public async Task Webhook_ComTokenValido_Aprovado_DeveRetornar200()
+    {
+        var os = await CriarOsEnviadaAsync();
+        var publico = _fx.Factory.CreateClient();
+        publico.DefaultRequestHeaders.Add("X-Webhook-Token", "token-teste-webhook");
+
+        var resp = await publico.PostAsJsonAsync(
+            $"/api/v1/ordens-servico/{os.Id}/orcamento/aprovacao",
+            new DecisaoOrcamentoRequest("aprovado"));
 
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await resp.Content.ReadFromJsonAsync<ConsultaPublicaResponse>();
+        var body = await resp.Content.ReadFromJsonAsync<OrdemResponse>();
         body!.OrcamentoAprovadoEm.Should().NotBeNull();
     }
 
     [Fact]
-    public async Task Rejeitar_PeloCliente_DeveCancelar()
+    public async Task Webhook_SemToken_DeveRetornar401()
     {
-        var (numero, doc) = await CriarOsParaConsultaAsync();
+        var os = await CriarOsEnviadaAsync();
         var publico = _fx.Factory.CreateClient();
 
-        var resp = await publico.PostAsync($"/api/v1/consulta/{numero}/rejeitar?documento={doc}", null);
+        var resp = await publico.PostAsJsonAsync(
+            $"/api/v1/ordens-servico/{os.Id}/orcamento/aprovacao",
+            new DecisaoOrcamentoRequest("aprovado"));
 
-        resp.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await resp.Content.ReadFromJsonAsync<ConsultaPublicaResponse>();
-        body!.Status.Should().Be("Cancelada");
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Webhook_DecisaoInvalida_DeveRetornar422()
+    {
+        var os = await CriarOsEnviadaAsync();
+        var publico = _fx.Factory.CreateClient();
+        publico.DefaultRequestHeaders.Add("X-Webhook-Token", "token-teste-webhook");
+
+        var resp = await publico.PostAsJsonAsync(
+            $"/api/v1/ordens-servico/{os.Id}/orcamento/aprovacao",
+            new DecisaoOrcamentoRequest("talvez"));
+
+        resp.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 }

@@ -21,6 +21,7 @@ public class OrdemDeServicoController
     private readonly AdicionarItemPecaUseCase _adicionarItemPeca;
     private readonly RemoverItemPecaUseCase _removerItemPeca;
     private readonly ObterTempoMedioExecucaoUseCase _tempoMedio;
+    private readonly RegistrarDecisaoDeOrcamentoUseCase _registrarDecisao;
 
     public OrdemDeServicoController(
         CriarOrdemUseCase criar,
@@ -36,7 +37,8 @@ public class OrdemDeServicoController
         RemoverItemServicoUseCase removerItemServico,
         AdicionarItemPecaUseCase adicionarItemPeca,
         RemoverItemPecaUseCase removerItemPeca,
-        ObterTempoMedioExecucaoUseCase tempoMedio)
+        ObterTempoMedioExecucaoUseCase tempoMedio,
+        RegistrarDecisaoDeOrcamentoUseCase registrarDecisao)
     {
         _criar = criar;
         _abrir = abrir;
@@ -52,6 +54,7 @@ public class OrdemDeServicoController
         _adicionarItemPeca = adicionarItemPeca;
         _removerItemPeca = removerItemPeca;
         _tempoMedio = tempoMedio;
+        _registrarDecisao = registrarDecisao;
     }
 
     public async Task<OrdemResponse> CriarAsync(CriarOrdemRequest req, CancellationToken ct)
@@ -130,5 +133,11 @@ public class OrdemDeServicoController
     {
         var metrica = await _tempoMedio.ExecutarAsync(ct);
         return OrdemDeServicoPresenter.ApresentarMetrica(metrica);
+    }
+
+    public async Task<OrdemResponse?> RegistrarDecisaoDeOrcamentoAsync(Guid id, bool aprovado, CancellationToken ct)
+    {
+        var ordem = await _registrarDecisao.ExecutarAsync(id, aprovado, ct);
+        return ordem is null ? null : OrdemDeServicoPresenter.Apresentar(ordem);
     }
 }

@@ -32,6 +32,7 @@ public class AuthFixture : IAsyncLifetime
         Environment.SetEnvironmentVariable("Jwt__Issuer", "oficina-api-test");
         Environment.SetEnvironmentVariable("Jwt__Audience", "oficina-clients-test");
         Environment.SetEnvironmentVariable("AdminBootstrap__Password", "AlteraMe@123");
+        Environment.SetEnvironmentVariable("Webhook__Token", "token-teste-webhook");
 
         // Rate limit dos demais testes desligado na prática — RateLimitTestes
         // usa fixture separada com limite real.

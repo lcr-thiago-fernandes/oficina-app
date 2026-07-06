@@ -36,7 +36,8 @@ public class OrdemDeServicoControllerTestes
             new RemoverItemServicoUseCase(ordens.Object),
             new AdicionarItemPecaUseCase(ordens.Object, pecas.Object),
             new RemoverItemPecaUseCase(ordens.Object),
-            new ObterTempoMedioExecucaoUseCase(ordens.Object));
+            new ObterTempoMedioExecucaoUseCase(ordens.Object),
+            new RegistrarDecisaoDeOrcamentoUseCase(ordens.Object, notificacoes.Object));
     }
 
     [Fact]
@@ -164,5 +165,39 @@ public class OrdemDeServicoControllerTestes
         resp.ItensServico.Should().ContainSingle(i => i.Nome == "Troca de óleo");
         clientes.Verify(c => c.AdicionarAsync(It.IsAny<Cliente>(), It.IsAny<CancellationToken>()), Times.Once);
         ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegistrarDecisaoDeOrcamentoAsync_Aprovado_DeveRetornarOrdemResponse()
+    {
+        var ordens = new Mock<IOrdemDeServicoGateway>();
+        var os = OrdemDeServico.Criar(Guid.NewGuid(), Guid.NewGuid());
+        os.AdicionarItemServico(Guid.NewGuid(), "S", 10m, 1);
+        os.IniciarDiagnostico();
+        os.EnviarOrcamentoParaAprovacao();
+        ordens.Setup(o => o.ObterPorIdAsync(os.Id, It.IsAny<CancellationToken>())).ReturnsAsync(os);
+
+        var controller = CriarController(ordens, new Mock<IClienteGateway>(),
+            new Mock<IServicoGateway>(), new Mock<IPecaGateway>());
+
+        var resp = await controller.RegistrarDecisaoDeOrcamentoAsync(os.Id, true, default);
+
+        resp.Should().NotBeNull();
+        resp!.OrcamentoAprovadoEm.Should().NotBeNull();
+        ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegistrarDecisaoDeOrcamentoAsync_OsInexistente_DeveRetornarNull()
+    {
+        var ordens = new Mock<IOrdemDeServicoGateway>();
+        ordens.Setup(o => o.ObterPorIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((OrdemDeServico?)null);
+        var controller = CriarController(ordens, new Mock<IClienteGateway>(),
+            new Mock<IServicoGateway>(), new Mock<IPecaGateway>());
+
+        var resp = await controller.RegistrarDecisaoDeOrcamentoAsync(Guid.NewGuid(), true, default);
+
+        resp.Should().BeNull();
     }
 }

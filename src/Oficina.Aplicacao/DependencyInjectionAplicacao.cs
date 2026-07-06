@@ -60,11 +60,10 @@ public static class DependencyInjectionAplicacao
         services.AddScoped<AdicionarItemPecaUseCase>();
         services.AddScoped<RemoverItemPecaUseCase>();
         services.AddScoped<ObterTempoMedioExecucaoUseCase>();
+        services.AddScoped<RegistrarDecisaoDeOrcamentoUseCase>();
 
-        // Consulta pública (sem auth)
+        // Consulta pública (sem auth) — apenas leitura de status (anti-enumeração)
         services.AddScoped<ConsultarOrdemPorNumeroUseCase>();
-        services.AddScoped<AprovarOrcamentoPorClienteUseCase>();
-        services.AddScoped<RejeitarOrcamentoPorClienteUseCase>();
 
         // Validators (auto-discovery via assembly)
         services.AddValidatorsFromAssembly(typeof(DependencyInjectionAplicacao).Assembly);
