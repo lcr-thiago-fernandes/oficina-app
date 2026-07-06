@@ -47,6 +47,7 @@ public static class DependencyInjectionAplicacao
 
         // Ordens de Serviço
         services.AddScoped<CriarOrdemUseCase>();
+        services.AddScoped<AbrirOrdemDeServicoUseCase>();
         services.AddScoped<ObterOrdemPorIdUseCase>();
         services.AddScoped<ListarOrdensUseCase>();
         services.AddScoped<IniciarDiagnosticoUseCase>();

@@ -42,16 +42,17 @@ public class ConsultaPublicaTestes
             new AdicionarVeiculoRequest($"OSC{new Random().Next(1000,9999)}", "F", "U", 2020)))
             .Content.ReadFromJsonAsync<VeiculoResponse>();
 
-        var os = await (await http.PostAsJsonAsync("/api/v1/ordens-servico",
-            new CriarOrdemRequest(cli.Id, v!.Id, null))).Content.ReadFromJsonAsync<OrdemResponse>();
-        await http.PatchAsync($"/api/v1/ordens-servico/{os!.Id}/diagnostico", null);
-
-        // adicionar pelo menos um item para poder enviar para aprovação
         var s = await (await http.PostAsJsonAsync("/api/v1/servicos",
             new CriarServicoRequest("S consulta", "x", 10m, 10)))
             .Content.ReadFromJsonAsync<ServicoResponse>();
-        await http.PostAsJsonAsync($"/api/v1/ordens-servico/{os.Id}/servicos",
-            new AdicionarItemServicoRequest(s!.Id, 1));
+
+        var os = await (await http.PostAsJsonAsync("/api/v1/ordens-servico",
+            new AbrirOrdemRequest(
+                new ClienteDadosDto(doc, "Cli OS", $"c{Guid.NewGuid():N}@x.com", "11987654321"),
+                new VeiculoDadosDto(v!.Placa, "F", "U", 2020),
+                new[] { new ItemServicoDto(s!.Id, 1) },
+                Array.Empty<ItemPecaDto>()))).Content.ReadFromJsonAsync<OrdemResponse>();
+        await http.PatchAsync($"/api/v1/ordens-servico/{os!.Id}/diagnostico", null);
         await http.PostAsync($"/api/v1/ordens-servico/{os.Id}/orcamento/enviar", null);
 
         return (os.Numero, doc);

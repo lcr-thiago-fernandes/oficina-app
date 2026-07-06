@@ -24,6 +24,7 @@ public class OrdemDeServicoControllerTestes
         var notificacoes = new Mock<INotificacaoGateway>();
         return new(
             new CriarOrdemUseCase(ordens.Object, clientes.Object),
+            new AbrirOrdemDeServicoUseCase(clientes.Object, servicos.Object, pecas.Object, ordens.Object),
             new ObterOrdemPorIdUseCase(ordens.Object),
             new ListarOrdensUseCase(ordens.Object),
             new IniciarDiagnosticoUseCase(ordens.Object, notificacoes.Object),
@@ -127,5 +128,41 @@ public class OrdemDeServicoControllerTestes
         resp.TempoMedioMinutos.Should().Be(60);
         resp.TempoMinimoMinutos.Should().Be(30);
         resp.TempoMaximoMinutos.Should().Be(90);
+    }
+
+    [Fact]
+    public async Task AbrirAsync_ClienteNovo_DeveRetornarOrdemResponseFormatada()
+    {
+        var ordens = new Mock<IOrdemDeServicoGateway>();
+        var clientes = new Mock<IClienteGateway>();
+        var servicos = new Mock<IServicoGateway>();
+        var pecas = new Mock<IPecaGateway>();
+
+        var servico = Servico.Criar("Troca de óleo", "x", 150m, 30);
+        clientes.Setup(c => c.ObterPorDocumentoAsync(It.IsAny<Documento>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Cliente?)null);
+        servicos.Setup(s => s.ObterPorIdAsync(servico.Id, It.IsAny<CancellationToken>())).ReturnsAsync(servico);
+
+        OrdemDeServico? adicionada = null;
+        ordens.Setup(o => o.AdicionarAsync(It.IsAny<OrdemDeServico>(), It.IsAny<CancellationToken>()))
+            .Callback<OrdemDeServico, CancellationToken>((o, _) => adicionada = o)
+            .Returns(Task.CompletedTask);
+        ordens.Setup(o => o.ObterPorIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => adicionada);
+
+        var controller = CriarController(ordens, clientes, servicos, pecas);
+        var req = new AbrirOrdemRequest(
+            new ClienteDadosDto("39053344705", "João", "joao@x.com", "11987654321"),
+            new VeiculoDadosDto("ABC1234", "Fiat", "Uno", 2020),
+            new[] { new ItemServicoDto(servico.Id, 1) },
+            Array.Empty<ItemPecaDto>());
+
+        var resp = await controller.AbrirAsync(req, default);
+
+        resp.Should().BeOfType<OrdemResponse>();
+        resp.Status.Should().Be("Recebida");
+        resp.ItensServico.Should().ContainSingle(i => i.Nome == "Troca de óleo");
+        clientes.Verify(c => c.AdicionarAsync(It.IsAny<Cliente>(), It.IsAny<CancellationToken>()), Times.Once);
+        ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

@@ -8,6 +8,7 @@ namespace Oficina.Adaptadores.OrdensServico.Controllers;
 public class OrdemDeServicoController
 {
     private readonly CriarOrdemUseCase _criar;
+    private readonly AbrirOrdemDeServicoUseCase _abrir;
     private readonly ObterOrdemPorIdUseCase _obter;
     private readonly ListarOrdensUseCase _listar;
     private readonly IniciarDiagnosticoUseCase _iniciarDiagnostico;
@@ -23,6 +24,7 @@ public class OrdemDeServicoController
 
     public OrdemDeServicoController(
         CriarOrdemUseCase criar,
+        AbrirOrdemDeServicoUseCase abrir,
         ObterOrdemPorIdUseCase obter,
         ListarOrdensUseCase listar,
         IniciarDiagnosticoUseCase iniciarDiagnostico,
@@ -37,6 +39,7 @@ public class OrdemDeServicoController
         ObterTempoMedioExecucaoUseCase tempoMedio)
     {
         _criar = criar;
+        _abrir = abrir;
         _obter = obter;
         _listar = listar;
         _iniciarDiagnostico = iniciarDiagnostico;
@@ -54,6 +57,12 @@ public class OrdemDeServicoController
     public async Task<OrdemResponse> CriarAsync(CriarOrdemRequest req, CancellationToken ct)
     {
         var ordem = await _criar.ExecutarAsync(req, ct);
+        return OrdemDeServicoPresenter.Apresentar(ordem);
+    }
+
+    public async Task<OrdemResponse> AbrirAsync(AbrirOrdemRequest req, CancellationToken ct)
+    {
+        var ordem = await _abrir.ExecutarAsync(req, ct);
         return OrdemDeServicoPresenter.Apresentar(ordem);
     }
 

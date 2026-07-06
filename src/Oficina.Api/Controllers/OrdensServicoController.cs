@@ -12,12 +12,12 @@ namespace Oficina.Api.Controllers;
 public class OrdensServicoController : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> Criar(
-        [FromBody] CriarOrdemRequest req,
+    public async Task<IActionResult> Abrir(
+        [FromBody] AbrirOrdemRequest req,
         [FromServices] OrdemDeServicoController controller,
         CancellationToken ct)
     {
-        var resp = await controller.CriarAsync(req, ct);
+        var resp = await controller.AbrirAsync(req, ct);
         return CreatedAtAction(nameof(Obter), new { id = resp.Id }, resp);
     }
 

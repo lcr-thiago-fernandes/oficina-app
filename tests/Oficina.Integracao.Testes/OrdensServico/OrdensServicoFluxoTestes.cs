@@ -62,25 +62,20 @@ public class OrdensServicoFluxoTestes
         await http.PostAsJsonAsync($"/api/v1/pecas/{peca!.Id}/movimentacoes",
             new RegistrarMovimentacaoRequest("Entrada", 10, "compra", null));
 
-        // Criar OS
+        // Abrir OS consolidada (cliente/veículo find-or-create + serviço + peça)
         var osResp = await http.PostAsJsonAsync("/api/v1/ordens-servico",
-            new CriarOrdemRequest(cliente.Id, veiculo!.Id, "obs"));
+            new AbrirOrdemRequest(
+                new ClienteDadosDto("11144477735", "Cliente OS", $"c{Guid.NewGuid():N}@x.com", "11987654321"),
+                new VeiculoDadosDto(veiculo!.Placa, "Fiat", "Uno", 2020),
+                new[] { new ItemServicoDto(servico!.Id, 1) },
+                new[] { new ItemPecaDto(peca.Id, 3) },
+                "obs"));
         osResp.StatusCode.Should().Be(HttpStatusCode.Created);
         var os = await osResp.Content.ReadFromJsonAsync<OrdemResponse>();
 
         // Diagnóstico
         var diag = await http.PatchAsync($"/api/v1/ordens-servico/{os!.Id}/diagnostico", null);
         diag.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        // Adicionar serviço
-        var addS = await http.PostAsJsonAsync($"/api/v1/ordens-servico/{os.Id}/servicos",
-            new AdicionarItemServicoRequest(servico!.Id, 1));
-        addS.StatusCode.Should().Be(HttpStatusCode.Created);
-
-        // Adicionar peça
-        var addP = await http.PostAsJsonAsync($"/api/v1/ordens-servico/{os.Id}/pecas",
-            new AdicionarItemPecaRequest(peca.Id, 3));
-        addP.StatusCode.Should().Be(HttpStatusCode.Created);
 
         // Enviar para aprovação
         var enviar = await http.PostAsync($"/api/v1/ordens-servico/{os.Id}/orcamento/enviar", null);
@@ -130,7 +125,11 @@ public class OrdensServicoFluxoTestes
         var veic = await v.Content.ReadFromJsonAsync<VeiculoResponse>();
 
         var os = await http.PostAsJsonAsync("/api/v1/ordens-servico",
-            new CriarOrdemRequest(cliente.Id, veic!.Id, null));
+            new AbrirOrdemRequest(
+                new ClienteDadosDto("11144477735", "X", $"x{Guid.NewGuid():N}@x.com", "11987654321"),
+                new VeiculoDadosDto(veic!.Placa, "F", "U", 2020),
+                Array.Empty<ItemServicoDto>(),
+                Array.Empty<ItemPecaDto>()));
         var osR = await os.Content.ReadFromJsonAsync<OrdemResponse>();
         await http.PatchAsync($"/api/v1/ordens-servico/{osR!.Id}/diagnostico", null);
 
@@ -160,10 +159,12 @@ public class OrdensServicoFluxoTestes
         var s = await (await http.PostAsJsonAsync("/api/v1/servicos",
             new CriarServicoRequest("X", "y", 10m, 10))).Content.ReadFromJsonAsync<ServicoResponse>();
         var os = await (await http.PostAsJsonAsync("/api/v1/ordens-servico",
-            new CriarOrdemRequest(cli.Id, v!.Id, null))).Content.ReadFromJsonAsync<OrdemResponse>();
+            new AbrirOrdemRequest(
+                new ClienteDadosDto("11144477735", "Cli IE", $"ie{Guid.NewGuid():N}@x.com", "11987654321"),
+                new VeiculoDadosDto(v!.Placa, "F", "U", 2020),
+                new[] { new ItemServicoDto(s!.Id, 1) },
+                Array.Empty<ItemPecaDto>()))).Content.ReadFromJsonAsync<OrdemResponse>();
         await http.PatchAsync($"/api/v1/ordens-servico/{os!.Id}/diagnostico", null);
-        await http.PostAsJsonAsync($"/api/v1/ordens-servico/{os.Id}/servicos",
-            new AdicionarItemServicoRequest(s!.Id, 1));
         await http.PostAsync($"/api/v1/ordens-servico/{os.Id}/orcamento/enviar", null);
 
         var resp = await http.PostAsync($"/api/v1/ordens-servico/{os.Id}/execucao/iniciar", null);
