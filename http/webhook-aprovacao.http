@@ -1,0 +1,39 @@
+### Webhook de aprovação de orçamento (externo — sem JWT, autenticado por X-Webhook-Token)
+### {id} é o GUID da OS (ordemServicoId), NÃO o número. Body: { "decisao": "aprovado" | "recusado" }.
+### O token vem de Webhook:Token (env WEBHOOK_TOKEN no .env local).
+
+### Aprovar orçamento (AguardandoAprovacao -> ... liberada para execução)
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/aprovacao
+X-Webhook-Token: {{webhookToken}}
+Content-Type: application/json
+
+{
+  "decisao": "aprovado"
+}
+
+### Recusar orçamento (cancela a OS)
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/aprovacao
+X-Webhook-Token: {{webhookToken}}
+Content-Type: application/json
+
+{
+  "decisao": "recusado"
+}
+
+### Token ausente/errado (esperado 401 — mesmo sem corpo, o filtro roda antes do binding)
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/aprovacao
+X-Webhook-Token: token-invalido
+Content-Type: application/json
+
+{
+  "decisao": "aprovado"
+}
+
+### Decisão inválida (esperado 422)
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/aprovacao
+X-Webhook-Token: {{webhookToken}}
+Content-Type: application/json
+
+{
+  "decisao": "talvez"
+}

@@ -6,10 +6,12 @@
       "token": "",
       "clienteId": "",
       "veiculoPlaca": "",
-      "veiculoId":"",
+      "veiculoId": "",
       "servicoId": "",
       "pecaId": "",
-      "ordemServicoId": ""
+      "ordemServicoId": "",
+      "numeroOs": "",
+      "webhookToken": ""
     },
     "local": {
       "host": "http://localhost:8080",

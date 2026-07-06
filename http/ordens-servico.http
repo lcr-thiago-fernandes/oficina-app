@@ -1,30 +1,52 @@
-### 1) Criar OS (precisa de clienteId e veiculoId existentes)
-# @name criarOs
+### Abertura consolidada de OS (cliente + veiculo + servicos + pecas numa unica requisicao)
+### O cliente e o veiculo sao find-or-create (por documento e por placa).
+# @name abrirOs
 POST {{baseUrl}}/ordens-servico
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "clienteId": "{{clienteId}}",
-  "veiculoId": "{{veiculoId}}",
+  "clienteDados": {
+    "documento": "39053344705",
+    "nome": "João da Silva",
+    "email": "joao.silva@example.com",
+    "telefone": "11987654321"
+  },
+  "veiculoDados": {
+    "placa": "ABC1A23",
+    "marca": "Fiat",
+    "modelo": "Uno",
+    "ano": 2020
+  },
+  "servicos": [
+    { "servicoId": "{{servicoId}}", "quantidade": 1 }
+  ],
+  "pecas": [
+    { "pecaId": "{{pecaId}}", "quantidade": 2 }
+  ],
   "observacoes": "Cliente reportou ruído no motor."
 }
 
-### @ordemServicoId = {{criarOs.response.body.id}}
+### >>> COPIE o "id" da OS da resposta para .vscode/settings.json em "ordemServicoId"
+### >>> e o "numero" (BIGSERIAL) para "numeroOs" (usado na consulta pública e no webhook)
 
-### 2) Obter OS
+### Obter OS por id
 GET {{baseUrl}}/ordens-servico/{{ordemServicoId}}
 Authorization: Bearer {{token}}
 
-### 3) Listar OS por status
+### Listar OS (sem filtro: esconde terminais; ordenada por prioridade da fila e depois criadaEm)
+GET {{baseUrl}}/ordens-servico
+Authorization: Bearer {{token}}
+
+### Listar OS por status
 GET {{baseUrl}}/ordens-servico?status=Recebida
 Authorization: Bearer {{token}}
 
-### 4) Iniciar diagnóstico
+### Iniciar diagnóstico (Recebida -> EmDiagnostico)
 PATCH {{baseUrl}}/ordens-servico/{{ordemServicoId}}/diagnostico
 Authorization: Bearer {{token}}
 
-### 5) Adicionar serviço
+### Adicionar serviço avulso à OS
 POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/servicos
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -34,7 +56,7 @@ Content-Type: application/json
   "quantidade": 1
 }
 
-### 6) Adicionar peça
+### Adicionar peça avulsa à OS
 POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/pecas
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -44,28 +66,36 @@ Content-Type: application/json
   "quantidade": 2
 }
 
-### 7) Enviar orçamento para aprovação
+### Enviar orçamento para aprovação (EmDiagnostico -> AguardandoAprovacao)
 POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/enviar
 Authorization: Bearer {{token}}
 
-### 8) (cliente aprova — endpoint do Plano 7)
+### >>> Aprovação do cliente é feita pelo webhook — ver http/webhook-aprovacao.http
 
-### 9) Iniciar execução (baixa estoque)
+### Iniciar execução (AguardandoAprovacao -> EmExecucao; baixa estoque transacional)
 POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/execucao/iniciar
 Authorization: Bearer {{token}}
 
-### 10) Finalizar
+### Finalizar (EmExecucao -> Finalizada)
 POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/finalizar
 Authorization: Bearer {{token}}
 
-### 11) Entregar
+### Entregar (Finalizada -> Entregue)
 POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/entregar
 Authorization: Bearer {{token}}
 
-### Tentar enviar para aprovação sem itens (esperado 422)
-POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/enviar
+### Métricas — tempo médio de execução (admin)
+GET {{baseUrl}}/ordens-servico/metricas/tempo-medio
 Authorization: Bearer {{token}}
 
-### Tentar iniciar execução sem aprovação (esperado 422)
-POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/execucao/iniciar
+### Abrir OS sem itens (esperado 422 — precisa de ao menos 1 serviço ou peça)
+POST {{baseUrl}}/ordens-servico
 Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteDados": { "documento": "39053344705", "nome": "João da Silva", "email": "joao.silva@example.com", "telefone": "11987654321" },
+  "veiculoDados": { "placa": "ABC1A23", "marca": "Fiat", "modelo": "Uno", "ano": 2020 },
+  "servicos": [],
+  "pecas": []
+}

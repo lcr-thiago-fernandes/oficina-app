@@ -341,6 +341,8 @@ fiap_15SOAT_fase1/
 └── tests/
     ├── Oficina.Dominio.Testes/
     ├── Oficina.Aplicacao.Testes/
+    ├── Oficina.Adaptadores.Testes/
+    ├── Oficina.Infraestrutura.Testes/
     └── Oficina.Integracao.Testes/
 ```
 

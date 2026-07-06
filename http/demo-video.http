@@ -1,5 +1,5 @@
 ### ============================================================
-### DEMO TECH CHALLENGE — FIAP 15SOAT Fase 1
+### DEMO TECH CHALLENGE — FIAP 15SOAT Fase 2
 ###
 ### PRÉ-REQUISITOS:
 ###   1. docker compose -f docker/docker-compose.yml --env-file .env up -d --build
@@ -134,20 +134,22 @@ Authorization: Bearer {{token}}
 ###            → Finalizada → Entregue
 ### ============================================================
 
-### [3.1] Criar Ordem de Serviço (estado inicial: Recebida)
-### Mostrar: o "numero" é um BIGSERIAL gerado pelo banco (humano-amigável).
-# @name criarOs
+### [3.1] Abrir Ordem de Serviço consolidada (cliente + veículo + serviços + peças)
+### Mostrar: cliente/veículo find-or-create numa única transação; "numero" é BIGSERIAL.
+# @name abrirOs
 POST {{baseUrl}}/ordens-servico
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "clienteId": "{{clienteId}}",
-  "veiculoId": "{{veiculoId}}",
+  "clienteDados": { "documento": "39053344705", "nome": "João da Silva", "email": "joao.silva@example.com", "telefone": "11987654321" },
+  "veiculoDados": { "placa": "ABC1A23", "marca": "Fiat", "modelo": "Uno", "ano": 2020 },
+  "servicos": [ { "servicoId": "{{servicoId}}", "quantidade": 1 } ],
+  "pecas": [ { "pecaId": "{{pecaId}}", "quantidade": 3 } ],
   "observacoes": "Cliente reportou ruído no motor e óleo escuro."
 }
 
-### >>> COPIE o "id" da OS para .vscode/settings.json em "ordemServicoId"
+### >>> COPIE o "id" da OS para "ordemServicoId" e o "numero" para "numeroOs" em .vscode/settings.json
 
 
 ### [3.2] Iniciar Diagnóstico (Recebida → EmDiagnostico)
@@ -191,10 +193,10 @@ Authorization: Bearer {{token}}
 
 
 ### ============================================================
-### PARTE 4 — APROVAÇÃO PÚBLICA (sem JWT)
-### Demonstrar: rota acessada pelo cliente final, exige o CPF do dono
-### como proteção (anti-enumeração: 404 idêntico para OS inexistente
-### e para documento que não bate).
+### PARTE 4 — CONSULTA PÚBLICA (só leitura) + APROVAÇÃO VIA WEBHOOK
+### Consulta: rota pública (sem JWT), exige o CPF do dono (anti-enumeração:
+### 404 idêntico para OS inexistente e para documento que não bate).
+### Aprovação/recusa: agora via webhook autenticado por X-Webhook-Token.
 ### ============================================================
 
 ### [4.1] Consulta pública pelo cliente (status do orçamento)
@@ -208,8 +210,14 @@ GET {{baseUrl}}/consulta/1?documento=39053344705
 GET {{baseUrl}}/consulta/1?documento=12345678909
 
 
-### [4.3] APROVAR orçamento pelo cliente (rota pública)
-POST {{baseUrl}}/consulta/1/aprovar?documento=39053344705
+### [4.3] APROVAR orçamento via WEBHOOK (autenticado por X-Webhook-Token; substitui a rota pública antiga)
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/aprovacao
+X-Webhook-Token: {{webhookToken}}
+Content-Type: application/json
+
+{
+  "decisao": "aprovado"
+}
 
 
 ### ============================================================
