@@ -14,3 +14,5 @@ http/
 .env
 .env.local
 docker/docker-compose.yml
+**/*.user
+.superpowers/
