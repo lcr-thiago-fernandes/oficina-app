@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oficina-api-config
+  namespace: oficina
+  labels:
+    app: oficina-api
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  # Emissor/audiência do JWT (não sensíveis). Devem bater com o token emitido pela API.
+  Jwt__Issuer: "oficina-api"
+  Jwt__Audience: "oficina-clients"
+  # Em Kubernetes os pods do Deployment NÃO migram: a migração é feita pelo Job dedicado.
+  Bootstrap__ExecutarNoStartup: "false"
+  # OBS: a connection string completa contém a SENHA do banco → fica no Secret
+  # (chave ConnectionStrings__Default), não aqui. O endpoint do RDS PostgreSQL vem
+  # do output do Terraform (Plano 09) e é injetado na criação do Secret pelo CI.

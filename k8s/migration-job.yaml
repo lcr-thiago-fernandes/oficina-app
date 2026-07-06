@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: oficina-migrate
+  namespace: oficina
+  labels:
+    app: oficina-api
+    component: migrate
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: oficina-api
+        component: migrate
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: "${ECR_REPOSITORY}:${IMAGE_TAG}"
+          # Modo migrate do Program.cs: migra + bootstrap e encerra (não sobe o servidor web).
+          # Sobrescreve o ENTRYPOINT ["dotnet","Oficina.Api.dll"] do Dockerfile.
+          command: ["dotnet", "Oficina.Api.dll", "migrate"]
+          envFrom:
+            - configMapRef:
+                name: oficina-api-config
+            - secretRef:
+                name: oficina-api-secret
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
