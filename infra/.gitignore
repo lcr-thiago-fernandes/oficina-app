@@ -1,0 +1,20 @@
+# Terraform — estado e caches locais (NUNCA commitar).
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Arquivos de variaveis podem conter segredos (ex.: db_password) — NUNCA commitar.
+*.tfvars
+*.tfvars.json
+# ... exceto o exemplo com placeholders:
+!terraform.tfvars.example
+
+# Overrides locais.
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# O lock de providers (.terraform.lock.hcl) DEVE ser commitado — nao ignorar.
