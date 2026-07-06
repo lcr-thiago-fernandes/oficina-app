@@ -131,4 +131,65 @@ public class AbrirOrdemDeServicoUseCaseTestes
         await act.Should().ThrowAsync<OrdemInvalidaException>().WithMessage("*não encontrada*");
         _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task Executar_ClienteExistenteInativo_DeveLancar()
+    {
+        var cliente = Cliente.Criar("João", Documento.Criar("39053344705"),
+            Email.Criar("joao@x.com"), Telefone.Criar("11987654321"));
+        cliente.Inativar();
+        var servico = Servico.Criar("Troca de óleo", "x", 150m, 30);
+        _clientes.Setup(c => c.ObterPorDocumentoAsync(It.IsAny<Documento>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cliente);
+        _servicos.Setup(s => s.ObterPorIdAsync(servico.Id, It.IsAny<CancellationToken>())).ReturnsAsync(servico);
+
+        var act = async () => await CriarUseCase().ExecutarAsync(RequestValido(servico.Id), default);
+
+        await act.Should().ThrowAsync<OrdemInvalidaException>().WithMessage("*inativo*");
+        _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Executar_PecasOmitidas_DeveAbrirOrdemComApenasServicos()
+    {
+        var servico = Servico.Criar("Troca de óleo", "x", 150m, 30);
+        _clientes.Setup(c => c.ObterPorDocumentoAsync(It.IsAny<Documento>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Cliente?)null);
+        _servicos.Setup(s => s.ObterPorIdAsync(servico.Id, It.IsAny<CancellationToken>())).ReturnsAsync(servico);
+        ConfigurarRefetch();
+
+        var req = new AbrirOrdemRequest(
+            new ClienteDadosDto("39053344705", "João", "joao@x.com", "11987654321"),
+            new VeiculoDadosDto("ABC1234", "Fiat", "Uno", 2020),
+            new[] { new ItemServicoDto(servico.Id, 1) },
+            null!);
+
+        var ordem = await CriarUseCase().ExecutarAsync(req, default);
+
+        ordem.Should().NotBeNull();
+        ordem.ItensServico.Should().ContainSingle();
+        _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Executar_ServicosOmitidos_DeveAbrirOrdemComApenasPecas()
+    {
+        var peca = Peca.Criar(Sku.Criar("ABC-123"), "Filtro de óleo", 50m);
+        _clientes.Setup(c => c.ObterPorDocumentoAsync(It.IsAny<Documento>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Cliente?)null);
+        _pecas.Setup(p => p.ObterPorIdAsync(peca.Id, It.IsAny<CancellationToken>())).ReturnsAsync(peca);
+        ConfigurarRefetch();
+
+        var req = new AbrirOrdemRequest(
+            new ClienteDadosDto("39053344705", "João", "joao@x.com", "11987654321"),
+            new VeiculoDadosDto("ABC1234", "Fiat", "Uno", 2020),
+            null!,
+            new[] { new ItemPecaDto(peca.Id, 1) });
+
+        var ordem = await CriarUseCase().ExecutarAsync(req, default);
+
+        ordem.Should().NotBeNull();
+        ordem.ItensPeca.Should().ContainSingle();
+        _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

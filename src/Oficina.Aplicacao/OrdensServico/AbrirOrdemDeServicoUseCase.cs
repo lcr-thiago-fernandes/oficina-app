@@ -45,6 +45,10 @@ public class AbrirOrdemDeServicoUseCase
                 Email.Criar(req.ClienteDados.Email),
                 Telefone.Criar(req.ClienteDados.Telefone));
         }
+        else if (!cliente.Ativo)
+        {
+            throw new OrdemInvalidaException("Cliente inativo.");
+        }
 
         // 2) find-or-add veículo por placa
         var placa = Placa.Criar(req.VeiculoDados.Placa);
@@ -70,7 +74,7 @@ public class AbrirOrdemDeServicoUseCase
         await _ordens.AdicionarAsync(ordem, ct);
 
         // 4) serviços
-        foreach (var s in req.Servicos)
+        foreach (var s in req.Servicos ?? Enumerable.Empty<ItemServicoDto>())
         {
             var servico = await _servicos.ObterPorIdAsync(s.ServicoId, ct)
                 ?? throw new OrdemInvalidaException($"Serviço {s.ServicoId} não encontrado.");
@@ -82,7 +86,7 @@ public class AbrirOrdemDeServicoUseCase
         }
 
         // 5) peças
-        foreach (var p in req.Pecas)
+        foreach (var p in req.Pecas ?? Enumerable.Empty<ItemPecaDto>())
         {
             var peca = await _pecas.ObterPorIdAsync(p.PecaId, ct)
                 ?? throw new OrdemInvalidaException($"Peça {p.PecaId} não encontrada.");
