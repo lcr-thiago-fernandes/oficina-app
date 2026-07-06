@@ -20,6 +20,10 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString, npgsql =>
                 npgsql.MigrationsHistoryTable("__migrations_history", "public")));
 
+        // Reutilizável pelo startup (HostedService) e pelo Job de migração (Program "migrate").
+        // Singleton stateless: cria o próprio escopo a partir do IServiceProvider recebido.
+        services.AddSingleton<IInicializadorBanco, InicializadorBanco>();
+
         services.AdicionarAutenticacao(configuration);
         services.AdicionarRepositorios();
         services.AdicionarNotificacoes();

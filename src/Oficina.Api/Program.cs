@@ -3,6 +3,7 @@ using Oficina.Adaptadores;
 using Oficina.Aplicacao;
 using Oficina.Api.Configuracao;
 using Oficina.Infraestrutura;
+using Oficina.Infraestrutura.Persistencia;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -57,6 +58,26 @@ builder.Services.AdicionarJwtBearer(builder.Configuration);
 builder.Services.AdicionarPoliticas();
 builder.Services.AdicionarRateLimit(builder.Configuration);
 builder.Services.AdicionarWebhook(builder.Configuration);
+
+// Modo Job de migração (Kubernetes): "dotnet Oficina.Api.dll migrate" ou STARTUP_TASK=migrate.
+// Aplica migrations + bootstrap do admin e ENCERRA sem subir o servidor web.
+// Roda o inicializador diretamente (o HostedService não é iniciado neste caminho,
+// pois builder.Build() não dispara hosted services — só app.Run() faria).
+var tarefaStartup = Environment.GetEnvironmentVariable("STARTUP_TASK");
+if (args.Contains("migrate") ||
+    string.Equals(tarefaStartup, "migrate", StringComparison.OrdinalIgnoreCase))
+{
+    await using var appMigrate = builder.Build();
+    var logMigrate = appMigrate.Services
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("Migrate");
+    var inicializador = appMigrate.Services.GetRequiredService<IInicializadorBanco>();
+
+    logMigrate.LogInformation("STARTUP_TASK=migrate — migração + bootstrap; encerrando após concluir.");
+    await inicializador.ExecutarAsync(
+        appMigrate.Services, appMigrate.Configuration, logMigrate, CancellationToken.None);
+    return;
+}
 
 var app = builder.Build();
 
