@@ -20,11 +20,11 @@ Repositório privado com acesso concedido ao grupo **`soat-architecture`**.
 
 | Item | Link |
 |---|---|
-| Repositório (privado, acesso a `soat-architecture`) | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1 |
+| Repositório (privado, acesso a `soat-architecture`) | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2 |
 | Vídeo de apresentação (≤15 min) | `<INSERIR-LINK-DO-VIDEO>` |
-| README | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/README.md |
-| Documentos / ADRs | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/tree/main/docs |
-| Coleção de APIs | Swagger em `/swagger` + cenários em [`http/`](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/tree/main/http) |
+| README | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/blob/main/README.md |
+| Documentos / ADRs | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/tree/main/docs |
+| Coleção de APIs | Swagger em `/swagger` + cenários em [`http/`](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/tree/main/http) |
 
 ---
 
@@ -39,8 +39,8 @@ Os três diagramas (renderizados no README) cobrem:
 3. **Fluxo de deploy (CI/CD)** — push em `main` → CI/CD → build/push no ECR → Job de migração →
    apply dos manifestos K8s → rollout.
 
-Ver [README.md](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/README.md)
-e os ADRs em [docs/arquitetura](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/tree/main/docs/arquitetura)
+Ver [README.md](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/blob/main/README.md)
+e os ADRs em [docs/arquitetura](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/tree/main/docs/arquitetura)
 (ADR-009 a ADR-013 documentam as decisões da Fase 2).
 
 ---
@@ -91,9 +91,9 @@ docker compose -f docker/docker-compose.yml --env-file .env up -d --build
 
 **Kubernetes (AWS EKS):** provisionar com Terraform (`infra/`), conectar o kubeconfig e
 aplicar os manifestos (`k8s/`) — ou deixar o **CD** fazer no push em `main`. Passo a passo no
-[README.md](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/README.md),
-[infra/README.md](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/infra/README.md)
-e [k8s/README.md](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1/blob/main/k8s/README.md).
+[README.md](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/blob/main/README.md),
+[infra/README.md](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/blob/main/infra/README.md)
+e [k8s/README.md](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/blob/main/k8s/README.md).
 
 > A geração do PDF a partir deste Markdown é manual (ex.: `pandoc` ou "Print to PDF").
 

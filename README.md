@@ -177,8 +177,8 @@ VPC (2 AZs, subnets públicas/privadas, NAT único), **EKS** (1 node group `t3.m
 ### 1. Clonar e configurar
 
 ```bash
-git clone https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1
-cd fiap_15SOAT_fase1
+git clone https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2
+cd fiap_15SOAT_fase2
 cp .env.example .env   # ajuste ADMIN_BOOTSTRAP_PASSWORD, JWT_SECRET (>=64 chars), WEBHOOK_TOKEN
 ```
 
@@ -323,7 +323,7 @@ Os testes de integração usam **Testcontainers** (Postgres real efêmero, sem m
 ## Estrutura de pastas
 
 ```
-fiap_15SOAT_fase1/
+fiap_15SOAT_fase2/
 ├── .github/workflows/    # ci.yml, cd.yml, infra.yml + Dependabot
 ├── docker/               # Dockerfile + docker-compose
 ├── docs/
