@@ -76,7 +76,7 @@ Recebida → Em Diagnóstico → Aguardando Aprovação → Em Execução → Fi
 
 - Testes unitários (Domínio/Aplicação/Adaptadores) + integração (Testcontainers, Postgres real).
 - CI quebra se a cobertura de linha cair abaixo de 80%.
-- CodeQL + Dependabot para análise de vulnerabilidades.
+- CodeQL + Dependabot para análise de vulnerabilidades — ver [relatório de vulnerabilidades da Fase 2](relatorio-vulnerabilidades-fase2.md) (6 Altas transitivas só em teste + 1 Moderada de produção, todas aceitas com mitigação planejada).
 
 ---
 
