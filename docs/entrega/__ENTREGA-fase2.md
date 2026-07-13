@@ -82,6 +82,9 @@ Recebida → Em Diagnóstico → Aguardando Aprovação → Em Execução → Fi
 
 ## Como executar (resumo)
 
+> **Passo a passo completo do que depende do avaliador/entregador** (provisionar AWS, configurar CI/CD, deploy, demo de escalabilidade, vídeo e PDF), com justificativas amarradas ao enunciado: **[GUIA-DEPLOY-E-ENTREGA-fase2.md](GUIA-DEPLOY-E-ENTREGA-fase2.md)**.
+
+
 **Local (Docker):**
 ```bash
 cp .env.example .env   # ajuste ADMIN_BOOTSTRAP_PASSWORD, JWT_SECRET, WEBHOOK_TOKEN
