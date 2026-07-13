@@ -36,3 +36,7 @@ CLAUDE.md
 .serena/
 .serena-cache/
 memory/
+
+## Superpowers (artefatos de brainstorming/planejamento — nao versionar)
+docs/superpowers/
+.superpowers/
