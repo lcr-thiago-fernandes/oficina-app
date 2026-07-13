@@ -296,8 +296,6 @@ As variáveis (`baseUrl`, `token`, `webhookToken`, IDs) ficam em [`.vscode/setti
 
 📹 **Link do vídeo (≤15 min):** https://1drv.ms/f/c/fa2e7c7114d0ee1e/IgAZg-pFOF5fTJ1mQ_0nRLAmAcSgougV4IOc_4BL0KM_KVw?e=9aEKXJ
 
-Roteiro em [docs/entrega/roteiro-video-fase2.md](docs/entrega/roteiro-video-fase2.md).
-
 ---
 
 ## Como rodar testes
