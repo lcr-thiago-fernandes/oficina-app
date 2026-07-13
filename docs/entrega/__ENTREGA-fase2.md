@@ -21,7 +21,7 @@ Repositório privado com acesso concedido ao grupo **`soat-architecture`**.
 | Item | Link |
 |---|---|
 | Repositório (privado, acesso a `soat-architecture`) | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2 |
-| Vídeo de apresentação (≤15 min) | `<INSERIR-LINK-DO-VIDEO>` |
+| Vídeo de apresentação (≤15 min) | https://1drv.ms/f/c/fa2e7c7114d0ee1e/IgAZg-pFOF5fTJ1mQ_0nRLAmAcSgougV4IOc_4BL0KM_KVw?e=9aEKXJ |
 | README | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/blob/main/README.md |
 | Documentos / ADRs | https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/tree/main/docs |
 | Coleção de APIs | Swagger em `/swagger` + cenários em [`http/`](https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/tree/main/http) |
