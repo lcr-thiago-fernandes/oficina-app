@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Tech Challenge — Fase 2 — Documento de Entrega</title>
+<style>
+@page { size: A4; margin: 20mm 18mm; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 11pt;
+  line-height: 1.5;
+  color: #24292f;
+  max-width: 100%;
+}
+h1 { font-size: 22pt; margin-top: 0; border-bottom: 2px solid #d0d7de; padding-bottom: 8px; }
+h2 { font-size: 16pt; margin-top: 24px; border-bottom: 1px solid #d0d7de; padding-bottom: 4px; }
+h3 { font-size: 13pt; margin-top: 18px; }
+hr { border: none; border-top: 1px solid #d0d7de; margin: 20px 0; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 10pt; }
+th, td { border: 1px solid #d0d7de; padding: 6px 10px; text-align: left; vertical-align: top; }
+th { background: #f6f8fa; font-weight: 600; }
+code {
+  background: #f6f8fa;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: "Consolas", "Cascadia Code", monospace;
+  font-size: 9.5pt;
+}
+pre {
+  background: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: 4px;
+  padding: 12px;
+  overflow-x: auto;
+  font-family: "Consolas", "Cascadia Code", monospace;
+  font-size: 9pt;
+  line-height: 1.4;
+}
+pre code { background: none; padding: 0; }
+ul, ol { padding-left: 22px; }
+li { margin: 3px 0; }
+a { color: #0969da; text-decoration: none; word-break: break-all; }
+strong { font-weight: 600; }
+blockquote {
+  margin: 12px 0;
+  padding: 6px 14px;
+  border-left: 4px solid #d0d7de;
+  background: #f6f8fa;
+  color: #57606a;
+}
+blockquote p { margin: 4px 0; }
+</style>
+</head>
+<body>
+
+<h1>Tech Challenge — Fase 2 — Documento de Entrega</h1>
+
+<p>
+<strong>Curso:</strong> Pós-Tech FIAP — Arquitetura de Software (15SOAT)<br>
+<strong>Tema:</strong> Sistema Integrado de Atendimento e Execução de Serviços para Oficina Mecânica<br>
+<strong>Data de entrega:</strong> 06/07/2026
+</p>
+
+<hr>
+
+<h2>Equipe</h2>
+
+<table>
+<thead><tr><th>Nome</th><th>Discord</th></tr></thead>
+<tbody>
+<tr><td>Thiago Fernandes da Cruz</td><td>@thiago_64271</td></tr>
+</tbody>
+</table>
+
+<p>Repositório privado com acesso concedido ao grupo <strong><code>soat-architecture</code></strong>.</p>
+
+<hr>
+
+<h2>Links</h2>
+
+<table>
+<thead><tr><th>Item</th><th>Link</th></tr></thead>
+<tbody>
+<tr>
+  <td>Repositório (privado, acesso a <code>soat-architecture</code>)</td>
+  <td><a href="https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2">https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2</a></td>
+</tr>
+<tr>
+  <td>Vídeo de apresentação (≤15 min)</td>
+  <td><a href="https://1drv.ms/f/c/fa2e7c7114d0ee1e/IgAZg-pFOF5fTJ1mQ_0nRLAmAcSgougV4IOc_4BL0KM_KVw?e=9aEKXJ">https://1drv.ms/f/c/fa2e7c7114d0ee1e/IgAZg-pFOF5fTJ1mQ_0nRLAmAcSgougV4IOc_4BL0KM_KVw?e=9aEKXJ</a></td>
+</tr>
+<tr>
+  <td>README</td>
+  <td><a href="https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/blob/main/README.md">https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/blob/main/README.md</a></td>
+</tr>
+<tr>
+  <td>Documentos / ADRs</td>
+  <td><a href="https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/tree/main/docs">https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/tree/main/docs</a></td>
+</tr>
+<tr>
+  <td>Coleção de APIs</td>
+  <td>Swagger em <code>/swagger</code> + cenários em <a href="https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/tree/main/http"><code>http/</code></a></td>
+</tr>
+</tbody>
+</table>
+
+<hr>
+
+<h2>Desenho da arquitetura</h2>
+
+<p>Os três diagramas (renderizados no README) cobrem:</p>
+
+<ol>
+<li><strong>Camadas (Clean Architecture, 5 projetos)</strong> — Entidades → Casos de Uso → Adaptadores (Controllers/Gateways/Presenters/DataSources) → Frameworks &amp; Drivers (API/EF).</li>
+<li><strong>Infraestrutura AWS</strong> — VPC (2 AZs), EKS + node group, RDS PostgreSQL privado, ECR, ELB, GitHub Actions via OIDC, estado do Terraform em S3+DynamoDB.</li>
+<li><strong>Fluxo de deploy (CI/CD)</strong> — push em <code>main</code> → CI/CD → build/push no ECR → Job de migração → apply dos manifestos K8s → rollout.</li>
+</ol>
+
+<p>Ver <a href="https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/blob/main/README.md">README.md</a> e os ADRs em <a href="https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/tree/main/docs/arquitetura">docs/arquitetura</a> (ADR-009 a ADR-013 documentam as decisões da Fase 2).</p>
+
+<hr>
+
+<h2>Resumo da solução (Fase 2)</h2>
+
+<p>
+Evolução do MVP da Fase 1 com foco em <strong>qualidade, resiliência e escalabilidade</strong>, em <strong>C# / .NET 8 / ASP.NET Core</strong> sobre <strong>PostgreSQL 16</strong> (AWS RDS em produção).
+</p>
+
+<h3>O que a Fase 2 entrega</h3>
+
+<ul>
+<li><strong>Refatoração para Clean Architecture</strong> com 5 projetos, incluindo a camada <code>Oficina.Adaptadores</code> (Controllers de aplicação, Gateways, Presenters, DataSources).</li>
+<li><strong>Containerização + orquestração no Kubernetes (AWS EKS)</strong>: Deployment com 2 réplicas, probes, <code>securityContext</code> restritivo e <strong>HPA (2–10 réplicas)</strong>.</li>
+<li><strong>Infraestrutura como código (Terraform)</strong>: VPC, EKS, RDS PostgreSQL, ECR, OIDC do GitHub Actions e metrics-server; estado remoto em S3 + DynamoDB.</li>
+<li><strong>CI/CD (GitHub Actions)</strong>: CI com build, testes (cobertura ≥80%), CodeQL e build da imagem; CD com deploy contínuo em <code>main</code> via <strong>OIDC</strong> (sem chave estática), <strong>Job de migração</strong> isolado e rollout controlado.</li>
+<li><strong>Novo contrato de API</strong>: abertura consolidada da OS (cliente + veículo + serviços + peças), listagem ordenada por prioridade, <strong>webhook de aprovação de orçamento</strong> autenticado por token (<code>X-Webhook-Token</code>, tempo constante, fail-closed) substituindo as rotas públicas de aprovar/rejeitar (consulta pública agora é só leitura), e <strong>notificação de status</strong> (mock).</li>
+<li><strong>Observabilidade mínima</strong>: logs estruturados (Serilog JSON) + métricas Prometheus em <code>/metrics</code>.</li>
+</ul>
+
+<h3>Máquina de estados da OS</h3>
+
+<p>
+Recebida → Em Diagnóstico → Aguardando Aprovação → Em Execução → Finalizada → Entregue (com <strong>Cancelada</strong> via recusa do orçamento no webhook).
+</p>
+
+<h3>Qualidade</h3>
+
+<ul>
+<li>Testes unitários (Domínio/Aplicação/Adaptadores) + integração (Testcontainers, Postgres real).</li>
+<li>CI quebra se a cobertura de linha cair abaixo de 80%.</li>
+<li>CodeQL + Dependabot para análise de vulnerabilidades — ver <a href="relatorio-vulnerabilidades-fase2.md">relatório de vulnerabilidades da Fase 2</a> (6 Altas transitivas só em teste + 1 Moderada de produção, todas aceitas com mitigação planejada).</li>
+</ul>
+
+<hr>
+
+<h2>Como executar (resumo)</h2>
+
+<blockquote>
+<p><strong>Passo a passo completo do que depende do avaliador/entregador</strong> (provisionar AWS, configurar CI/CD, deploy, demo de escalabilidade, vídeo e PDF), com justificativas amarradas ao enunciado: <strong><a href="GUIA-DEPLOY-E-ENTREGA-fase2.md">GUIA-DEPLOY-E-ENTREGA-fase2.md</a></strong>.</p>
+</blockquote>
+
+<p><strong>Local (Docker):</strong></p>
+<pre><code>cp .env.example .env   # ajuste ADMIN_BOOTSTRAP_PASSWORD, JWT_SECRET, WEBHOOK_TOKEN
+docker compose -f docker/docker-compose.yml --env-file .env up -d --build
+# API http://localhost:8080 · Swagger /swagger · Health /health · Métricas /metrics
+</code></pre>
+
+<p><strong>Kubernetes (AWS EKS):</strong> provisionar com Terraform (<code>infra/</code>), conectar o kubeconfig e aplicar os manifestos (<code>k8s/</code>) — ou deixar o <strong>CD</strong> fazer no push em <code>main</code>. Passo a passo no <a href="https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/blob/main/README.md">README.md</a>, <a href="https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/blob/main/infra/README.md">infra/README.md</a> e <a href="https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase2/blob/main/k8s/README.md">k8s/README.md</a>.</p>
+
+<blockquote>
+<p>A geração do PDF a partir deste Markdown é manual (ex.: <code>pandoc</code> ou "Print to PDF").</p>
+</blockquote>
+
+<blockquote>
+<p><strong>Coleção (decisão):</strong> documentamos <strong>Swagger (<code>/swagger</code>) + pasta <code>http/</code></strong> como a coleção (o enunciado aceita "collection ou similar"). O Postman JSON é <strong>opcional</strong> e <strong>não</strong> é gerado por este plano; se desejado no futuro, criar <code>docs/entrega/collection.postman_collection.json</code>.</p>
+</blockquote>
+
+</body>
+</html>
