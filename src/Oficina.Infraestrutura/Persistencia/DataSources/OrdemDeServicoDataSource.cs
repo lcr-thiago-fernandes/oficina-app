@@ -53,6 +53,16 @@ public class OrdemDeServicoDataSource : IOrdemDeServicoDataSource
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<OrdemDeServico>> ListarPorClienteAsync(
+        Guid clienteId, CancellationToken ct) =>
+        await _db.OrdensServico
+            .AsNoTracking()
+            .Include(o => o.ItensServico)
+            .Include(o => o.ItensPeca)
+            .Where(o => o.ClienteId == clienteId)
+            .OrderByDescending(o => o.CriadaEm)
+            .ToListAsync(ct);
+
     public Task<int> ContarAsync(StatusOrdemDeServico? status, CancellationToken ct)
     {
         var q = OrdemDeServicoQuery.AplicarFiltro(_db.OrdensServico.AsQueryable(), status);
