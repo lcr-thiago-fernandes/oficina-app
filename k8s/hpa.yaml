@@ -12,6 +12,16 @@ spec:
     name: oficina-api
   minReplicas: 2
   maxReplicas: 10
+  # Só CPU (spec do projeto). Havia também uma métrica de memória
+  # (averageUtilization: 70), removida: o HPA calcula esse percentual sobre
+  # requests.memory (256Mi em deployment.yaml → alvo de ~179Mi), mas o pod em
+  # repouso, com o agente do New Relic ligado, mede ~215Mi de RSS (ver
+  # deployment.yaml) — ou seja, o alvo já está estourado com zero tráfego. E
+  # esse consumo é por pod, não dilui ao replicar, então o HPA escalava direto
+  # até maxReplicas (10) e ficava preso lá, com pods ociosos reservando 256Mi de
+  # request cada. Quem for reintroduzir essa métrica precisa antes subir o
+  # averageUtilization (ou requests.memory) para acomodar o repouso medido com
+  # o profiler ligado.
   metrics:
     - type: Resource
       resource:
@@ -19,9 +29,3 @@ spec:
         target:
           type: Utilization
           averageUtilization: 60
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 70

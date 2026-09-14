@@ -16,7 +16,7 @@ dois ambientes, em namespaces separados: `oficina-hml` (branch `develop`) e `ofi
 | `migration-job.yaml` | Job (`batch/v1`) | `oficina-migrate`: roda `dotnet Oficina.Api.dll migrate` (migração + bootstrap) e encerra. |
 | `deployment.yaml` | Deployment (`apps/v1`) | `oficina-api`: 2 réplicas, probes em `/health:8080`, resources requests/limits, securityContext restritivo, rootfs read-only + `emptyDir` em `/tmp`, agente do New Relic ligado via `CORECLR_ENABLE_PROFILING=1`. |
 | `service.yaml` | Service (`v1`) | `oficina-api`: `NodePort` `80 → 8080`. |
-| `hpa.yaml` | HorizontalPodAutoscaler (`autoscaling/v2`) | `oficina-api`: 2–10 réplicas, CPU ~60% / memória ~70%. |
+| `hpa.yaml` | HorizontalPodAutoscaler (`autoscaling/v2`) | `oficina-api`: 2–10 réplicas, só CPU ~60% (métrica de memória removida — ver comentário no arquivo). |
 
 Todos os manifests namespaced usam `namespace: ${NAMESPACE}`, substituído pelo CI conforme
 o ambiente (`oficina-hml` ou `oficina-prd`).
