@@ -38,6 +38,16 @@
           "Microsoft.TestPlatform.TestHost": "17.8.0"
         }
       },
+      "System.IdentityModel.Tokens.Jwt": {
+        "type": "Direct",
+        "requested": "[8.2.1, )",
+        "resolved": "8.2.1",
+        "contentHash": "GVQmbjr2N8awFWPTWyThLxgKnFINObG1P+oX7vFrBY8um3V7V7Dh3wnxaGxNH6v6lSTeVQrY+SaUUBX9H3TPcw==",
+        "dependencies": {
+          "Microsoft.IdentityModel.JsonWebTokens": "8.2.1",
+          "Microsoft.IdentityModel.Tokens": "8.2.1"
+        }
+      },
       "Testcontainers.PostgreSql": {
         "type": "Direct",
         "requested": "[4.0.0, )",
@@ -1089,15 +1099,6 @@
           "System.Runtime.InteropServices": "4.3.0"
         }
       },
-      "System.IdentityModel.Tokens.Jwt": {
-        "type": "Transitive",
-        "resolved": "8.2.1",
-        "contentHash": "GVQmbjr2N8awFWPTWyThLxgKnFINObG1P+oX7vFrBY8um3V7V7Dh3wnxaGxNH6v6lSTeVQrY+SaUUBX9H3TPcw==",
-        "dependencies": {
-          "Microsoft.IdentityModel.JsonWebTokens": "8.2.1",
-          "Microsoft.IdentityModel.Tokens": "8.2.1"
-        }
-      },
       "System.IO": {
         "type": "Transitive",
         "resolved": "4.3.0",
@@ -1763,6 +1764,8 @@
           "FluentValidation.AspNetCore": "[11.3.0, )",
           "FluentValidation.DependencyInjectionExtensions": "[11.10.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[8.0.10, )",
+          "Microsoft.IdentityModel.JsonWebTokens": "[8.2.1, )",
+          "Microsoft.IdentityModel.Tokens": "[8.2.1, )",
           "Oficina.Adaptadores": "[1.0.0, )",
           "Oficina.Aplicacao": "[1.0.0, )",
           "Oficina.Infraestrutura": "[1.0.0, )",
@@ -1776,8 +1779,7 @@
           "Serilog.Formatting.Compact": "[3.0.0, )",
           "Serilog.Sinks.Console": "[6.0.0, )",
           "Serilog.Sinks.File": "[6.0.0, )",
-          "Swashbuckle.AspNetCore": "[6.8.1, )",
-          "System.IdentityModel.Tokens.Jwt": "[8.2.1, )"
+          "Swashbuckle.AspNetCore": "[6.8.1, )"
         }
       },
       "oficina.aplicacao": {
