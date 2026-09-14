@@ -152,7 +152,7 @@ Content-Type: application/json
 ### >>> resultado:"Sucesso"} no New Relic — é ela que alimenta o painel de volume
 ### >>> diário de OS.
 
-### [2.2] Abertura SEM itens (esperado 422)
+### [2.2] Abertura SEM itens (esperado 400)
 ### Mostrar: erro do cliente, não falha de processamento — NÃO emite evento de
 ### falha e portanto NÃO dispara o alerta Critical, e a tentativa falha também
 ### NÃO é contada como OS criada no painel de volume diário.
@@ -307,5 +307,5 @@ X-Correlation-Id: demo-fase3-0001
 ### >>>   - painel de volume diário     → OrdemServicoEvento WHERE statusNovo = 'Recebida'
 ### >>>   - painel de tempo por status  → OrdemServicoEvento, duracaoNoStatusSegundos
 ### >>>   - alerta Critical             → OrdemServicoEvento WHERE resultado = 'Falha'
-### >>> Nenhum dos 422 demonstrados acima ([2.2], [3.1], [3.5]) aparece nesses
-### >>> três lugares: erro do cliente não é falha de processamento.
+### >>> Nenhum dos erros de cliente demonstrados acima ([2.2] 400, [3.1] 422, [3.5] 401)
+### >>> aparece nesses três lugares: erro do cliente não é falha de processamento.
