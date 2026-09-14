@@ -57,13 +57,39 @@ spec:
                   key: NewRelic__LicenseKey
             - name: NEW_RELIC_LABELS
               value: "ambiente:${AMBIENTE}"
+            # readOnlyRootFilesystem: true + agente em /usr/local/newrelic-dotnet-agent:
+            # por padrão o agente grava em $CORECLR_NEWRELIC_HOME/logs e o profiler
+            # NATIVO grava seu próprio log ANTES de ler qualquer configuração gerenciada.
+            # Nos dois casos o destino seria a raiz somente-leitura. O único ponto
+            # gravável do pod é /tmp (emptyDir, abaixo), e é para lá que os dois vão.
+            # Vale /tmp direto, e não um subdiretório: o profiler nativo falha ao abrir
+            # o log se o diretório não existir, e falha de carga do profiler com
+            # CORECLR_ENABLE_PROFILING=1 derruba o processo inteiro na inicialização.
+            - name: NEW_RELIC_LOG_DIRECTORY
+              value: "/tmp"
+            - name: NEWRELIC_PROFILER_LOG_DIRECTORY
+              value: "/tmp"
+          # Memória dimensionada COM o agente APM ligado. O valor anterior (256Mi)
+          # foi definido para a aplicação SEM agente. Medição desta imagem, em
+          # repouso (sem tráfego), banco conectado, rootfs read-only:
+          #   CORECLR_ENABLE_PROFILING=0 →  ~77Mi RSS
+          #   CORECLR_ENABLE_PROFILING=1 → ~215Mi RSS   (+~140Mi de agente:
+          #       profiler nativo + agente gerenciado + ~30 assemblies de
+          #       instrumentação em extensions/ + buffers do harvest de 60s)
+          # Ou seja: ligado o profiler, o pod já nasce a ~84% do limite antigo SEM
+          # atender uma única requisição — qualquer carga o leva a OOMKill e ao laço
+          # de restart do liveness probe. 512Mi ≈ 2,4x o repouso medido, margem que
+          # o GC precisa para não coletar agressivamente junto ao limite. requests
+          # sobe de 128Mi para 256Mi porque 128Mi era menos da metade do consumo
+          # real: o scheduler empacotaria pods demais no nó e este seria candidato
+          # precoce a despejo sob pressão de memória.
           resources:
             requests:
               cpu: "100m"
-              memory: "128Mi"
+              memory: "256Mi"
             limits:
               cpu: "500m"
-              memory: "256Mi"
+              memory: "512Mi"
           readinessProbe:
             httpGet:
               path: /health
@@ -88,7 +114,9 @@ spec:
               drop:
                 - ALL
           volumeMounts:
-            # rootfs read-only → /tmp precisa ser gravável (arquivos temporários do .NET).
+            # rootfs read-only → /tmp precisa ser gravável (arquivos temporários do .NET
+            # e, desde a Fase 3, os logs do agente e do profiler do New Relic — ver
+            # NEW_RELIC_LOG_DIRECTORY / NEWRELIC_PROFILER_LOG_DIRECTORY acima).
             - name: tmp
               mountPath: /tmp
       volumes:

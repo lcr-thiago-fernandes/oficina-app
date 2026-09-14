@@ -78,3 +78,21 @@ liga o profiler (`CORECLR_ENABLE_PROFILING=1`) e lê a licença do Secret
 `oficina-api-secret`, chave **`NewRelic__LicenseKey`**. Essa é a chave que o pipeline de
 CD (que cria o Secret real) precisa preencher — nomes diferentes fazem o pod subir sem
 licença, sem erro visível além do dashboard vazio.
+
+Dois ajustes que o profiler **ligado** exige e que não apareciam com ele desligado:
+
+- **Logs em `/tmp`.** Com `readOnlyRootFilesystem: true`, o destino padrão do agente
+  (`$CORECLR_NEWRELIC_HOME/logs`) e do profiler nativo não é gravável. O Deployment
+  define `NEW_RELIC_LOG_DIRECTORY=/tmp` e `NEWRELIC_PROFILER_LOG_DIRECTORY=/tmp`
+  (o `emptyDir` montado em `/tmp`). Verificado rodando a imagem com
+  `--read-only --tmpfs /tmp` e `CORECLR_ENABLE_PROFILING=1`: sem as variáveis, `/tmp`
+  fica sem nenhum log do agente (diagnóstico silenciosamente perdido); com elas,
+  aparecem `NewRelic.Profiler.<pid>.log` e `newrelic_agent_Oficina.Api.log`.
+- **Memória.** Na mesma medição, em repouso: ~77Mi de RSS com o profiler desligado e
+  ~215Mi com ele ligado. Por isso `limits.memory` é 512Mi (era 256Mi, dimensionado sem
+  agente) e `requests.memory` é 256Mi.
+
+- **Nome da aplicação.** `NEW_RELIC_APP_NAME` é `oficina-api;oficina-api-${AMBIENTE}`.
+  O primeiro nome da lista é a entidade principal e é o que as consultas e os alertas
+  da Fase 3 procuram (`appName = 'oficina-api'`); o segundo mantém hml e prd
+  separáveis no APM. `${AMBIENTE}` (`prd`/`hml`) vem do `cd.yml`, não do `${NAMESPACE}`.
