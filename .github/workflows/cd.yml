@@ -57,9 +57,21 @@ jobs:
       #    123456789012.dkr.ecr.us-east-1.amazonaws.com/oficina-api).
       - name: Ler parametros do SSM
         run: |
-          echo "ECR_REPOSITORY=$(aws ssm get-parameter --name /oficina/ecr/repository_url --query Parameter.Value --output text)" >> "$GITHUB_ENV"
-          echo "EKS_CLUSTER_NAME=$(aws ssm get-parameter --name /oficina/eks/cluster_name --query Parameter.Value --output text)" >> "$GITHUB_ENV"
-          echo "RDS_ENDPOINT=$(aws ssm get-parameter --name /oficina/db/endpoint --query Parameter.Value --output text)" >> "$GITHUB_ENV"
+          # `set -e` sozinho NAO propaga a falha do `aws ssm` quando ela esta do lado
+          # esquerdo de uma substituicao de comando dentro de `echo "VAR=$(...)"`
+          # (o status observado seria o do echo, sempre 0). Por isso a atribuicao a uma
+          # variavel vem ANTES do echo: assim `set -e` interrompe o passo se o `aws ssm`
+          # falhar, em vez de gravar ECR_REPOSITORY/EKS_CLUSTER_NAME/RDS_ENDPOINT vazios
+          # no ambiente e so descobrir o problema minutos depois, num passo posterior.
+          set -euo pipefail
+
+          ecr_repository=$(aws ssm get-parameter --name /oficina/ecr/repository_url --query Parameter.Value --output text)
+          eks_cluster_name=$(aws ssm get-parameter --name /oficina/eks/cluster_name --query Parameter.Value --output text)
+          rds_endpoint=$(aws ssm get-parameter --name /oficina/db/endpoint --query Parameter.Value --output text)
+
+          echo "ECR_REPOSITORY=${ecr_repository}" >> "$GITHUB_ENV"
+          echo "EKS_CLUSTER_NAME=${eks_cluster_name}" >> "$GITHUB_ENV"
+          echo "RDS_ENDPOINT=${rds_endpoint}" >> "$GITHUB_ENV"
 
       # 4) Login no ECR (usa as credenciais temporarias do passo 2).
       - name: Login no Amazon ECR
@@ -91,20 +103,51 @@ jobs:
       #    A chave NewRelic__LicenseKey precisa bater, case-sensitive, com o
       #    secretKeyRef do Deployment (k8s/deployment.yaml) — se divergir o pod sobe
       #    normalmente, mas o dashboard do New Relic fica vazio, sem erro nenhum.
+      #
+      #    ADMIN_BOOTSTRAP_PASSWORD e WEBHOOK_TOKEN sao passados por `env:` (nao
+      #    interpolados como "${{ secrets.X }}" direto no script): a interpolacao do
+      #    GitHub acontece ANTES de o bash existir, entao um valor com aspas, `$(...)`
+      #    ou crase viraria comando executado no runner — com as credenciais AWS ja
+      #    assumidas. Via `env:` o valor so chega como texto de variavel de ambiente.
       - name: Criar/atualizar Secret do K8s
+        env:
+          ADMIN_BOOTSTRAP_PASSWORD: ${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}
+          WEBHOOK_TOKEN: ${{ secrets.WEBHOOK_TOKEN }}
         run: |
+          set -euo pipefail
+
           DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id oficina/db_password --query SecretString --output text)
           JWT_SECRET=$(aws secretsmanager get-secret-value --secret-id oficina/jwt_secret --query SecretString --output text)
           NR_KEY=$(aws secretsmanager get-secret-value --secret-id oficina/newrelic_license_key --query SecretString --output text)
           CONN="Host=${RDS_ENDPOINT};Port=5432;Database=oficina;Username=oficina_admin;Password=${DB_PASSWORD}"
+
+          # Registra os segredos no mascarador do Actions assim que existem: eles sao
+          # strings de shell comuns (nao GitHub Secrets), entao o mascaramento
+          # automatico do log NAO se aplica a eles. Sem isso, um erro malformado do
+          # kubectl, um `echo` de depuracao esquecido ou ACTIONS_STEP_DEBUG ligado
+          # imprimiria o valor em claro — e este repositorio e publico.
+          echo "::add-mask::$DB_PASSWORD"
+          echo "::add-mask::$JWT_SECRET"
+          echo "::add-mask::$NR_KEY"
+          echo "::add-mask::$CONN"
+
+          # Falha cedo e com mensagem clara se algum segredo vier vazio (parametro/segredo
+          # ausente, permissao faltando etc.). Sem isso o kubectl aceita o valor vazio, o
+          # pod sobe normalmente e o sintoma (JWT invalido, sem conexao com o banco, sem
+          # dados no New Relic) aparece bem longe da causa real.
+          if [ -z "$JWT_SECRET" ]; then echo "ERRO: JWT_SECRET veio vazio do Secrets Manager (oficina/jwt_secret)." >&2; exit 1; fi
+          if [ -z "$DB_PASSWORD" ]; then echo "ERRO: DB_PASSWORD veio vazio do Secrets Manager (oficina/db_password)." >&2; exit 1; fi
+          if [ -z "$NR_KEY" ]; then echo "ERRO: NR_KEY veio vazio do Secrets Manager (oficina/newrelic_license_key)." >&2; exit 1; fi
+          if [ -z "$ADMIN_BOOTSTRAP_PASSWORD" ]; then echo "ERRO: secret ADMIN_BOOTSTRAP_PASSWORD veio vazio do GitHub Secrets." >&2; exit 1; fi
+          if [ -z "$WEBHOOK_TOKEN" ]; then echo "ERRO: secret WEBHOOK_TOKEN veio vazio do GitHub Secrets." >&2; exit 1; fi
 
           kubectl create secret generic oficina-api-secret \
             --namespace "$NAMESPACE" \
             --from-literal=Jwt__Secret="${JWT_SECRET}" \
             --from-literal=ConnectionStrings__Default="${CONN}" \
             --from-literal=NewRelic__LicenseKey="${NR_KEY}" \
-            --from-literal=AdminBootstrap__Password="${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}" \
-            --from-literal=Webhook__Token="${{ secrets.WEBHOOK_TOKEN }}" \
+            --from-literal=AdminBootstrap__Password="${ADMIN_BOOTSTRAP_PASSWORD}" \
+            --from-literal=Webhook__Token="${WEBHOOK_TOKEN}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       # 9) Job de migracao (migra + bootstrap). O Job e imutavel: deletar antes de
