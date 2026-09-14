@@ -53,7 +53,41 @@ public class OrdemDeServicoDataSource : IOrdemDeServicoDataSource
     public async Task AdicionarAsync(OrdemDeServico ordem, CancellationToken ct) =>
         await _db.OrdensServico.AddAsync(ordem, ct);
 
-    public Task SalvarAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
+    public Task SalvarAsync(CancellationToken ct)
+    {
+        MarcarNovosHistoricosComoAdicionados();
+        return _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// O histórico de status é um efeito colateral interno do domínio: cada transição
+    /// (IniciarDiagnostico, EnviarOrcamentoParaAprovacao, etc.) acrescenta uma entrada
+    /// nova a <see cref="OrdemDeServico.Historico"/> sem passar por Add() explícito.
+    /// Quando a OS já estava carregada (não incluímos Historico em ObterPorIdAsync,
+    /// para não pagar o join em toda leitura), o change tracker do EF Core descobre
+    /// essa entrada nova por meio do grafo, mas como o Id (Guid) já vem atribuído pelo
+    /// domínio, ele assume — por heurística de chave — que a linha já existe no banco
+    /// (Unchanged/Modified) em vez de marcá-la como Added, e a gravação falha com
+    /// DbUpdateConcurrencyException (UPDATE que afeta 0 linhas). Como a navegação não
+    /// foi carregada neste contexto, qualquer item nela presente só pode ter chegado
+    /// agora, em memória — logo, é sempre novo.
+    /// </summary>
+    private void MarcarNovosHistoricosComoAdicionados()
+    {
+        _db.ChangeTracker.DetectChanges();
+        foreach (var entry in _db.ChangeTracker.Entries<OrdemDeServico>())
+        {
+            if (entry.Collection(o => o.Historico).IsLoaded)
+                continue;
+
+            foreach (var historico in entry.Entity.Historico)
+            {
+                var historicoEntry = _db.Entry(historico);
+                if (historicoEntry.State is EntityState.Unchanged or EntityState.Modified)
+                    historicoEntry.State = EntityState.Added;
+            }
+        }
+    }
 
     public void MarcarItemServicoComoNovo(ItemServico item) =>
         _db.Set<ItemServico>().Add(item);

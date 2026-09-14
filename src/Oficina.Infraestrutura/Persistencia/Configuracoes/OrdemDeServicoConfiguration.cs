@@ -23,10 +23,20 @@ public class OrdemDeServicoConfiguration : IEntityTypeConfiguration<OrdemDeServi
 
         b.Property(x => x.Status)
             .HasConversion<string>().HasColumnName("status").HasMaxLength(30).IsRequired();
-        b.HasIndex(x => x.Status);
+        // Padrao de acesso real: filtrar por status e ordenar por data de abertura.
+        // `ordem_servico` nao possui coluna `atualizado_em`; `criada_em` e a data canonica.
+        b.HasIndex(x => new { x.Status, x.CriadaEm })
+            .HasDatabaseName("ix_ordem_servico_status_data");
         b.HasIndex(x => x.ClienteId);
 
         b.Property(x => x.Observacoes).HasColumnName("observacoes").HasColumnType("text");
+
+        b.Property(x => x.Unidade)
+            .HasColumnName("unidade")
+            .HasMaxLength(60)
+            .HasDefaultValue("matriz")
+            .IsRequired();
+        b.HasIndex(x => x.Unidade).HasDatabaseName("ix_ordem_servico_unidade");
 
         b.Property(x => x.CriadaEm).HasColumnName("criada_em").IsRequired();
         b.Property(x => x.DiagnosticadaEm).HasColumnName("diagnosticada_em");
@@ -53,9 +63,16 @@ public class OrdemDeServicoConfiguration : IEntityTypeConfiguration<OrdemDeServi
             .HasForeignKey("ordem_servico_id")
             .OnDelete(DeleteBehavior.Cascade);
 
+        b.HasMany(x => x.Historico)
+            .WithOne()
+            .HasForeignKey("ordem_servico_id")
+            .OnDelete(DeleteBehavior.Cascade);
+
         b.Metadata.FindNavigation(nameof(OrdemDeServico.ItensServico))!
             .SetPropertyAccessMode(PropertyAccessMode.Field);
         b.Metadata.FindNavigation(nameof(OrdemDeServico.ItensPeca))!
+            .SetPropertyAccessMode(PropertyAccessMode.Field);
+        b.Metadata.FindNavigation(nameof(OrdemDeServico.Historico))!
             .SetPropertyAccessMode(PropertyAccessMode.Field);
     }
 }
