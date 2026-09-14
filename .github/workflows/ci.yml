@@ -2,10 +2,11 @@ name: CI
 
 on:
   push:
-    # Plano 10: adiciona fase-2 (mantendo main/develop) para o CI rodar na branch de trabalho.
-    branches: [main, develop, fase-2]
+    # Fase 3: dois ambientes no mesmo cluster (oficina-hml em develop, oficina-prd em
+    # main). A branch fase-2 nao existe mais; o CI roda em main/develop (push e PR).
+    branches: [main, develop]
   pull_request:
-    branches: [main, develop, fase-2]
+    branches: [main, develop]
 
 jobs:
   build-test:
