@@ -353,7 +353,11 @@ Não configurados mais como GitHub Secret/Variable (mudaram de origem):
   - `ordens-servico.http` — abertura consolidada + fluxo completo da OS
   - `webhook-aprovacao.http` — aprovação/recusa do orçamento via webhook (`X-Webhook-Token`, sem JWT)
   - `consulta.http` — consulta do orçamento pelo cliente, **com token JWT de perfil `Cliente`** na claim `documento` (deixou de ser anônima na Fase 3)
-  - `demo-video.http` — roteiro fim-a-fim para a demonstração da Fase 2 (histórico)
+  - `fase3-demo.http` — **roteiro da demonstração da Fase 3**: token de Cliente, `/me/ordens-servico`,
+    `/me/veiculos`, consulta da própria OS (200) vs. OS de outro cliente (404 anti-enumeração),
+    ciclo completo da OS gerando histórico de transições, e os 422 que **não** disparam o alerta
+  - `demo-video.http` — roteiro fim-a-fim da Fase 2 (**histórico**; as duas primeiras requisições
+    usam o `POST /auth/login` removido, então o roteiro não roda mais nesta API)
 
 As variáveis (`baseUrl`, `token`, `tokenCliente`, `tokenOutroCliente`, `webhookToken`, IDs)
 ficam em [`.vscode/settings.json`](.vscode/settings.json) (`rest-client.environmentVariables`).
