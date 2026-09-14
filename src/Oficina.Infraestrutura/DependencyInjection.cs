@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Oficina.Aplicacao.OrdensServico.Telemetria;
 using Oficina.Infraestrutura.Auth;
 using Oficina.Infraestrutura.Notificacoes;
 using Oficina.Infraestrutura.Persistencia;
+using Oficina.Infraestrutura.Telemetria;
 
 namespace Oficina.Infraestrutura;
 
@@ -27,6 +29,7 @@ public static class DependencyInjection
         services.AdicionarAutenticacao(configuration);
         services.AdicionarRepositorios();
         services.AdicionarNotificacoes();
+        services.AddSingleton<IPublicadorEventoOs, PublicadorEventoOsNewRelic>();
 
         return services;
     }
