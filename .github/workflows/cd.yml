@@ -30,17 +30,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1) Namespace e nodePort derivados da branch: develop -> homologacao (oficina-hml),
-      #    main -> producao (oficina-prd). As portas precisam diferir: um nodePort e unico
-      #    no cluster inteiro (nao por namespace) — 30080 fica com produção, 30081 com
-      #    homologacao. E o pipeline, nao os manifests, quem fixa essa atribuicao.
+      # 1) Namespace, ambiente e nodePort derivados da branch: develop -> homologacao
+      #    (oficina-hml), main -> producao (oficina-prd). As portas precisam diferir: um
+      #    nodePort e unico no cluster inteiro (nao por namespace) — 30080 fica com
+      #    produção, 30081 com homologacao. E o pipeline, nao os manifests, quem fixa
+      #    essa atribuicao.
+      #
+      #    AMBIENTE (prd|hml) e exportado separadamente de NAMESPACE (oficina-prd|
+      #    oficina-hml) porque o Deployment precisa do sufixo limpo: "${NAMESPACE}" no
+      #    NEW_RELIC_APP_NAME rendia "oficina-api-oficina-prd" e no NEW_RELIC_LABELS
+      #    rendia "ambiente:oficina-prd", com o prefixo repetido.
       - name: Definir ambiente
         run: |
           if [ "${{ github.ref_name }}" = "main" ]; then
             echo "NAMESPACE=oficina-prd" >> "$GITHUB_ENV"
+            echo "AMBIENTE=prd" >> "$GITHUB_ENV"
             echo "NODE_PORT=30080" >> "$GITHUB_ENV"
           else
             echo "NAMESPACE=oficina-hml" >> "$GITHUB_ENV"
+            echo "AMBIENTE=hml" >> "$GITHUB_ENV"
             echo "NODE_PORT=30081" >> "$GITHUB_ENV"
           fi
 
@@ -161,11 +169,11 @@ jobs:
           kubectl wait --for=condition=complete job/oficina-migrate -n "$NAMESPACE" --timeout=300s
 
       # 10) Deployment + Service + HPA. Cada envsubst declara so as variaveis que o
-      #     respectivo manifest usa (deployment/hpa: NAMESPACE, ECR_REPOSITORY,
-      #     IMAGE_TAG; service: NAMESPACE, NODE_PORT).
+      #     respectivo manifest usa (deployment: NAMESPACE, ECR_REPOSITORY, IMAGE_TAG,
+      #     AMBIENTE; hpa: NAMESPACE; service: NAMESPACE, NODE_PORT).
       - name: Aplicar Deployment, Service e HPA
         run: |
-          envsubst '${ECR_REPOSITORY} ${IMAGE_TAG} ${NAMESPACE}' < k8s/deployment.yaml | kubectl apply -f -
+          envsubst '${ECR_REPOSITORY} ${IMAGE_TAG} ${NAMESPACE} ${AMBIENTE}' < k8s/deployment.yaml | kubectl apply -f -
           envsubst '${NAMESPACE} ${NODE_PORT}' < k8s/service.yaml | kubectl apply -f -
           envsubst '${NAMESPACE}' < k8s/hpa.yaml | kubectl apply -f -
 
