@@ -213,6 +213,12 @@ esta API, o contrato do token (segredo HS256, `iss`/`aud`) — por isso costuma 
 último. Este repositório (`oficina-app`) depende dos três: só faz deploy real depois que
 o cluster, o banco e o segredo compartilhado existirem.
 
+Os acoplamentos concretos que este repositório já fixou — formato do token, caminhos do
+SSM, identificadores do Secrets Manager, portas, a tabela `auth.usuario` e as pendências
+que atravessam a fronteira entre repositórios — estão em
+**[docs/contratos-entre-repositorios.md](docs/contratos-entre-repositorios.md)**. Cada um
+deles falha em silêncio se divergir, por isso está escrito e não subentendido.
+
 ---
 
 ## Como rodar localmente
