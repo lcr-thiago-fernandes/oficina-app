@@ -98,6 +98,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseMiddleware<MiddlewareDeCorrelacao>();
 app.UseSerilogRequestLogging();
 app.UseMiddleware<MiddlewareDeExcecoes>();
 app.UseAuthentication();
