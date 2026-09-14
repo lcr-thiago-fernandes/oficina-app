@@ -154,6 +154,16 @@
           "Swashbuckle.AspNetCore.SwaggerUI": "6.8.1"
         }
       },
+      "System.IdentityModel.Tokens.Jwt": {
+        "type": "Direct",
+        "requested": "[8.2.1, )",
+        "resolved": "8.2.1",
+        "contentHash": "GVQmbjr2N8awFWPTWyThLxgKnFINObG1P+oX7vFrBY8um3V7V7Dh3wnxaGxNH6v6lSTeVQrY+SaUUBX9H3TPcw==",
+        "dependencies": {
+          "Microsoft.IdentityModel.JsonWebTokens": "8.2.1",
+          "Microsoft.IdentityModel.Tokens": "8.2.1"
+        }
+      },
       "BCrypt.Net-Next": {
         "type": "Transitive",
         "resolved": "4.0.3",
@@ -646,15 +656,6 @@
         "resolved": "8.0.0",
         "contentHash": "c9xLpVz6PL9lp/djOWtk5KPDZq3cSYpmXoJQY524EOtuFl5z9ZtsotpsyrDW40U1DRnQSYvcPKEUV0X//u6gkQ=="
       },
-      "System.IdentityModel.Tokens.Jwt": {
-        "type": "Transitive",
-        "resolved": "8.2.1",
-        "contentHash": "GVQmbjr2N8awFWPTWyThLxgKnFINObG1P+oX7vFrBY8um3V7V7Dh3wnxaGxNH6v6lSTeVQrY+SaUUBX9H3TPcw==",
-        "dependencies": {
-          "Microsoft.IdentityModel.JsonWebTokens": "8.2.1",
-          "Microsoft.IdentityModel.Tokens": "8.2.1"
-        }
-      },
       "System.IO.Pipelines": {
         "type": "Transitive",
         "resolved": "6.0.3",
@@ -711,7 +712,6 @@
       "oficina.infraestrutura": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.AspNetCore.Authentication.JwtBearer": "[8.0.10, )",
           "Microsoft.EntityFrameworkCore": "[8.0.10, )",
           "Microsoft.Extensions.Configuration.Abstractions": "[8.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[8.0.2, )",
@@ -720,8 +720,7 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[8.0.10, )",
           "Oficina.Adaptadores": "[1.0.0, )",
           "Oficina.Aplicacao": "[1.0.0, )",
-          "Oficina.Dominio": "[1.0.0, )",
-          "System.IdentityModel.Tokens.Jwt": "[8.2.1, )"
+          "Oficina.Dominio": "[1.0.0, )"
         }
       }
     }

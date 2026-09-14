@@ -26,6 +26,9 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.8.1" />
+    <!-- Pin da stack Microsoft.IdentityModel usada na VALIDACAO do token.
+         Sem ele o JwtBearer 8.0.10 resolve a 7.1.2 (mais antiga). -->
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.2.1" />
   </ItemGroup>
 
   <ItemGroup>

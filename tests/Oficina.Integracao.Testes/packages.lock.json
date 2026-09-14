@@ -1776,7 +1776,8 @@
           "Serilog.Formatting.Compact": "[3.0.0, )",
           "Serilog.Sinks.Console": "[6.0.0, )",
           "Serilog.Sinks.File": "[6.0.0, )",
-          "Swashbuckle.AspNetCore": "[6.8.1, )"
+          "Swashbuckle.AspNetCore": "[6.8.1, )",
+          "System.IdentityModel.Tokens.Jwt": "[8.2.1, )"
         }
       },
       "oficina.aplicacao": {
@@ -1797,7 +1798,6 @@
       "oficina.infraestrutura": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.AspNetCore.Authentication.JwtBearer": "[8.0.10, )",
           "Microsoft.EntityFrameworkCore": "[8.0.10, )",
           "Microsoft.Extensions.Configuration.Abstractions": "[8.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[8.0.2, )",
@@ -1806,8 +1806,7 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[8.0.10, )",
           "Oficina.Adaptadores": "[1.0.0, )",
           "Oficina.Aplicacao": "[1.0.0, )",
-          "Oficina.Dominio": "[1.0.0, )",
-          "System.IdentityModel.Tokens.Jwt": "[8.2.1, )"
+          "Oficina.Dominio": "[1.0.0, )"
         }
       }
     }

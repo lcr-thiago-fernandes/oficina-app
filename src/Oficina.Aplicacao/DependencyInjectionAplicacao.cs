@@ -13,8 +13,7 @@ public static class DependencyInjectionAplicacao
 {
     public static IServiceCollection AdicionarAplicacao(this IServiceCollection services)
     {
-        // Auth (movido do Plano 2)
-        services.AddScoped<LoginUseCase>();
+        // Auth — so o bootstrap do admin; a emissao de token saiu da API.
         services.AddScoped<BootstrapAdminUseCase>();
 
         // Clientes

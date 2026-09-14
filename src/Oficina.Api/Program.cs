@@ -57,7 +57,6 @@ builder.Services.AdicionarAplicacao();
 builder.Services.AdicionarAdaptadores();
 builder.Services.AdicionarJwtBearer(builder.Configuration);
 builder.Services.AdicionarPoliticas();
-builder.Services.AdicionarRateLimit(builder.Configuration);
 builder.Services.AdicionarWebhook(builder.Configuration);
 
 // Observabilidade minima: OpenTelemetry expondo /metrics (Prometheus).
@@ -103,7 +102,6 @@ app.UseSerilogRequestLogging();
 app.UseMiddleware<MiddlewareDeExcecoes>();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseRateLimiter();
 app.MapControllers();
 
 // Endpoint de scraping do Prometheus (anonimo): expõe /metrics.

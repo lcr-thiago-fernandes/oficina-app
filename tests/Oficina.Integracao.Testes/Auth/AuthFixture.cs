@@ -32,11 +32,6 @@ public class AuthFixture : IAsyncLifetime
         Environment.SetEnvironmentVariable("AdminBootstrap__Password", "AlteraMe@123");
         Environment.SetEnvironmentVariable("Webhook__Token", "token-teste-webhook");
 
-        // Rate limit dos demais testes desligado na prática — RateLimitTestes
-        // usa fixture separada com limite real.
-        Environment.SetEnvironmentVariable("RateLimit__Login__PermitLimit", "100000");
-        Environment.SetEnvironmentVariable("RateLimit__Login__WindowMinutes", "1");
-
         Factory = new WebApplicationFactory<Program>();
 
         // dispara o startup, que aplica migrations e cria admin
