@@ -40,16 +40,35 @@ jobs:
       #    oficina-hml) porque o Deployment precisa do sufixo limpo: "${NAMESPACE}" no
       #    NEW_RELIC_APP_NAME rendia "oficina-api-oficina-prd" e no NEW_RELIC_LABELS
       #    rendia "ambiente:oficina-prd", com o prefixo repetido.
+      #    REF_NAME vai por `env:` e nao interpolado no corpo do `run:` — mesma classe
+      #    de problema ja corrigida nos secrets, so que aqui a fonte e o NOME DA REF.
+      #    `git check-ref-format` nao proibe $, (, ), crase, aspas, ; nem & em nome de
+      #    branch/tag, e workflow_dispatch aceita qualquer ref: interpolado direto, o
+      #    nome viraria comando executado no runner, que ja esta com as credenciais
+      #    AWS assumidas. Via `env:` o valor so chega como texto, e "$REF_NAME" entre
+      #    aspas nao sofre word splitting nem globbing.
+      #
+      #    O `else` virou `elif`/`exit 1`: antes, um workflow_dispatch em QUALQUER ref
+      #    que nao fosse main implantava em homologacao — uma branch de feature
+      #    despachada a mao ia direto para oficina-hml. Agora so main e develop
+      #    resolvem um ambiente; o resto falha alto.
       - name: Definir ambiente
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          if [ "${{ github.ref_name }}" = "main" ]; then
+          set -euo pipefail
+
+          if [ "$REF_NAME" = "main" ]; then
             echo "NAMESPACE=oficina-prd" >> "$GITHUB_ENV"
             echo "AMBIENTE=prd" >> "$GITHUB_ENV"
             echo "NODE_PORT=30080" >> "$GITHUB_ENV"
-          else
+          elif [ "$REF_NAME" = "develop" ]; then
             echo "NAMESPACE=oficina-hml" >> "$GITHUB_ENV"
             echo "AMBIENTE=hml" >> "$GITHUB_ENV"
             echo "NODE_PORT=30081" >> "$GITHUB_ENV"
+          else
+            echo "ERRO: ref '$REF_NAME' nao tem ambiente de deploy. Apenas main (oficina-prd) e develop (oficina-hml) sao implantaveis." >&2
+            exit 1
           fi
 
       # 2) Credenciais AWS via OIDC (SEM aws-access-key-id/secret): assume o role de deploy.
