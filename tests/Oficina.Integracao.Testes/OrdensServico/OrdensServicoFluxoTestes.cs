@@ -105,13 +105,12 @@ public class OrdensServicoFluxoTestes
     }
 
     [Fact]
-    public async Task EnviarParaAprovacao_SemItens_DeveRetornar422()
+    public async Task AbrirOrdem_SemItens_DeveRetornar400()
     {
         var http = await AutenticadoAsync();
 
-        // criar dependências mínimas
         var cliResp = await http.GetAsync("/api/v1/clientes?documento=11144477735");
-        var cliente = cliResp.StatusCode == HttpStatusCode.OK
+        var cliente = cliResp.IsSuccessStatusCode
             ? await cliResp.Content.ReadFromJsonAsync<ClienteResponse>()
             : null;
         if (cliente is null)
@@ -121,20 +120,20 @@ public class OrdensServicoFluxoTestes
             cliente = await create.Content.ReadFromJsonAsync<ClienteResponse>();
         }
         var v = await http.PostAsJsonAsync($"/api/v1/clientes/{cliente!.Id}/veiculos",
-            new AdicionarVeiculoRequest($"NEW{new Random().Next(1000,9999)}", "F", "U", 2020));
+            new AdicionarVeiculoRequest($"NEW{new Random().Next(1000, 9999)}", "F", "U", 2020));
         var veic = await v.Content.ReadFromJsonAsync<VeiculoResponse>();
 
-        var os = await http.PostAsJsonAsync("/api/v1/ordens-servico",
+        // Abrir OS sem nenhum servico e nenhuma peca: AbrirOrdemValidator rejeita.
+        // A regra de dominio equivalente (OrdemSemItensException) tem cobertura
+        // propria em Oficina.Dominio.Testes/OrdensServico/OrdemDeServicoTestes.cs.
+        var resp = await http.PostAsJsonAsync("/api/v1/ordens-servico",
             new AbrirOrdemRequest(
                 new ClienteDadosDto("11144477735", "X", $"x{Guid.NewGuid():N}@x.com", "11987654321"),
                 new VeiculoDadosDto(veic!.Placa, "F", "U", 2020),
                 Array.Empty<ItemServicoDto>(),
                 Array.Empty<ItemPecaDto>()));
-        var osR = await os.Content.ReadFromJsonAsync<OrdemResponse>();
-        await http.PatchAsync($"/api/v1/ordens-servico/{osR!.Id}/diagnostico", null);
 
-        var resp = await http.PostAsync($"/api/v1/ordens-servico/{osR.Id}/orcamento/enviar", null);
-        resp.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
