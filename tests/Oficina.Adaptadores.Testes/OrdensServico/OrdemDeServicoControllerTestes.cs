@@ -25,8 +25,8 @@ public class OrdemDeServicoControllerTestes
         var notificacoes = new Mock<INotificacaoGateway>();
         var publicador = new Mock<IPublicadorEventoOs>();
         return new(
-            new CriarOrdemUseCase(ordens.Object, clientes.Object),
-            new AbrirOrdemDeServicoUseCase(clientes.Object, servicos.Object, pecas.Object, ordens.Object),
+            new CriarOrdemUseCase(ordens.Object, clientes.Object, publicador.Object),
+            new AbrirOrdemDeServicoUseCase(clientes.Object, servicos.Object, pecas.Object, ordens.Object, publicador.Object),
             new ObterOrdemPorIdUseCase(ordens.Object),
             new ListarOrdensUseCase(ordens.Object),
             new IniciarDiagnosticoUseCase(ordens.Object, notificacoes.Object, publicador.Object),

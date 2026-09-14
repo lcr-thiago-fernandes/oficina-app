@@ -23,17 +23,11 @@ public class IniciarDiagnosticoUseCase
         var os = await _gateway.ObterPorIdAsync(id, ct);
         if (os is null) return null;
 
-        try
+        await _publicador.ExecutarTransicaoComTelemetriaAsync(os, async () =>
         {
             os.IniciarDiagnostico();
             await _gateway.SalvarAsync(ct);
-            _publicador.Publicar(EventoOrdemServico.DeUltimaTransicao(os));
-        }
-        catch (Exception)
-        {
-            _publicador.Publicar(EventoOrdemServico.DeFalha(os.Numero, os.Status.ToString(), os.Unidade));
-            throw;
-        }
+        });
 
         await _notificacoes.NotificarMudancaDeStatusAsync(os, ct);
         return os;

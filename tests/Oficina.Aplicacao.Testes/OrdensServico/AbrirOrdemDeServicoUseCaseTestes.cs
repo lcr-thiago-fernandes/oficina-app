@@ -6,6 +6,7 @@ using Oficina.Aplicacao.Estoque.Gateways;
 using Oficina.Aplicacao.OrdensServico;
 using Oficina.Aplicacao.OrdensServico.Dtos;
 using Oficina.Aplicacao.OrdensServico.Gateways;
+using Oficina.Aplicacao.OrdensServico.Telemetria;
 using Oficina.Dominio.Catalogo;
 using Oficina.Dominio.Clientes;
 using Oficina.Dominio.Estoque;
@@ -20,9 +21,10 @@ public class AbrirOrdemDeServicoUseCaseTestes
     private readonly Mock<IServicoGateway> _servicos = new();
     private readonly Mock<IPecaGateway> _pecas = new();
     private readonly Mock<IOrdemDeServicoGateway> _ordens = new();
+    private readonly Mock<IPublicadorEventoOs> _publicador = new();
 
     private AbrirOrdemDeServicoUseCase CriarUseCase() =>
-        new(_clientes.Object, _servicos.Object, _pecas.Object, _ordens.Object);
+        new(_clientes.Object, _servicos.Object, _pecas.Object, _ordens.Object, _publicador.Object);
 
     // Simula o re-fetch final: devolve a mesma OS que foi adicionada.
     private void ConfigurarRefetch()
@@ -58,6 +60,12 @@ public class AbrirOrdemDeServicoUseCaseTestes
         _clientes.Verify(c => c.AdicionarAsync(It.IsAny<Cliente>(), It.IsAny<CancellationToken>()), Times.Once);
         _clientes.Verify(c => c.MarcarVeiculoComoNovo(It.IsAny<Veiculo>()), Times.Never);
         _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
+        // Volume diário de OS (painel obrigatório) depende deste evento de criação.
+        _publicador.Verify(p => p.Publicar(
+            It.Is<EventoOrdemServico>(e => e.StatusAnterior == null
+                && e.StatusNovo == "Recebida"
+                && e.Resultado == EventoOrdemServico.ResultadoSucesso)),
+            Times.Once);
     }
 
     [Fact]
@@ -110,6 +118,9 @@ public class AbrirOrdemDeServicoUseCaseTestes
 
         await act.Should().ThrowAsync<OrdemInvalidaException>().WithMessage("*inativo*");
         _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Never);
+        // A OS já existia (Criar() rodou antes do loop de itens) — a falha é reportada.
+        _publicador.Verify(p => p.Publicar(
+            It.Is<EventoOrdemServico>(e => e.Resultado == EventoOrdemServico.ResultadoFalha)), Times.Once);
     }
 
     [Fact]
@@ -130,6 +141,8 @@ public class AbrirOrdemDeServicoUseCaseTestes
 
         await act.Should().ThrowAsync<OrdemInvalidaException>().WithMessage("*não encontrada*");
         _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _publicador.Verify(p => p.Publicar(
+            It.Is<EventoOrdemServico>(e => e.Resultado == EventoOrdemServico.ResultadoFalha)), Times.Once);
     }
 
     [Fact]
@@ -147,6 +160,9 @@ public class AbrirOrdemDeServicoUseCaseTestes
 
         await act.Should().ThrowAsync<OrdemInvalidaException>().WithMessage("*inativo*");
         _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Never);
+        // Falha antes da OS existir (checagem de cliente inativo é anterior ao Criar()) —
+        // nada para reportar em telemetria.
+        _publicador.Verify(p => p.Publicar(It.IsAny<EventoOrdemServico>()), Times.Never);
     }
 
     [Fact]

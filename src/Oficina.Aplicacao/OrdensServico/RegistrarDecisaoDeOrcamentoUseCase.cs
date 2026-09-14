@@ -26,25 +26,19 @@ public class RegistrarDecisaoDeOrcamentoUseCase
         var ordem = await _ordens.ObterPorIdAsync(ordemId, ct);
         if (ordem is null) return null;
 
-        try
-        {
-            if (aprovado) ordem.Aprovar();
-            else ordem.Rejeitar();
+        // Aprovar() só carimba OrcamentoAprovadoEm e não muda o Status nem
+        // acrescenta entrada ao Historico — não há transição para publicar.
+        // Rejeitar() cancela a OS e essa transição alimenta os painéis.
+        await _publicador.ExecutarTransicaoComTelemetriaAsync(
+            ordem,
+            async () =>
+            {
+                if (aprovado) ordem.Aprovar();
+                else ordem.Rejeitar();
 
-            await _ordens.SalvarAsync(ct);
-
-            // Aprovar() só carimba OrcamentoAprovadoEm e não muda o Status nem
-            // acrescenta entrada ao Historico — não há transição para publicar.
-            // Rejeitar() cancela a OS e essa transição alimenta os painéis.
-            if (!aprovado)
-                _publicador.Publicar(EventoOrdemServico.DeUltimaTransicao(ordem));
-        }
-        catch (Exception)
-        {
-            _publicador.Publicar(
-                EventoOrdemServico.DeFalha(ordem.Numero, ordem.Status.ToString(), ordem.Unidade));
-            throw;
-        }
+                await _ordens.SalvarAsync(ct);
+            },
+            publicarSucesso: !aprovado);
 
         await _notificacoes.NotificarMudancaDeStatusAsync(ordem, ct);
         return ordem;

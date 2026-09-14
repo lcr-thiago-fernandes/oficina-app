@@ -31,7 +31,14 @@ public class IniciarExecucaoUseCase
             var ordem = await _ordens.ObterPorIdAsync(ordemId, tx);
             if (ordem is null) return;
 
-            try
+            // publicarSucesso: false — o commit ainda acontece depois que este
+            // delegate retorna (EmTransacaoSerializadaAsync só chama CommitAsync
+            // após "acao" completar); publicar sucesso aqui dentro anunciaria uma
+            // transação que pode ainda ser revertida no commit (ex.: conflito de
+            // serialização, Postgres 40001). O evento de falha, por outro lado,
+            // é seguro aqui: qualquer exceção nesta função impede o commit de
+            // qualquer forma.
+            await _publicador.ExecutarTransicaoComTelemetriaAsync(ordem, async () =>
             {
                 // 1) muda estado da OS — pode lançar OrcamentoNaoAprovadoException ou TransicaoInvalida
                 ordem.IniciarExecucao();
@@ -53,22 +60,18 @@ public class IniciarExecucaoUseCase
                 // 3) persiste tudo na mesma transação
                 await _ordens.SalvarAsync(tx);
 
-                _publicador.Publicar(EventoOrdemServico.DeUltimaTransicao(ordem));
-
                 resultado = ordem;
-            }
-            catch (Exception)
-            {
-                _publicador.Publicar(
-                    EventoOrdemServico.DeFalha(ordem.Numero, ordem.Status.ToString(), ordem.Unidade));
-                throw;
-            }
+            }, publicarSucesso: false);
         }, ct);
 
-        // 4) notifica fora da transação serializável (efeito colateral não deve
-        //    prender a transação nem provocar rollback se o "envio" falhar)
+        // 4) publica o sucesso e notifica só depois que a transação foi commitada
+        //    (efeito colateral não deve prender a transação nem provocar rollback
+        //    se o "envio" falhar).
         if (resultado is not null)
+        {
+            _publicador.Publicar(EventoOrdemServico.DeUltimaTransicao(resultado));
             await _notificacoes.NotificarMudancaDeStatusAsync(resultado, ct);
+        }
 
         return resultado;
     }
