@@ -1,0 +1,99 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using FluentAssertions;
+using Oficina.Aplicacao.Autoatendimento.Dtos;
+using Oficina.Aplicacao.Clientes.Dtos;
+using Oficina.Integracao.Testes.Auth;
+using Xunit;
+
+namespace Oficina.Integracao.Testes.Autoatendimento;
+
+[Collection(nameof(AuthCollection))]
+public class MeEndpointsTestes
+{
+    private readonly AuthFixture _fx;
+    public MeEndpointsTestes(AuthFixture fx) => _fx = fx;
+
+    private const string Documento = "52998224725";
+
+    private async Task<ClienteResponse> GarantirClienteAsync()
+    {
+        var http = _fx.Factory.CreateClient();
+        http.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", await _fx.ObterTokenAdminAsync());
+
+        var existente = await (await http.GetAsync($"/api/v1/clientes?documento={Documento}"))
+            .Content.ReadFromJsonAsync<ClienteResponse>();
+        if (existente is not null) return existente;
+
+        var criado = await http.PostAsJsonAsync("/api/v1/clientes",
+            new CriarClienteRequest("Cliente Me", Documento, $"me{Guid.NewGuid():N}@x.com", "11987654321"));
+        return (await criado.Content.ReadFromJsonAsync<ClienteResponse>())!;
+    }
+
+    [Fact]
+    public async Task Sem_token_retorna_401()
+    {
+        var http = _fx.Factory.CreateClient();
+        var resp = await http.GetAsync("/api/v1/me/ordens-servico");
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Token_de_Admin_retorna_403_porque_falta_o_perfil_Cliente()
+    {
+        var http = _fx.Factory.CreateClient();
+        http.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", await _fx.ObterTokenAdminAsync());
+
+        var resp = await http.GetAsync("/api/v1/me/ordens-servico");
+
+        resp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Token_com_perfil_Cliente_mas_sem_claim_documento_retorna_403()
+    {
+        // A politica RequerCliente exige DUAS coisas: perfil=Cliente e a claim
+        // "documento". Este teste cobre o unico ramo que nao sai de graca dos
+        // outros dois: perfil correto, mas sem a claim que a Lambda sempre inclui.
+        var http = _fx.Factory.CreateClient();
+        var token = GeradorTokenDeTeste.Gerar("Cliente", Guid.NewGuid(), documento: null);
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var resp = await http.GetAsync("/api/v1/me/ordens-servico");
+
+        resp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Token_de_Cliente_lista_as_proprias_ordens()
+    {
+        var cliente = await GarantirClienteAsync();
+
+        var http = _fx.Factory.CreateClient();
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await _fx.ObterTokenClienteAsync(cliente.Id, Documento));
+
+        var resp = await http.GetAsync("/api/v1/me/ordens-servico");
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var ordens = await resp.Content.ReadFromJsonAsync<List<OrdemResumoResponse>>();
+        ordens.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Token_de_Cliente_lista_os_proprios_veiculos()
+    {
+        var cliente = await GarantirClienteAsync();
+
+        var http = _fx.Factory.CreateClient();
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await _fx.ObterTokenClienteAsync(cliente.Id, Documento));
+
+        var resp = await http.GetAsync("/api/v1/me/veiculos");
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+}

@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Oficina.Aplicacao.Auth;
+using Oficina.Aplicacao.Autoatendimento;
 using Oficina.Aplicacao.Catalogo;
 using Oficina.Aplicacao.Clientes;
 using Oficina.Aplicacao.Consulta;
@@ -63,6 +64,10 @@ public static class DependencyInjectionAplicacao
 
         // Consulta pública (sem auth) — apenas leitura de status (anti-enumeração)
         services.AddScoped<ConsultarOrdemPorNumeroUseCase>();
+
+        // Autoatendimento do cliente
+        services.AddScoped<ListarOrdensDoClienteUseCase>();
+        services.AddScoped<ListarVeiculosDoClienteUseCase>();
 
         // Validators (auto-discovery via assembly)
         services.AddValidatorsFromAssembly(typeof(DependencyInjectionAplicacao).Assembly);
