@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: oficina-migrate
-  namespace: oficina
+  namespace: ${NAMESPACE}
   labels:
     app: oficina-api
     component: migrate

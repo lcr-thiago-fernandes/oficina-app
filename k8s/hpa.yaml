@@ -2,7 +2,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: oficina-api
-  namespace: oficina
+  namespace: ${NAMESPACE}
   labels:
     app: oficina-api
 spec:

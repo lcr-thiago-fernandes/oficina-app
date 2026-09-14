@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: oficina-api
-  namespace: oficina
+  namespace: ${NAMESPACE}
   labels:
     app: oficina-api
 spec:
@@ -32,6 +32,22 @@ spec:
                 name: oficina-api-config
             - secretRef:
                 name: oficina-api-secret
+          # Liga o agente do New Relic (ja presente na imagem, desligado por padrao).
+          # CORECLR_ENABLE_PROFILING=1 e o que ativa o profiler; sem isso a licenca
+          # nao tem efeito nenhum. A licenca vem do Secret oficina-api-secret, chave
+          # NewRelic__LicenseKey (criado pelo CI de deploy).
+          env:
+            - name: CORECLR_ENABLE_PROFILING
+              value: "1"
+            - name: NEW_RELIC_APP_NAME
+              value: "oficina-api-${NAMESPACE}"
+            - name: NEW_RELIC_LICENSE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: oficina-api-secret
+                  key: NewRelic__LicenseKey
+            - name: NEW_RELIC_LABELS
+              value: "ambiente:${NAMESPACE}"
           resources:
             requests:
               cpu: "100m"
