@@ -13,6 +13,8 @@ public sealed class HistoricoStatus
     public StatusOrdemDeServico StatusNovo { get; private set; }
     public DateTimeOffset OcorridoEm { get; private set; }
     public long? DuracaoSegundos { get; private set; }
+    // Sempre null na Fase 3: nenhum caso de uso propaga a identidade do chamador
+    // até aqui. Ver README, seção "Limitações conhecidas".
     public Guid? UsuarioId { get; private set; }
 
     private HistoricoStatus() { }

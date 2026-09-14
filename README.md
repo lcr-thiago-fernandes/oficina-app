@@ -440,6 +440,63 @@ VPC/EKS/RDS foi para os repositórios listados em
 
 ---
 
+## Limitações conhecidas e decisões registradas
+
+Três pontos desta entrega parecem funcionalidades completas no código e não são. Estão
+aqui para que o próximo leitor não conclua o contrário.
+
+### 1. A propriedade da OS é resolvida por `documento`, não por `sub`
+
+A especificação cita `sub` como identificador do sujeito. Esta API autoriza por
+`documento` (CPF) em `/api/v1/me/*` e `/api/v1/consulta/{numeroOs}`, e isso é
+deliberado:
+
+- o token de Cliente é emitido **a partir do CPF** pela `oficina-auth-api` — é o dado
+  que ela tem em mãos e o único que identifica o mesmo sujeito dos dois lados sem um
+  lookup adicional;
+- `sub` não tem significado uniforme entre perfis: num token de Cliente seria o `Id` do
+  `Cliente`; num token de Admin/Atendente, o `Id` do `Usuario` — tabelas diferentes.
+  Autorizar por ele exigiria saber o perfil antes de saber o que o identificador
+  significa;
+- `documento` já é chave única e indexada em `cliente`, então a consulta por propriedade
+  não fica mais cara.
+
+`sub` continua presente no token e é **informativo** (rastreabilidade em log e APM).
+Consequência: o leitor de `sub` que existia em `ExtensoesClaims` (`IdDoSujeito`) era
+código de produção morto — usado só pelos próprios testes — e foi **removido**, em vez
+de mantido como API que aparenta ser suportada.
+
+### 2. `auth.usuario` é contrato com o repositório `oficina-lambda-auth` — não é código morto
+
+O bootstrap desta API cria o usuário `admin` e grava o hash **BCrypt** da senha em
+`auth.usuario`. **Nenhum endpoint desta API verifica esse hash**: ela não emite token
+desde a Fase 3. Quem lê a tabela e compara a senha é a função serverless
+`oficina-auth-api`, no fluxo de login de Atendente/Admin.
+
+Por isso `Usuario.Autenticar` e `ObterPorUsernameAsync` (gateway, data source e
+interfaces das quatro camadas) permanecem **sem chamador local, de propósito**: eles
+definem e sustentam o formato do dado que o outro repositório consome. Trocar o
+algoritmo de hash, o nome da coluna ou o schema quebra o login lá — silenciosamente, sem
+quebrar nenhum teste daqui.
+
+### 3. `unidade` e `historico_status.usuario_id` nunca são populados — fora do escopo
+
+`ordem_servico.unidade` existe, é indexada e vai no evento `OrdemServicoEvento`, mas
+**nenhum request, header ou configuração a fornece**: `OrdemDeServico.Criar` é sempre
+chamado sem o parâmetro, logo **toda OS é `"matriz"`**. A especificação justifica a
+coluna pela segmentação de dashboard por unidade — segmentação que, hoje, não pode
+acontecer: o painel filtrado por unidade mostraria uma fatia só.
+
+O mesmo, em menor grau, vale para `historico_status.usuario_id`: nenhum caso de uso
+propaga a identidade do chamador até o agregado, então a coluna é sempre `NULL`.
+
+**Alimentar os dois está fora do escopo desta fase** (exigiria origem da unidade — token,
+request ou configuração do pod — e propagação do usuário autenticado até o domínio).
+Ficam como ponto de extensão declarado, e os comentários nas respectivas configurações
+de EF Core dizem o mesmo, para que ninguém leia o campo como funcional.
+
+---
+
 ## Nota sobre o gerador de token local
 
 Este README aponta para `tests/Oficina.Integracao.Testes/Auth/GeradorTokenDeTeste.cs`

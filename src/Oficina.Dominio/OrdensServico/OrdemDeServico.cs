@@ -12,6 +12,8 @@ public sealed class OrdemDeServico
     public Guid VeiculoId { get; private set; }
     public StatusOrdemDeServico Status { get; private set; }
     public string? Observacoes { get; private set; }
+    // Sempre "matriz" na Fase 3: nenhum chamador de Criar() informa `unidade`.
+    // Ver README, seção "Limitações conhecidas".
     public string Unidade { get; private set; } = "matriz";
 
     public DateTimeOffset CriadaEm { get; private set; }

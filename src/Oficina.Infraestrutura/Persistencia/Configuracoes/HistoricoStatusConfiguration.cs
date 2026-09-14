@@ -26,6 +26,10 @@ public class HistoricoStatusConfiguration : IEntityTypeConfiguration<HistoricoSt
 
         b.Property(x => x.OcorridoEm).HasColumnName("ocorrido_em").IsRequired();
         b.Property(x => x.DuracaoSegundos).HasColumnName("duracao_segundos");
+        // FORA DO ESCOPO DA FASE 3 — sempre NULL. RegistrarTransicao é chamado sem
+        // usuarioId por todos os casos de uso; nenhum deles propaga a identidade do
+        // chamador até o agregado. A coluna fica como ponto de extensão declarado, não
+        // como campo funcional. Ver README, seção "Limitações conhecidas".
         b.Property(x => x.UsuarioId).HasColumnName("usuario_id");
 
         // Shadow FK para a OS dona do registro — declarada explicitamente para

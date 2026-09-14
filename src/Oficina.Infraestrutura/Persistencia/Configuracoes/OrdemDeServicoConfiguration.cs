@@ -31,6 +31,15 @@ public class OrdemDeServicoConfiguration : IEntityTypeConfiguration<OrdemDeServi
 
         b.Property(x => x.Observacoes).HasColumnName("observacoes").HasColumnType("text");
 
+        // FORA DO ESCOPO DA FASE 3 — `unidade` NUNCA é populada com outro valor.
+        // Nenhum request, header ou configuração fornece a unidade: todo OrdemDeServico.Criar
+        // é chamado sem o parâmetro, então 100% das OSs ficam em "matriz". A coluna e o índice
+        // existem porque a especificação pede a dimensão de segmentação por unidade nos
+        // dashboards, mas a segmentação NÃO acontece hoje — o painel filtrado por unidade
+        // mostraria uma única fatia. Alimentar a coluna (unidade no token/no request/em
+        // configuração do pod) é trabalho de uma fase seguinte, deliberadamente não feito
+        // aqui. O mesmo vale para historico_status.usuario_id. Ver README, seção
+        // "Limitações conhecidas".
         b.Property(x => x.Unidade)
             .HasColumnName("unidade")
             .HasMaxLength(60)
