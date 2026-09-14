@@ -43,7 +43,7 @@ deploy contínuo via **OIDC** e **escalabilidade horizontal automática (HPA)**.
 | Web | ASP.NET Core (controllers + minimal hosting) |
 | ORM | Entity Framework Core 8 + Npgsql |
 | Banco | PostgreSQL 16 (local via Docker; RDS em homologação/produção, provisionado por repositório próprio) |
-| Auth | JWT HS256 (apenas validação) + BCrypt (usuários administrativos) + RateLimiting nativo |
+| Auth | JWT HS256 (apenas validação) + BCrypt (usuários administrativos) |
 | Validação | FluentValidation |
 | Observabilidade | Serilog (Console JSON) + OpenTelemetry (`/metrics` Prometheus) + agente APM New Relic |
 | Testes | xUnit + FluentAssertions + Moq + Coverlet + Testcontainers |
@@ -346,7 +346,7 @@ Não configurados mais como GitHub Secret/Variable (mudaram de origem):
   criado pelo repositório `oficina-infra-k8s` (hoje inexistente); formato esperado:
   `https://<id-do-api-gateway>.execute-api.us-east-1.amazonaws.com/swagger`.
 - **Cenários `.http`** (pasta [`http/`](http/)), executáveis pela extensão REST Client (VS Code), Visual Studio ou Rider:
-  - `auth.http` — cenário de referência para rate limit; o endpoint `POST /auth/login` que ele exercitava não existe mais nesta API (autenticação migrou para a Lambda) — use com um servidor de auth compatível ou trate como histórico.
+  - `auth.http` — **histórico da Fase 2**. O endpoint `POST /auth/login` que ele exercitava não existe mais nesta API (autenticação migrou para a função serverless) e o rate limit que ele demonstrava foi removido junto. Mantido só como registro do contrato antigo.
   - `clientes.http` — CRUD cliente + veículos
   - `servicos.http` — CRUD catálogo
   - `pecas.http` — CRUD peça + movimentações
@@ -431,7 +431,6 @@ VPC/EKS/RDS foi para os repositórios listados em
 
 - Senhas do usuário administrativo com BCrypt cost 12
 - JWT HS256 validado por esta API (assinatura, emissor, audiência, expiração); quem emite é a Lambda de autenticação
-- Rate limiting nativo do ASP.NET Core
 - Webhook de aprovação autenticado por token (`X-Webhook-Token`), comparação em tempo constante e fail-closed — único endpoint com `[AllowAnonymous]` em todo o projeto
 - Validação de CPF/CNPJ (dígitos verificadores), placa (antigo + Mercosul), e-mail
 - Saldo de peça nunca negativo (invariante + check constraint SQL)
