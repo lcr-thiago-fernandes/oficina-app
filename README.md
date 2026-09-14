@@ -393,8 +393,8 @@ reportgenerator -reports:"**/TestResults/**/coverage.cobertura.xml" \
 ```
 
 Os testes de integração usam **Testcontainers** (Postgres real efêmero, sem mocks) e
-exigem Docker. No estado atual do repositório: **355 testes**, cobertura de linha
-**89,2%**. O CI (`ci.yml`) exige no mínimo **80%** de cobertura de linha.
+exigem Docker. No estado atual do repositório: **370 testes**, cobertura de linha
+**89,2%** (cobertura de branch 70,2%). O CI (`ci.yml`) exige no mínimo **80%** de cobertura de linha.
 
 ---
 
