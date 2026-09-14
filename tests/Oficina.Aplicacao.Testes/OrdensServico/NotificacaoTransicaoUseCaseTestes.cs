@@ -114,7 +114,7 @@ public class NotificacaoTransicaoUseCaseTestes
     }
 
     [Fact]
-    public async Task IniciarDiagnostico_TransicaoInvalida_PublicaEventoDeFalhaEPropaga()
+    public async Task IniciarDiagnostico_TransicaoInvalida_PropagaSemPublicarEvento()
     {
         // OS já em EmDiagnostico — IniciarDiagnostico() lança TransicaoDeStatusInvalidaException.
         var os = OsRecebidaComItem();
@@ -127,8 +127,9 @@ public class NotificacaoTransicaoUseCaseTestes
         await act.Should().ThrowAsync<TransicaoDeStatusInvalidaException>();
         _ordens.Verify(r => r.SalvarAsync(It.IsAny<CancellationToken>()), Times.Never);
         _notificacoes.Verify(n => n.NotificarMudancaDeStatusAsync(It.IsAny<OrdemDeServico>(), It.IsAny<CancellationToken>()), Times.Never);
-        _publicador.Verify(p => p.Publicar(
-            It.Is<EventoOrdemServico>(e => e.Resultado == EventoOrdemServico.ResultadoFalha
-                && e.StatusAnterior == "EmDiagnostico")), Times.Once);
+        // Transição inválida é 422 (erro do cliente), não falha de processamento:
+        // publicar 'Falha' faria o alerta Critical disparar a cada requisição errada
+        // — inclusive a do vídeo de demonstração.
+        _publicador.Verify(p => p.Publicar(It.IsAny<EventoOrdemServico>()), Times.Never);
     }
 }

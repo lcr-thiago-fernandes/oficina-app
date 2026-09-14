@@ -118,9 +118,9 @@ public class AbrirOrdemDeServicoUseCaseTestes
 
         await act.Should().ThrowAsync<OrdemInvalidaException>().WithMessage("*inativo*");
         _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Never);
-        // A OS já existia (Criar() rodou antes do loop de itens) — a falha é reportada.
-        _publicador.Verify(p => p.Publicar(
-            It.Is<EventoOrdemServico>(e => e.Resultado == EventoOrdemServico.ResultadoFalha)), Times.Once);
+        // Erro de negócio (4xx) NÃO é falha de processamento: publicar 'Falha' aqui
+        // dispararia o alerta Critical da Fase 3 a cada requisição inválida do cliente.
+        _publicador.Verify(p => p.Publicar(It.IsAny<EventoOrdemServico>()), Times.Never);
     }
 
     [Fact]
@@ -141,8 +141,9 @@ public class AbrirOrdemDeServicoUseCaseTestes
 
         await act.Should().ThrowAsync<OrdemInvalidaException>().WithMessage("*não encontrada*");
         _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Never);
-        _publicador.Verify(p => p.Publicar(
-            It.Is<EventoOrdemServico>(e => e.Resultado == EventoOrdemServico.ResultadoFalha)), Times.Once);
+        // Erro de negócio (4xx) NÃO é falha de processamento: publicar 'Falha' aqui
+        // dispararia o alerta Critical da Fase 3 a cada requisição inválida do cliente.
+        _publicador.Verify(p => p.Publicar(It.IsAny<EventoOrdemServico>()), Times.Never);
     }
 
     [Fact]

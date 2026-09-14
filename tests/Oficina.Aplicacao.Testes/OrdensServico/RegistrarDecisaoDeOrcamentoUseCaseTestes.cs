@@ -86,7 +86,8 @@ public class RegistrarDecisaoDeOrcamentoUseCaseTestes
 
         await act.Should().ThrowAsync<TransicaoDeStatusInvalidaException>();
         _notificacoes.Verify(n => n.NotificarMudancaDeStatusAsync(It.IsAny<OrdemDeServico>(), It.IsAny<CancellationToken>()), Times.Never);
-        _publicador.Verify(p => p.Publicar(
-            It.Is<EventoOrdemServico>(e => e.Resultado == EventoOrdemServico.ResultadoFalha)), Times.Once);
+        // Erro de negócio (4xx) NÃO é falha de processamento: publicar 'Falha' aqui
+        // dispararia o alerta Critical da Fase 3 a cada requisição inválida do cliente.
+        _publicador.Verify(p => p.Publicar(It.IsAny<EventoOrdemServico>()), Times.Never);
     }
 }

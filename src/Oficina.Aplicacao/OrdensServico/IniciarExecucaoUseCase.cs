@@ -26,20 +26,23 @@ public class IniciarExecucaoUseCase
     {
         OrdemDeServico? resultado = null;
 
-        await _ordens.EmTransacaoSerializadaAsync(async tx =>
-        {
-            var ordem = await _ordens.ObterPorIdAsync(ordemId, tx);
-            if (ordem is null) return;
+        // Referência à OS carregada, visível FORA da transação: é o que permite
+        // publicar o evento de falha quando quem lança é o CommitAsync — que
+        // acontece depois que o delegate retorna, dentro de
+        // EmTransacaoSerializadaAsync. Um conflito de serialização do Postgres
+        // (40001) ou uma queda de conexão no commit reverte tudo e, antes desta
+        // correção, não produzia evento nenhum: nem sucesso (publicado só
+        // depois) nem falha (o try/catch ficava no escopo interno).
+        OrdemDeServico? carregada = null;
 
-            // publicarSucesso: false — o commit ainda acontece depois que este
-            // delegate retorna (EmTransacaoSerializadaAsync só chama CommitAsync
-            // após "acao" completar); publicar sucesso aqui dentro anunciaria uma
-            // transação que pode ainda ser revertida no commit (ex.: conflito de
-            // serialização, Postgres 40001). O evento de falha, por outro lado,
-            // é seguro aqui: qualquer exceção nesta função impede o commit de
-            // qualquer forma.
-            await _publicador.ExecutarTransicaoComTelemetriaAsync(ordem, async () =>
+        try
+        {
+            await _ordens.EmTransacaoSerializadaAsync(async tx =>
             {
+                var ordem = await _ordens.ObterPorIdAsync(ordemId, tx);
+                if (ordem is null) return;
+                carregada = ordem;
+
                 // 1) muda estado da OS — pode lançar OrcamentoNaoAprovadoException ou TransicaoInvalida
                 ordem.IniciarExecucao();
 
@@ -61,8 +64,20 @@ public class IniciarExecucaoUseCase
                 await _ordens.SalvarAsync(tx);
 
                 resultado = ordem;
-            }, publicarSucesso: false);
-        }, ct);
+            }, ct);
+        }
+        // O try envolve a chamada inteira (delegate + commit + rollback), então
+        // há exatamente um ponto que publica falha para este caso de uso — sem
+        // risco de evento duplicado e sem o buraco do commit. O evento de
+        // SUCESSO continua fora, depois do commit: publicá-lo aqui dentro
+        // anunciaria uma transação que ainda pode ser revertida.
+        catch (Exception ex) when (carregada is not null
+                                   && PublicadorEventoOsExtensions.EhFalhaDeProcessamento(ex))
+        {
+            _publicador.Publicar(
+                EventoOrdemServico.DeFalha(carregada.Numero, carregada.Status.ToString(), carregada.Unidade));
+            throw;
+        }
 
         // 4) publica o sucesso e notifica só depois que a transação foi commitada
         //    (efeito colateral não deve prender a transação nem provocar rollback
