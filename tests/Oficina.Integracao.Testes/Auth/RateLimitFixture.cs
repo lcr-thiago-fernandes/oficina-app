@@ -22,9 +22,9 @@ public class RateLimitFixture : IAsyncLifetime
         await Postgres.StartAsync();
 
         Environment.SetEnvironmentVariable("ConnectionStrings__Default", Postgres.GetConnectionString());
-        Environment.SetEnvironmentVariable("Jwt__Secret", new string('a', 64));
-        Environment.SetEnvironmentVariable("Jwt__Issuer", "oficina-api-test");
-        Environment.SetEnvironmentVariable("Jwt__Audience", "oficina-clients-test");
+        Environment.SetEnvironmentVariable("Jwt__Secret", GeradorTokenDeTeste.Secret);
+        Environment.SetEnvironmentVariable("Jwt__Issuer", GeradorTokenDeTeste.Issuer);
+        Environment.SetEnvironmentVariable("Jwt__Audience", GeradorTokenDeTeste.Audience);
         Environment.SetEnvironmentVariable("AdminBootstrap__Password", "AlteraMe@123");
         Environment.SetEnvironmentVariable("RateLimit__Login__PermitLimit", "5");
         Environment.SetEnvironmentVariable("RateLimit__Login__WindowMinutes", "15");

@@ -1,9 +1,7 @@
-using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Oficina.Aplicacao.Auth;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -28,9 +26,9 @@ public class AuthFixture : IAsyncLifetime
         // porque Program.cs lê ConnectionStrings:Default durante CreateBuilder (síncrono),
         // e isso acontece antes de qualquer callback de WithWebHostBuilder rodar.
         Environment.SetEnvironmentVariable("ConnectionStrings__Default", Postgres.GetConnectionString());
-        Environment.SetEnvironmentVariable("Jwt__Secret", new string('a', 64));
-        Environment.SetEnvironmentVariable("Jwt__Issuer", "oficina-api-test");
-        Environment.SetEnvironmentVariable("Jwt__Audience", "oficina-clients-test");
+        Environment.SetEnvironmentVariable("Jwt__Secret", GeradorTokenDeTeste.Secret);
+        Environment.SetEnvironmentVariable("Jwt__Issuer", GeradorTokenDeTeste.Issuer);
+        Environment.SetEnvironmentVariable("Jwt__Audience", GeradorTokenDeTeste.Audience);
         Environment.SetEnvironmentVariable("AdminBootstrap__Password", "AlteraMe@123");
         Environment.SetEnvironmentVariable("Webhook__Token", "token-teste-webhook");
 
@@ -45,15 +43,16 @@ public class AuthFixture : IAsyncLifetime
         _ = Factory.CreateClient();
     }
 
-    public async Task<string> ObterTokenAdminAsync()
-    {
-        var client = Factory.CreateClient();
-        var resp = await client.PostAsJsonAsync("/api/v1/auth/login",
-            new { username = "admin", password = "AlteraMe@123" });
-        resp.EnsureSuccessStatusCode();
-        var body = await resp.Content.ReadFromJsonAsync<LoginResponse>();
-        return body!.AccessToken;
-    }
+    /// <summary>
+    /// Token de Admin assinado localmente. A API nao emite mais tokens —
+    /// esse papel e da Lambda oficina-auth-api (repositorio separado).
+    /// </summary>
+    public Task<string> ObterTokenAdminAsync() =>
+        Task.FromResult(GeradorTokenDeTeste.Gerar("Admin", Guid.NewGuid()));
+
+    /// <summary>Token de Cliente, para os endpoints de autoatendimento e de consulta.</summary>
+    public Task<string> ObterTokenClienteAsync(Guid clienteId, string documento) =>
+        Task.FromResult(GeradorTokenDeTeste.Gerar("Cliente", clienteId, documento));
 
     public async Task DisposeAsync()
     {
