@@ -7,9 +7,11 @@ metadata:
     app: oficina-api
 data:
   ASPNETCORE_ENVIRONMENT: "Production"
-  # Emissor/audiência do JWT (não sensíveis). Devem bater com o token emitido pela API.
-  Jwt__Issuer: "oficina-api"
-  Jwt__Audience: "oficina-clients"
+  # Emissor/audiência do JWT (não sensíveis). Devem bater com o token emitido pela
+  # função serverless de autenticação (oficina-lambda-auth), que autentica o cliente
+  # pelo CPF; a API apenas valida o token.
+  Jwt__Issuer: "oficina-auth"
+  Jwt__Audience: "oficina-api"
   # Em Kubernetes os pods do Deployment NÃO migram: a migração é feita pelo Job dedicado.
   Bootstrap__ExecutarNoStartup: "false"
   # OBS: a connection string completa contém a SENHA do banco → fica no Secret

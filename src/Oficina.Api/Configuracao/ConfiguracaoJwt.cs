@@ -24,6 +24,12 @@ public static class ConfiguracaoJwt
             .AddJwtBearer(options =>
             {
                 options.RequireHttpsMetadata = false; // dev/MVP; prod = true
+
+                // Sem o mapeamento inbound o "sub" vira ClaimTypes.NameIdentifier
+                // e o "perfil" continua intacto; desligamos para ler as claims
+                // exatamente como a Lambda as emitiu.
+                options.MapInboundClaims = false;
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
