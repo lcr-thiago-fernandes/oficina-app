@@ -33,6 +33,11 @@ services:
       Jwt__Audience: ${JWT_AUDIENCE:-oficina-api}
       AdminBootstrap__Password: ${ADMIN_BOOTSTRAP_PASSWORD}
       Webhook__Token: ${WEBHOOK_TOKEN}
+      # Agente APM do New Relic: instalado na imagem, mas inerte aqui porque
+      # CORECLR_ENABLE_PROFILING=0 vem por padrao no Dockerfile. Quem liga o
+      # profiling (=1) e o Deployment do Kubernetes, nao o compose local.
+      NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY:-}
+      NEW_RELIC_APP_NAME: ${NEW_RELIC_APP_NAME:-oficina-api}
     ports:
       - "8080:8080"
     depends_on:

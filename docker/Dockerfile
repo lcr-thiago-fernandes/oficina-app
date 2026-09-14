@@ -38,6 +38,26 @@ LABEL org.opencontainers.image.title="Oficina Mecanica API" \
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
     CMD curl -fsS http://localhost:8080/health || exit 1
 
+# Agente APM do New Relic, instalado via tarball oficial (nao via apt).
+# O repositorio apt.newrelic.com exige duas chaves GPG (a assinatura do Release
+# depende de B31B29E5548C16BF e de 32FA4C172DAD550E) que na pratica ficam fora
+# de sincronia com o InRelease publicado, quebrando o "apt-get update" com
+# NO_PUBKEY. O tarball oficial para Linux sem gerenciador de pacotes evita essa
+# fragilidade e usa o mesmo curl ja instalado acima.
+# A instrumentacao so liga quando NEW_RELIC_LICENSE_KEY estiver definida — em
+# desenvolvimento a imagem roda sem agente e sem erro.
+RUN curl -fsSL -o /tmp/newrelic-dotnet-agent.tar.gz \
+        https://download.newrelic.com/dot_net_agent/latest_release/newrelic-dotnet-agent_amd64.tar.gz \
+    && mkdir -p /usr/local/newrelic-dotnet-agent \
+    && tar -xzf /tmp/newrelic-dotnet-agent.tar.gz -C /usr/local/newrelic-dotnet-agent --strip-components=1 \
+    && rm -f /tmp/newrelic-dotnet-agent.tar.gz
+
+ENV CORECLR_ENABLE_PROFILING=0 \
+    CORECLR_PROFILER="{36032161-FFC0-4B61-B559-F6C5D41BAE5A}" \
+    CORECLR_NEWRELIC_HOME=/usr/local/newrelic-dotnet-agent \
+    CORECLR_PROFILER_PATH=/usr/local/newrelic-dotnet-agent/libNewRelicProfiler.so \
+    NEW_RELIC_APP_NAME="oficina-api"
+
 USER app
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "Oficina.Api.dll"]
