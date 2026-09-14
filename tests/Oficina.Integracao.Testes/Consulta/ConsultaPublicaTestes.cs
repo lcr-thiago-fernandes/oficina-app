@@ -62,9 +62,12 @@ public class ConsultaPublicaTestes
     public async Task Consultar_ComDocumentoCorreto_DeveRetornar200()
     {
         var (numero, doc) = await CriarOsParaConsultaAsync();
-        var publico = _fx.Factory.CreateClient();
 
-        var resp = await publico.GetAsync($"/api/v1/consulta/{numero}?documento={doc}");
+        var http = _fx.Factory.CreateClient();
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await _fx.ObterTokenClienteAsync(Guid.NewGuid(), doc));
+
+        var resp = await http.GetAsync($"/api/v1/consulta/{numero}");
 
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await resp.Content.ReadFromJsonAsync<ConsultaPublicaResponse>();
@@ -77,26 +80,65 @@ public class ConsultaPublicaTestes
     public async Task Consultar_ComDocumentoErrado_DeveRetornar404()
     {
         var (numero, _) = await CriarOsParaConsultaAsync();
-        var publico = _fx.Factory.CreateClient();
 
-        var resp = await publico.GetAsync($"/api/v1/consulta/{numero}?documento=39053344705");
+        // Token valido, mas de um documento diferente do dono da OS.
+        var http = _fx.Factory.CreateClient();
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await _fx.ObterTokenClienteAsync(Guid.NewGuid(), "39053344705"));
+
+        var resp = await http.GetAsync($"/api/v1/consulta/{numero}");
         resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task Consultar_OsInexistente_DeveRetornar404()
     {
-        var publico = _fx.Factory.CreateClient();
-        var resp = await publico.GetAsync("/api/v1/consulta/9999999?documento=11144477735");
+        var http = _fx.Factory.CreateClient();
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await _fx.ObterTokenClienteAsync(Guid.NewGuid(), "11144477735"));
+
+        var resp = await http.GetAsync("/api/v1/consulta/9999999");
         resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
-    public async Task Consultar_SemDocumento_DeveRetornar400()
+    public async Task Consulta_sem_token_retorna_401()
     {
-        var publico = _fx.Factory.CreateClient();
-        var resp = await publico.GetAsync("/api/v1/consulta/1");
-        resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var (numero, _) = await CriarOsParaConsultaAsync();
+
+        var http = _fx.Factory.CreateClient();
+        var resp = await http.GetAsync($"/api/v1/consulta/{numero}");
+
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Consulta_de_OS_de_outro_cliente_retorna_404()
+    {
+        var (numero, _) = await CriarOsParaConsultaAsync();
+
+        // Cliente valido, porem dono de outro documento.
+        var http = _fx.Factory.CreateClient();
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await _fx.ObterTokenClienteAsync(Guid.NewGuid(), "52998224725"));
+
+        var resp = await http.GetAsync($"/api/v1/consulta/{numero}");
+
+        resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Consulta_da_propria_OS_retorna_200()
+    {
+        var (numero, documento) = await CriarOsParaConsultaAsync();
+
+        var http = _fx.Factory.CreateClient();
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await _fx.ObterTokenClienteAsync(Guid.NewGuid(), documento));
+
+        var resp = await http.GetAsync($"/api/v1/consulta/{numero}");
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     private async Task<OrdemResponse> CriarOsEnviadaAsync()
