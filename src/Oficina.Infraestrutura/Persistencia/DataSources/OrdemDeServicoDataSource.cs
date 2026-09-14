@@ -16,12 +16,21 @@ public class OrdemDeServicoDataSource : IOrdemDeServicoDataSource
         _db.OrdensServico
             .Include(o => o.ItensServico)
             .Include(o => o.ItensPeca)
+            // Historico precisa vir carregado aqui: RegistrarTransicao (chamado por toda
+            // transicao de status) calcula DuracaoSegundos a partir da ultima entrada de
+            // Historico.LastOrDefault() — sem o Include, a colecao chega vazia e a duracao
+            // sai sempre nula, inutilizando a coluna que alimenta o dashboard de tempo medio
+            // por status. A ordenacao por OcorridoEm garante que "a ultima entrada" seja de
+            // fato a mais recente (o Postgres nao garante ordem de retorno sem ORDER BY, e o
+            // Id de HistoricoStatus e um Guid, sem relacao com a ordem cronologica).
+            .Include(o => o.Historico.OrderBy(h => h.OcorridoEm))
             .FirstOrDefaultAsync(o => o.Id == id, ct);
 
     public Task<OrdemDeServico?> ObterPorNumeroAsync(long numero, CancellationToken ct) =>
         _db.OrdensServico
             .Include(o => o.ItensServico)
             .Include(o => o.ItensPeca)
+            .Include(o => o.Historico.OrderBy(h => h.OcorridoEm))
             .FirstOrDefaultAsync(o => o.Numero == numero, ct);
 
     public async Task<IReadOnlyList<OrdemDeServico>> ListarAsync(
@@ -53,41 +62,7 @@ public class OrdemDeServicoDataSource : IOrdemDeServicoDataSource
     public async Task AdicionarAsync(OrdemDeServico ordem, CancellationToken ct) =>
         await _db.OrdensServico.AddAsync(ordem, ct);
 
-    public Task SalvarAsync(CancellationToken ct)
-    {
-        MarcarNovosHistoricosComoAdicionados();
-        return _db.SaveChangesAsync(ct);
-    }
-
-    /// <summary>
-    /// O histórico de status é um efeito colateral interno do domínio: cada transição
-    /// (IniciarDiagnostico, EnviarOrcamentoParaAprovacao, etc.) acrescenta uma entrada
-    /// nova a <see cref="OrdemDeServico.Historico"/> sem passar por Add() explícito.
-    /// Quando a OS já estava carregada (não incluímos Historico em ObterPorIdAsync,
-    /// para não pagar o join em toda leitura), o change tracker do EF Core descobre
-    /// essa entrada nova por meio do grafo, mas como o Id (Guid) já vem atribuído pelo
-    /// domínio, ele assume — por heurística de chave — que a linha já existe no banco
-    /// (Unchanged/Modified) em vez de marcá-la como Added, e a gravação falha com
-    /// DbUpdateConcurrencyException (UPDATE que afeta 0 linhas). Como a navegação não
-    /// foi carregada neste contexto, qualquer item nela presente só pode ter chegado
-    /// agora, em memória — logo, é sempre novo.
-    /// </summary>
-    private void MarcarNovosHistoricosComoAdicionados()
-    {
-        _db.ChangeTracker.DetectChanges();
-        foreach (var entry in _db.ChangeTracker.Entries<OrdemDeServico>())
-        {
-            if (entry.Collection(o => o.Historico).IsLoaded)
-                continue;
-
-            foreach (var historico in entry.Entity.Historico)
-            {
-                var historicoEntry = _db.Entry(historico);
-                if (historicoEntry.State is EntityState.Unchanged or EntityState.Modified)
-                    historicoEntry.State = EntityState.Added;
-            }
-        }
-    }
+    public Task SalvarAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 
     public void MarcarItemServicoComoNovo(ItemServico item) =>
         _db.Set<ItemServico>().Add(item);
