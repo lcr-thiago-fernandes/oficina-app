@@ -1,5 +1,6 @@
 using Oficina.Aplicacao.Estoque.Gateways;
 using Oficina.Aplicacao.OrdensServico.Gateways;
+using Oficina.Aplicacao.OrdensServico.Telemetria;
 using Oficina.Dominio.OrdensServico;
 
 namespace Oficina.Aplicacao.OrdensServico;
@@ -9,13 +10,16 @@ public class IniciarExecucaoUseCase
     private readonly IOrdemDeServicoGateway _ordens;
     private readonly IPecaGateway _pecas;
     private readonly INotificacaoGateway _notificacoes;
+    private readonly IPublicadorEventoOs _publicador;
 
     public IniciarExecucaoUseCase(
-        IOrdemDeServicoGateway ordens, IPecaGateway pecas, INotificacaoGateway notificacoes)
+        IOrdemDeServicoGateway ordens, IPecaGateway pecas, INotificacaoGateway notificacoes,
+        IPublicadorEventoOs publicador)
     {
         _ordens = ordens;
         _pecas = pecas;
         _notificacoes = notificacoes;
+        _publicador = publicador;
     }
 
     public async Task<OrdemDeServico?> ExecutarAsync(Guid ordemId, CancellationToken ct)
@@ -27,27 +31,38 @@ public class IniciarExecucaoUseCase
             var ordem = await _ordens.ObterPorIdAsync(ordemId, tx);
             if (ordem is null) return;
 
-            // 1) muda estado da OS — pode lançar OrcamentoNaoAprovadoException ou TransicaoInvalida
-            ordem.IniciarExecucao();
-
-            // 2) baixar estoque para cada item de peça (mesma transação)
-            foreach (var item in ordem.ItensPeca)
+            try
             {
-                var peca = await _pecas.ObterPorIdAsync(item.PecaId, tx)
-                    ?? throw new OrdemInvalidaException(
-                        $"Peça {item.PecaId} referenciada na OS não existe mais.");
+                // 1) muda estado da OS — pode lançar OrcamentoNaoAprovadoException ou TransicaoInvalida
+                ordem.IniciarExecucao();
 
-                var mov = peca.RegistrarSaida(
-                    quantidade: item.Quantidade,
-                    motivo: $"OS #{ordem.Numero}",
-                    ordemServicoId: ordem.Id);
-                _pecas.MarcarMovimentacaoComoNova(mov);
+                // 2) baixar estoque para cada item de peça (mesma transação)
+                foreach (var item in ordem.ItensPeca)
+                {
+                    var peca = await _pecas.ObterPorIdAsync(item.PecaId, tx)
+                        ?? throw new OrdemInvalidaException(
+                            $"Peça {item.PecaId} referenciada na OS não existe mais.");
+
+                    var mov = peca.RegistrarSaida(
+                        quantidade: item.Quantidade,
+                        motivo: $"OS #{ordem.Numero}",
+                        ordemServicoId: ordem.Id);
+                    _pecas.MarcarMovimentacaoComoNova(mov);
+                }
+
+                // 3) persiste tudo na mesma transação
+                await _ordens.SalvarAsync(tx);
+
+                _publicador.Publicar(EventoOrdemServico.DeUltimaTransicao(ordem));
+
+                resultado = ordem;
             }
-
-            // 3) persiste tudo na mesma transação
-            await _ordens.SalvarAsync(tx);
-
-            resultado = ordem;
+            catch (Exception)
+            {
+                _publicador.Publicar(
+                    EventoOrdemServico.DeFalha(ordem.Numero, ordem.Status.ToString(), ordem.Unidade));
+                throw;
+            }
         }, ct);
 
         // 4) notifica fora da transação serializável (efeito colateral não deve
