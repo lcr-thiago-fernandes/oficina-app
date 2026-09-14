@@ -2,8 +2,9 @@ name: CD
 
 on:
   push:
-    # Deploy SO em main -> escopa o uso do role OIDC a main (hardening do Plano 09).
-    branches: [main]
+    # Fase 3: dois ambientes no mesmo cluster EKS, um namespace por branch.
+    # develop -> oficina-hml (homologacao); main -> oficina-prd (producao).
+    branches: [main, develop]
   workflow_dispatch: {}
 
 # OIDC: id-token para assumir o role AWS; contents apenas leitura do repo.
@@ -11,7 +12,9 @@ permissions:
   id-token: write
   contents: read
 
-# Serializa deploys na mesma branch: um novo deploy aguarda o anterior concluir (nao cancela um rollout em voo).
+# Serializa deploys por branch: um novo deploy na MESMA branch aguarda o anterior
+# concluir (nao cancela um rollout em voo). Branches diferentes (hml/prd) tem grupos
+# de concorrencia diferentes e podem rodar em paralelo, sem se bloquear.
 concurrency:
   group: cd-${{ github.ref }}
   cancel-in-progress: false
@@ -21,81 +24,108 @@ jobs:
     runs-on: ubuntu-latest
     # ubuntu-latest ja traz Docker, AWS CLI v2, kubectl e envsubst (gettext-base) pre-instalados.
     env:
-      # Variaveis NAO sensiveis (GitHub Variables). ECR_REPOSITORY = URL completa do repo ECR
-      # (output ecr_repository_url do Terraform, ex.: 123456789012.dkr.ecr.us-east-1.amazonaws.com/oficina-api).
       AWS_REGION: ${{ vars.AWS_REGION }}
-      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
       # Tag da imagem = SHA do commit (imutavel, rastreavel).
       IMAGE_TAG: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
 
-      # 1) Credenciais AWS via OIDC (SEM aws-access-key-id/secret): assume o role do Terraform.
+      # 1) Namespace e nodePort derivados da branch: develop -> homologacao (oficina-hml),
+      #    main -> producao (oficina-prd). As portas precisam diferir: um nodePort e unico
+      #    no cluster inteiro (nao por namespace) — 30080 fica com produção, 30081 com
+      #    homologacao. E o pipeline, nao os manifests, quem fixa essa atribuicao.
+      - name: Definir ambiente
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "NAMESPACE=oficina-prd" >> "$GITHUB_ENV"
+            echo "NODE_PORT=30080" >> "$GITHUB_ENV"
+          else
+            echo "NAMESPACE=oficina-hml" >> "$GITHUB_ENV"
+            echo "NODE_PORT=30081" >> "$GITHUB_ENV"
+          fi
+
+      # 2) Credenciais AWS via OIDC (SEM aws-access-key-id/secret): assume o role de deploy.
       - name: Configurar credenciais AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      # 2) Login no ECR (usa as credenciais temporarias do passo anterior).
+      # 3) Identificadores de infraestrutura vem do SSM Parameter Store, escritos pelos
+      #    repositorios de Terraform de infraestrutura — uma fonte de verdade so, nao
+      #    GitHub Variables. ECR_REPOSITORY e a URL completa do repo (ex.:
+      #    123456789012.dkr.ecr.us-east-1.amazonaws.com/oficina-api).
+      - name: Ler parametros do SSM
+        run: |
+          echo "ECR_REPOSITORY=$(aws ssm get-parameter --name /oficina/ecr/repository_url --query Parameter.Value --output text)" >> "$GITHUB_ENV"
+          echo "EKS_CLUSTER_NAME=$(aws ssm get-parameter --name /oficina/eks/cluster_name --query Parameter.Value --output text)" >> "$GITHUB_ENV"
+          echo "RDS_ENDPOINT=$(aws ssm get-parameter --name /oficina/db/endpoint --query Parameter.Value --output text)" >> "$GITHUB_ENV"
+
+      # 4) Login no ECR (usa as credenciais temporarias do passo 2).
       - name: Login no Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 3) Build + push da imagem (tag = SHA; tambem 'latest' por conveniencia).
-      - name: Build e push da imagem no ECR
+      # 5) Build + push da imagem (tag = SHA do commit).
+      - name: Build e push da imagem
         run: |
-          docker build -f docker/Dockerfile -t "$ECR_REPOSITORY:$IMAGE_TAG" -t "$ECR_REPOSITORY:latest" .
+          docker build -f docker/Dockerfile -t "$ECR_REPOSITORY:$IMAGE_TAG" .
           docker push "$ECR_REPOSITORY:$IMAGE_TAG"
-          docker push "$ECR_REPOSITORY:latest"
 
-      # 4) kubeconfig apontando para o cluster EKS (Plano 09).
-      - name: Configurar kubeconfig do EKS
-        run: aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}" --region "$AWS_REGION"
+      # 6) kubeconfig apontando para o cluster EKS (unico cluster, compartilhado pelos
+      #    dois ambientes/namespaces).
+      - name: Configurar kubeconfig
+        run: aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
 
-      # 5) Namespace + ConfigMap (config nao-sensivel). Namespace PRIMEIRO (o Secret depende dele).
+      # 7) Namespace do ambiente (arquivo dedicado por ambiente — namespace.yaml foi
+      #    removido) + ConfigMap. Namespace PRIMEIRO (Secret e demais recursos dependem
+      #    dele). ${NAMESPACE} e a unica variavel usada pelo ConfigMap.
       - name: Aplicar Namespace e ConfigMap
         run: |
-          kubectl apply -f k8s/namespace.yaml
-          kubectl apply -f k8s/configmap.yaml
+          kubectl apply -f "k8s/namespace-${NAMESPACE#oficina-}.yaml"
+          envsubst '${NAMESPACE}' < k8s/configmap.yaml | kubectl apply -f -
 
-      # 6) Secret REAL a partir de GitHub Secrets (o k8s/secret.yaml e apenas template, NAO e aplicado).
-      #    Segredos vem por env mascarada; NUNCA sao ecoados. `create --dry-run=client -o yaml | apply`
-      #    = upsert idempotente (funciona no 1o deploy e nos seguintes).
+      # 8) Secret REAL a partir do AWS Secrets Manager (k8s/secret.yaml e apenas
+      #    template/contrato das chaves, NAO e aplicado). Segredos nunca vem mais de
+      #    GitHub Secrets: JWT_SECRET, RDS_ENDPOINT e DB_PASSWORD saem do CD do
+      #    oficina-app. `create --dry-run=client -o yaml | apply` = upsert idempotente.
+      #    A chave NewRelic__LicenseKey precisa bater, case-sensitive, com o
+      #    secretKeyRef do Deployment (k8s/deployment.yaml) — se divergir o pod sobe
+      #    normalmente, mas o dashboard do New Relic fica vazio, sem erro nenhum.
       - name: Criar/atualizar Secret do K8s
-        env:
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          RDS_ENDPOINT: ${{ secrets.RDS_ENDPOINT }}
-          ADMIN_BOOTSTRAP_PASSWORD: ${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}
-          WEBHOOK_TOKEN: ${{ secrets.WEBHOOK_TOKEN }}
         run: |
-          # Monta a connection string a partir do endpoint do RDS + credenciais (nunca ecoada).
-          CONN="Host=${RDS_ENDPOINT};Port=5432;Database=oficina;Username=${DB_USER};Password=${DB_PASSWORD}"
+          DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id oficina/db_password --query SecretString --output text)
+          JWT_SECRET=$(aws secretsmanager get-secret-value --secret-id oficina/jwt_secret --query SecretString --output text)
+          NR_KEY=$(aws secretsmanager get-secret-value --secret-id oficina/newrelic_license_key --query SecretString --output text)
+          CONN="Host=${RDS_ENDPOINT};Port=5432;Database=oficina;Username=oficina_admin;Password=${DB_PASSWORD}"
+
           kubectl create secret generic oficina-api-secret \
-            --namespace oficina \
+            --namespace "$NAMESPACE" \
             --from-literal=Jwt__Secret="${JWT_SECRET}" \
             --from-literal=ConnectionStrings__Default="${CONN}" \
-            --from-literal=AdminBootstrap__Password="${ADMIN_BOOTSTRAP_PASSWORD}" \
-            --from-literal=Webhook__Token="${WEBHOOK_TOKEN}" \
+            --from-literal=NewRelic__LicenseKey="${NR_KEY}" \
+            --from-literal=AdminBootstrap__Password="${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}" \
+            --from-literal=Webhook__Token="${{ secrets.WEBHOOK_TOKEN }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
-      # 7) Job de migracao (migra + bootstrap). O Job e imutavel: deletar antes de re-aplicar.
-      #    envsubst substitui SO ${ECR_REPOSITORY}/${IMAGE_TAG} (nao mexe em outros '$').
-      #    Aguarda a conclusao ANTES do rollout (evita subir a API sem o schema migrado).
-      - name: Rodar Job de migracao e aguardar conclusao
+      # 9) Job de migracao (migra + bootstrap). O Job e imutavel: deletar antes de
+      #    re-aplicar. Aguarda a conclusao ANTES do rollout (evita subir a API sem o
+      #    schema migrado). ${ECR_REPOSITORY}, ${IMAGE_TAG} e ${NAMESPACE} sao as
+      #    variaveis usadas por migration-job.yaml.
+      - name: Rodar Job de migracao
         run: |
-          kubectl delete job oficina-migrate -n oficina --ignore-not-found
-          envsubst '${ECR_REPOSITORY} ${IMAGE_TAG}' < k8s/migration-job.yaml | kubectl apply -f -
-          kubectl wait --for=condition=complete job/oficina-migrate -n oficina --timeout=300s
+          kubectl delete job oficina-migrate -n "$NAMESPACE" --ignore-not-found
+          envsubst '${ECR_REPOSITORY} ${IMAGE_TAG} ${NAMESPACE}' < k8s/migration-job.yaml | kubectl apply -f -
+          kubectl wait --for=condition=complete job/oficina-migrate -n "$NAMESPACE" --timeout=300s
 
-      # 8) Deployment (imagem substituida por envsubst) + Service + HPA.
+      # 10) Deployment + Service + HPA. Cada envsubst declara so as variaveis que o
+      #     respectivo manifest usa (deployment/hpa: NAMESPACE, ECR_REPOSITORY,
+      #     IMAGE_TAG; service: NAMESPACE, NODE_PORT).
       - name: Aplicar Deployment, Service e HPA
         run: |
-          envsubst '${ECR_REPOSITORY} ${IMAGE_TAG}' < k8s/deployment.yaml | kubectl apply -f -
-          kubectl apply -f k8s/service.yaml
-          kubectl apply -f k8s/hpa.yaml
+          envsubst '${ECR_REPOSITORY} ${IMAGE_TAG} ${NAMESPACE}' < k8s/deployment.yaml | kubectl apply -f -
+          envsubst '${NAMESPACE} ${NODE_PORT}' < k8s/service.yaml | kubectl apply -f -
+          envsubst '${NAMESPACE}' < k8s/hpa.yaml | kubectl apply -f -
 
-      # 9) Aguarda o rollout terminar (falha o deploy se os pods novos nao ficarem prontos).
+      # 11) Aguarda o rollout terminar (falha o deploy se os pods novos nao ficarem prontos).
       - name: Aguardar rollout
-        run: kubectl rollout status deployment/oficina-api -n oficina --timeout=300s
+        run: kubectl rollout status deployment/oficina-api -n "$NAMESPACE" --timeout=300s
