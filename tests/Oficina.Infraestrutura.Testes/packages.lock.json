@@ -364,6 +364,11 @@
           "System.Xml.XDocument": "4.3.0"
         }
       },
+      "NewRelic.Agent.Api": {
+        "type": "Transitive",
+        "resolved": "10.54.0",
+        "contentHash": "o4/NOxTU4c8YizdcJ7TaHP61z9UjQNmtLPd8+cR1VBqPJf46uFQYxIJiF/sQkgUBy+U3gz1/0lclXNpGNSHP9w=="
+      },
       "Newtonsoft.Json": {
         "type": "Transitive",
         "resolved": "13.0.1",
@@ -1336,6 +1341,7 @@
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[8.0.2, )",
           "Microsoft.Extensions.Hosting.Abstractions": "[8.0.1, )",
           "Microsoft.Extensions.Options.ConfigurationExtensions": "[8.0.0, )",
+          "NewRelic.Agent.Api": "[10.54.0, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[8.0.10, )",
           "Oficina.Adaptadores": "[1.0.0, )",
           "Oficina.Aplicacao": "[1.0.0, )",
