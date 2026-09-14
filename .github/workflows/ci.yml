@@ -14,7 +14,7 @@ jobs:
     # que nao rodam localmente, sao exercitados AQUI. O `dotnet test` roda a solution inteira,
     # incluindo os projetos novos Oficina.Adaptadores.Testes e Oficina.Infraestrutura.Testes.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
@@ -66,7 +66,7 @@ jobs:
     # (ou trocar --verify-no-changes por gate real) para torna-lo bloqueante.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
@@ -83,7 +83,7 @@ jobs:
   docker-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build Docker image
         # Valida o Dockerfile do Plano 07 (agora inclui Oficina.Adaptadores no restore/publish).
         run: docker build -f docker/Dockerfile -t oficina-api:ci .
@@ -95,7 +95,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: github/codeql-action/init@v3
         with:
           languages: csharp

@@ -28,7 +28,7 @@ jobs:
       # Tag da imagem = SHA do commit (imutavel, rastreavel).
       IMAGE_TAG: ${{ github.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 1) Credenciais AWS via OIDC (SEM aws-access-key-id/secret): assume o role do Terraform.
       - name: Configurar credenciais AWS (OIDC)
