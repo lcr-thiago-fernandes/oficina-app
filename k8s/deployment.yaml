@@ -43,13 +43,20 @@ spec:
           env:
             - name: CORECLR_ENABLE_PROFILING
               value: "1"
-            # Lista de nomes separada por ";" (recurso do agente .NET: até 3 nomes; o
-            # PRIMEIRO é a entidade principal). O primeiro nome é exatamente o que as
-            # consultas e os alertas da Fase 3 procuram (appName = 'oficina-api') — sem
-            # ele, nenhum painel encontra a aplicação. O segundo mantém uma entidade por
-            # ambiente, para inspecionar hml e prd separadamente no APM.
+            # Nome fixo, sem a lista "oficina-api;oficina-api-${AMBIENTE}" (recurso de
+            # roll-up do agente .NET: até 3 nomes separados por ";", o primeiro é a
+            # entidade principal). A sintaxe existe e foi verificada, mas por prudência
+            # optou-se pelo nome simples: se a lista NÃO se comportar como documentado,
+            # appName vira a string literal com ";" e os dois painéis obrigatórios e o
+            # alerta Critical da Fase 3 (que procuram appName = 'oficina-api') deixam de
+            # encontrar a aplicação — falha silenciosa, só visível na hora de mostrar o
+            # dashboard. Com o nome fixo, quem separa hml de prd no APM é o
+            # NEW_RELIC_LABELS abaixo (ambiente:${AMBIENTE}), que cobre a maior parte do
+            # caso de uso. Quem reintroduzir a lista deve validar antes contra o New
+            # Relic real (conta de hml, por exemplo) que ela realmente cria uma entidade
+            # por ambiente sem quebrar appName = 'oficina-api'.
             - name: NEW_RELIC_APP_NAME
-              value: "oficina-api;oficina-api-${AMBIENTE}"
+              value: "oficina-api"
             - name: NEW_RELIC_LICENSE_KEY
               valueFrom:
                 secretKeyRef:

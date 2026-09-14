@@ -92,7 +92,12 @@ Dois ajustes que o profiler **ligado** exige e que não apareciam com ele deslig
   ~215Mi com ele ligado. Por isso `limits.memory` é 512Mi (era 256Mi, dimensionado sem
   agente) e `requests.memory` é 256Mi.
 
-- **Nome da aplicação.** `NEW_RELIC_APP_NAME` é `oficina-api;oficina-api-${AMBIENTE}`.
-  O primeiro nome da lista é a entidade principal e é o que as consultas e os alertas
-  da Fase 3 procuram (`appName = 'oficina-api'`); o segundo mantém hml e prd
-  separáveis no APM. `${AMBIENTE}` (`prd`/`hml`) vem do `cd.yml`, não do `${NAMESPACE}`.
+- **Nome da aplicação.** `NEW_RELIC_APP_NAME` é o nome fixo `oficina-api` — exatamente
+  o que os dois painéis obrigatórios e o alerta Critical da Fase 3 procuram
+  (`appName = 'oficina-api'`). O agente .NET aceita uma lista `nome;nome-${AMBIENTE}`
+  (roll-up, primeiro nome = entidade principal) que criaria uma entidade por ambiente,
+  mas essa lista não foi adotada por prudência: se não se comportar como documentado,
+  `appName` vira a string literal com `;` e os painéis/alerta deixam de encontrar a
+  aplicação — falha silenciosa, só visível na apresentação. Quem separa hml de prd no
+  APM hoje é o `NEW_RELIC_LABELS` (`ambiente:${AMBIENTE}`, logo abaixo). `${AMBIENTE}`
+  (`prd`/`hml`) vem do `cd.yml`, não do `${NAMESPACE}`.
