@@ -33,10 +33,10 @@ public class ConsultaController : ControllerBase
     private IActionResult MapearResultado(ResultadoConsulta r) => r switch
     {
         ResultadoConsulta.Sucesso s => Ok(s.Response),
-        // Ambos os casos respondem 404 com o mesmo corpo — anti-enumeracao de
-        // conteudo. A mitigacao e so isso: ha diferenca de tempo mensuravel
-        // entre os ramos (NaoEncontrada volta apos uma consulta ao banco,
-        // DocumentoNaoConfere apos duas), que esta resposta nao esconde.
+        // Ambos os casos respondem 404 com o mesmo corpo — anti-enumeração de
+        // conteúdo. A mitigação é só isso: há diferença de tempo mensurável
+        // entre os ramos (NaoEncontrada volta após uma consulta ao banco,
+        // DocumentoNaoConfere após duas), que esta resposta não esconde.
         ResultadoConsulta.NaoEncontrada => NotFound(),
         ResultadoConsulta.DocumentoNaoConfere => NotFound(),
         _ => StatusCode(StatusCodes.Status500InternalServerError)

@@ -13,10 +13,15 @@ using Xunit;
 namespace Oficina.Integracao.Testes.Consulta;
 
 [Collection(nameof(AuthCollection))]
-public class ConsultaPublicaTestes
+/// <summary>
+/// Consulta de OS pelo próprio cliente. O nome "pública" saiu com a Fase 3: a
+/// rota exige token de perfil Cliente e autoriza por propriedade da OS. O DTO
+/// ConsultaPublicaResponse mantém o nome por ser contrato compartilhado.
+/// </summary>
+public class ConsultaDeOrdemPorClienteTestes
 {
     private readonly AuthFixture _fx;
-    public ConsultaPublicaTestes(AuthFixture fx) => _fx = fx;
+    public ConsultaDeOrdemPorClienteTestes(AuthFixture fx) => _fx = fx;
 
     private async Task<HttpClient> AdminAsync()
     {
@@ -99,7 +104,7 @@ public class ConsultaPublicaTestes
     {
         var (numero, _) = await CriarOsParaConsultaAsync();
 
-        // Cliente valido, porem dono de outro documento.
+        // Cliente válido, porém dono de outro documento.
         var http = _fx.Factory.CreateClient();
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer", await _fx.ObterTokenClienteAsync(Guid.NewGuid(), "52998224725"));

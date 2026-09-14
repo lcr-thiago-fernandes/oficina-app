@@ -9,8 +9,8 @@ public static class DependencyInjectionAuth
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Somente parametros de VALIDACAO do token. A emissao e da funcao
-        // serverless oficina-auth, em repositorio separado.
+        // Somente parâmetros de VALIDAÇÃO do token. A emissão é da função
+        // serverless oficina-auth-api, em repositório separado.
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.Secao));
 
         services.AddHostedService<BootstrapAdminHostedService>();

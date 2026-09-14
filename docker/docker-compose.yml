@@ -1,4 +1,4 @@
-name: fiap_15SOAT_fase1
+name: oficina-app
 
 services:
   postgres:
@@ -28,7 +28,8 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=oficina;Username=${DB_USER};Password=${DB_PASSWORD}"
       Jwt__Secret: ${JWT_SECRET}
-      # Contrato do token emitido pela funcao serverless oficina-auth; a API so valida.
+      # Contrato do token emitido pela funcao serverless oficina-auth-api; a API so
+      # valida. (oficina-auth abaixo e o VALOR da claim iss, nao o nome do componente.)
       Jwt__Issuer: ${JWT_ISSUER:-oficina-auth}
       Jwt__Audience: ${JWT_AUDIENCE:-oficina-api}
       AdminBootstrap__Password: ${ADMIN_BOOTSTRAP_PASSWORD}

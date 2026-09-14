@@ -20,8 +20,8 @@ public static class DependencyInjectionAdaptadores
 {
     public static IServiceCollection AdicionarAdaptadores(this IServiceCollection services)
     {
-        // Auth — apenas o gateway do usuario administrativo (bootstrap do admin).
-        // A API nao emite mais token: quem autentica e a funcao serverless oficina-auth.
+        // Auth — apenas o gateway do usuário administrativo (bootstrap do admin).
+        // A API não emite mais token: quem autentica é a função serverless oficina-auth-api.
         services.AddScoped<IUsuarioGateway, UsuarioGateway>();
 
         // Catálogo

@@ -1,3 +1,10 @@
+### ============================================================
+### HISTÓRICO DA FASE 2 — NÃO EXECUTÁVEL NESTA API
+### O endpoint POST /auth/login foi removido na Fase 3: quem emite token é a
+### função serverless oficina-auth-api. O rate limit exercitado no fim deste
+### arquivo também não existe mais. Mantido como registro do contrato antigo.
+### ============================================================
+
 ### Login admin (use o ADMIN_BOOTSTRAP_PASSWORD do .env na primeira execução)
 # @name login
 POST {{baseUrl}}/auth/login
@@ -8,8 +15,8 @@ Content-Type: application/json
   "password": "AlteraMe@123"
 }
 
-### Capturar o token desta resposta e setar @token em http/_env.http
-###   @token = {{login.response.body.accessToken}}
+### Capturar o token desta resposta e setar "token" em .vscode/settings.json
+### (rest-client.environmentVariables) — não existe arquivo http/_env.http.
 
 ### Login com senha errada (esperado 401)
 POST {{baseUrl}}/auth/login

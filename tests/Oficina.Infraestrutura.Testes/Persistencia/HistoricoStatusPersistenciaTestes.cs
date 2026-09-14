@@ -36,10 +36,10 @@ public class HistoricoStatusPersistenciaTestes : IAsyncLifetime
         await _db.SaveChangesAsync();
         _db.ChangeTracker.Clear();
 
-        // OrderBy explicito: sem ele, o EF Core so ordena pela chave da OS (unica linha
-        // aqui), nao pela do historico — a ordem das duas linhas de historico_status
-        // fica a criterio do plano de execucao do Postgres (Id e Guid, sem relacao com
-        // a ordem cronologica), tornando o `.Last()` abaixo nao-deterministico.
+        // OrderBy explícito: sem ele, o EF Core só ordena pela chave da OS (única linha
+        // aqui), não pela do histórico — a ordem das duas linhas de historico_status
+        // fica a critério do plano de execução do Postgres (Id é Guid, sem relação com
+        // a ordem cronológica), tornando o `.Last()` abaixo não-determinístico.
         var recarregada = await _db.OrdensServico
             .Include(o => o.Historico.OrderBy(h => h.OcorridoEm))
             .FirstAsync(o => o.Id == os.Id);

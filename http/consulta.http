@@ -1,7 +1,7 @@
 ### Consulta da OS pelo NÚMERO (cliente autenticado). Documento vem da claim do
-### token de Cliente emitido pela Lambda oficina-auth-api — não é mais parâmetro.
-### Capture o token da Lambda (ou gere um localmente para testes) e defina
-### @tokenCliente em http/_env.http.
+### token de Cliente emitido pela função serverless oficina-auth-api — não é mais
+### parâmetro. Capture o token dela (ou gere um localmente para testes) e defina
+### "tokenCliente" em .vscode/settings.json (rest-client.environmentVariables).
 GET {{baseUrl}}/consulta/{{numeroOs}}
 Authorization: Bearer {{tokenCliente}}
 

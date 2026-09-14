@@ -25,8 +25,8 @@ public class MeController : ControllerBase
         if (documento is null) return Forbid();
 
         var ordens = await uc.ExecutarAsync(documento, ct);
-        // Cliente autenticado cujo cadastro sumiu: trata como sem conteudo,
-        // nao como erro — nao ha o que ele possa fazer a respeito.
+        // Cliente autenticado cujo cadastro sumiu: trata como sem conteúdo,
+        // não como erro — não há o que ele possa fazer a respeito.
         return Ok(ordens ?? Array.Empty<OrdemResumoResponse>());
     }
 

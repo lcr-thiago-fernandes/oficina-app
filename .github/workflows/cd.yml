@@ -33,7 +33,7 @@ jobs:
       # 1) Namespace, ambiente e nodePort derivados da branch: develop -> homologacao
       #    (oficina-hml), main -> producao (oficina-prd). As portas precisam diferir: um
       #    nodePort e unico no cluster inteiro (nao por namespace) — 30080 fica com
-      #    produção, 30081 com homologacao. E o pipeline, nao os manifests, quem fixa
+      #    producao, 30081 com homologacao. E o pipeline, nao os manifests, quem fixa
       #    essa atribuicao.
       #
       #    AMBIENTE (prd|hml) e exportado separadamente de NAMESPACE (oficina-prd|

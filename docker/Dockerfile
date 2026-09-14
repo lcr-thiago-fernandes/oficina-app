@@ -31,8 +31,8 @@ ENV DOTNET_PRINT_TELEMETRY_MESSAGE=false
 EXPOSE 8080
 
 LABEL org.opencontainers.image.title="Oficina Mecanica API" \
-      org.opencontainers.image.description="MVP back-end da oficina (FIAP 15SOAT Fase 2)" \
-      org.opencontainers.image.source="https://github.com/lcr-thiago-fernandes/fiap_15SOAT_fase1" \
+      org.opencontainers.image.description="Back-end da oficina (FIAP 15SOAT Fase 3)" \
+      org.opencontainers.image.source="https://github.com/lcr-thiago-fernandes/oficina-app" \
       org.opencontainers.image.licenses="MIT"
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \

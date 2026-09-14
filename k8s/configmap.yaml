@@ -8,8 +8,9 @@ metadata:
 data:
   ASPNETCORE_ENVIRONMENT: "Production"
   # Emissor/audiência do JWT (não sensíveis). Devem bater com o token emitido pela
-  # função serverless de autenticação (oficina-lambda-auth), que autentica o cliente
-  # pelo CPF; a API apenas valida o token.
+  # função serverless de autenticação `oficina-auth-api` (repositório
+  # `oficina-lambda-auth`), que autentica o cliente pelo CPF; a API apenas valida
+  # o token. "oficina-auth" abaixo é o valor da claim `iss`, não o nome do componente.
   Jwt__Issuer: "oficina-auth"
   Jwt__Audience: "oficina-api"
   # Em Kubernetes os pods do Deployment NÃO migram: a migração é feita pelo Job dedicado.

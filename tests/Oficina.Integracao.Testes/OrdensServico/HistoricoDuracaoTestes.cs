@@ -50,7 +50,7 @@ public class HistoricoDuracaoTestes
             new CriarServicoRequest("Servico Duracao", "x", 100m, 30)))
             .Content.ReadFromJsonAsync<ServicoResponse>();
 
-        // Abrir OS (cria a 1a entrada de historico: Recebida, duracao null por ser a primeira)
+        // Abrir OS (cria a 1ª entrada de histórico: Recebida, duração null por ser a primeira)
         var osResp = await http.PostAsJsonAsync("/api/v1/ordens-servico",
             new AbrirOrdemRequest(
                 new ClienteDadosDto(documento, "Cliente Duracao", $"d{Guid.NewGuid():N}@x.com", "11987654321"),
@@ -61,7 +61,7 @@ public class HistoricoDuracaoTestes
         osResp.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
         var os = await osResp.Content.ReadFromJsonAsync<OrdemResponse>();
 
-        // Segunda transicao via API — Recebida -> EmDiagnostico (2a entrada de historico)
+        // Segunda transição via API — Recebida -> EmDiagnostico (2ª entrada de histórico)
         var diag = await http.PatchAsync($"/api/v1/ordens-servico/{os!.Id}/diagnostico", null);
         diag.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 

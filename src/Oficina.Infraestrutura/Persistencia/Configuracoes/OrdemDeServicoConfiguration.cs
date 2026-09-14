@@ -23,8 +23,8 @@ public class OrdemDeServicoConfiguration : IEntityTypeConfiguration<OrdemDeServi
 
         b.Property(x => x.Status)
             .HasConversion<string>().HasColumnName("status").HasMaxLength(30).IsRequired();
-        // Padrao de acesso real: filtrar por status e ordenar por data de abertura.
-        // `ordem_servico` nao possui coluna `atualizado_em`; `criada_em` e a data canonica.
+        // Padrão de acesso real: filtrar por status e ordenar por data de abertura.
+        // `ordem_servico` não possui coluna `atualizado_em`; `criada_em` é a data canônica.
         b.HasIndex(x => new { x.Status, x.CriadaEm })
             .HasDatabaseName("ix_ordem_servico_status_data");
         b.HasIndex(x => x.ClienteId);

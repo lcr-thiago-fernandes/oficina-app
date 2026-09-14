@@ -60,9 +60,9 @@ public class MeEndpointsTestes
     [Fact]
     public async Task Token_com_perfil_Cliente_mas_sem_claim_documento_retorna_403()
     {
-        // A politica RequerCliente exige DUAS coisas: perfil=Cliente e a claim
-        // "documento". Este teste cobre o unico ramo que nao sai de graca dos
-        // outros dois: perfil correto, mas sem a claim que a Lambda sempre inclui.
+        // A política RequerCliente exige DUAS coisas: perfil=Cliente e a claim
+        // "documento". Este teste cobre o único ramo que não sai de graça dos
+        // outros dois: perfil correto, mas sem a claim que oficina-auth-api sempre inclui.
         var http = _fx.Factory.CreateClient();
         var token = GeradorTokenDeTeste.Gerar("Cliente", Guid.NewGuid(), documento: null);
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);

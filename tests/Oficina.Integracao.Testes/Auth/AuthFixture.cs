@@ -39,8 +39,8 @@ public class AuthFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// Token de Admin assinado localmente. A API nao emite mais tokens —
-    /// esse papel e da Lambda oficina-auth-api (repositorio separado).
+    /// Token de Admin assinado localmente. A API não emite mais tokens —
+    /// esse papel é da função serverless oficina-auth-api (repositório separado).
     /// </summary>
     public Task<string> ObterTokenAdminAsync() =>
         Task.FromResult(GeradorTokenDeTeste.Gerar("Admin", Guid.NewGuid()));

@@ -16,13 +16,13 @@ public class OrdemDeServicoDataSource : IOrdemDeServicoDataSource
         _db.OrdensServico
             .Include(o => o.ItensServico)
             .Include(o => o.ItensPeca)
-            // Historico precisa vir carregado aqui: RegistrarTransicao (chamado por toda
-            // transicao de status) calcula DuracaoSegundos a partir da ultima entrada de
-            // Historico.LastOrDefault() — sem o Include, a colecao chega vazia e a duracao
-            // sai sempre nula, inutilizando a coluna que alimenta o dashboard de tempo medio
-            // por status. A ordenacao por OcorridoEm garante que "a ultima entrada" seja de
-            // fato a mais recente (o Postgres nao garante ordem de retorno sem ORDER BY, e o
-            // Id de HistoricoStatus e um Guid, sem relacao com a ordem cronologica).
+            // Histórico precisa vir carregado aqui: RegistrarTransicao (chamado por toda
+            // transição de status) calcula DuracaoSegundos a partir da última entrada de
+            // Historico.LastOrDefault() — sem o Include, a coleção chega vazia e a duração
+            // sai sempre nula, inutilizando a coluna que alimenta o dashboard de tempo médio
+            // por status. A ordenação por OcorridoEm garante que "a última entrada" seja de
+            // fato a mais recente (o Postgres não garante ordem de retorno sem ORDER BY, e o
+            // Id de HistoricoStatus é um Guid, sem relação com a ordem cronológica).
             .Include(o => o.Historico.OrderBy(h => h.OcorridoEm))
             .FirstOrDefaultAsync(o => o.Id == id, ct);
 

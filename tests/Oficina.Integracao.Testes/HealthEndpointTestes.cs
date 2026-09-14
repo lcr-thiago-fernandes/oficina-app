@@ -40,8 +40,8 @@ public class HealthEndpointTestes : IClassFixture<HealthEndpointTestes.HealthFac
     {
         public HealthFactory()
         {
-            // Mesmas constantes da AuthFixture: essas env vars sao process-wide,
-            // entao valores divergentes aqui fariam o host validar contra outro
+            // Mesmas constantes da AuthFixture: essas env vars são process-wide,
+            // então valores divergentes aqui fariam o host validar contra outro
             // issuer/chave e rejeitar os tokens assinados por GeradorTokenDeTeste.
             Environment.SetEnvironmentVariable("Jwt__Secret", Auth.GeradorTokenDeTeste.Secret);
             Environment.SetEnvironmentVariable("Jwt__Issuer", Auth.GeradorTokenDeTeste.Issuer);
