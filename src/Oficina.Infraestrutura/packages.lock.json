@@ -2,6 +2,16 @@
   "version": 1,
   "dependencies": {
     "net8.0": {
+      "FluentValidation.DependencyInjectionExtensions": {
+        "type": "Direct",
+        "requested": "[12.1.1, )",
+        "resolved": "12.1.1",
+        "contentHash": "D0VXh4dtjjX2aQizuaa0g6R8X3U1JaVqJPfGCvLwZX9t/O2h7tkpbitbadQMfwcgSPdDbI2vDxuwRMv/Uf9dHA==",
+        "dependencies": {
+          "FluentValidation": "12.1.1",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "2.1.0"
+        }
+      },
       "Microsoft.AspNetCore.Authentication.JwtBearer": {
         "type": "Direct",
         "requested": "[8.0.10, )",
@@ -106,17 +116,8 @@
       },
       "FluentValidation": {
         "type": "Transitive",
-        "resolved": "11.10.0",
-        "contentHash": "qsJGSJDdZ8qiG+lVJ70PZfJHcEdq8UQZ/tZDXoj78/iHKG6lVKtMJsD11zyyv/IPc7rwqGqnFoFLTNzpo3IPYg=="
-      },
-      "FluentValidation.DependencyInjectionExtensions": {
-        "type": "Transitive",
-        "resolved": "11.10.0",
-        "contentHash": "hIe+i6P+ZUxFh6lJOBXRs4EGE/thcub0Lpdk2FF2/JBKJUqDqE2xDnBIiqTMkpXLoekgBN0SlhJT0vpeNr1J6g==",
-        "dependencies": {
-          "FluentValidation": "11.10.0",
-          "Microsoft.Extensions.Dependencyinjection.Abstractions": "2.1.0"
-        }
+        "resolved": "12.1.1",
+        "contentHash": "EPpkIe1yh1a0OXyC100oOA8WMbZvqUu5plwhvYcb7oSELfyUZzfxV48BLhvs3kKo4NwG7MGLNgy1RJiYtT8Dpw=="
       },
       "Humanizer.Core": {
         "type": "Transitive",
@@ -451,8 +452,8 @@
       "oficina.aplicacao": {
         "type": "Project",
         "dependencies": {
-          "FluentValidation": "[11.10.0, )",
-          "FluentValidation.DependencyInjectionExtensions": "[11.10.0, )",
+          "FluentValidation": "[12.1.1, )",
+          "FluentValidation.DependencyInjectionExtensions": "[12.1.1, )",
           "Microsoft.Extensions.Logging.Abstractions": "[8.0.2, )",
           "Oficina.Dominio": "[1.0.0, )"
         }
