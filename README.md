@@ -294,7 +294,8 @@ kubectl apply -f k8s/configmap.yaml       # requer ${NAMESPACE} resolvido (envsu
 #    Ver "kubectl create secret" no k8s/README.md e no job "Criar/atualizar Secret" do cd.yml
 kubectl apply -f k8s/migration-job.yaml   # migra + bootstrap
 kubectl wait --for=condition=complete job/oficina-migrate -n <namespace> --timeout=300s
-kubectl apply -f k8s/deployment.yaml      # só após o Job concluir
+kubectl apply -f k8s/deployment.yaml      # só após o Job concluir; requer ${ECR_REPOSITORY},
+                                           # ${IMAGE_TAG}, ${NAMESPACE} e ${AMBIENTE} (envsubst)
 kubectl apply -f k8s/service.yaml         # NodePort, não LoadBalancer
 kubectl apply -f k8s/hpa.yaml             # requer metrics-server
 ```

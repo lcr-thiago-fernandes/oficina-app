@@ -41,9 +41,10 @@ Quem define `${NODE_PORT}` por ambiente é o pipeline de CD.
 
 ## Ordem de aplicação
 
-As imagens usam os placeholders `${ECR_REPOSITORY}` e `${IMAGE_TAG}`, e os manifests
-namespaced usam `${NAMESPACE}` e (o Service) `${NODE_PORT}` — todos substituídos pelo CI
-com `envsubst` (ex.: `envsubst < arquivo.yaml | kubectl apply -f -`).
+As imagens usam os placeholders `${ECR_REPOSITORY}` e `${IMAGE_TAG}`, o Deployment usa
+também `${AMBIENTE}` (New Relic), e os manifests namespaced usam `${NAMESPACE}` e (o
+Service) `${NODE_PORT}` — todos substituídos pelo CI com `envsubst` (ex.:
+`envsubst < arquivo.yaml | kubectl apply -f -`).
 
 ```bash
 kubectl apply -f namespace-prd.yaml   # ou namespace-hml.yaml, conforme o ambiente
