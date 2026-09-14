@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.RegularExpressions;
 using FluentAssertions;
 using Oficina.Aplicacao.Catalogo.Dtos;
 using Oficina.Aplicacao.Clientes.Dtos;
@@ -25,20 +26,37 @@ public class ConsultaPublicaTestes
         return http;
     }
 
+    /// <summary>
+    /// Busca o cliente pelo documento e só cria se a busca confirmar que ele
+    /// não existe (404). Importante checar o StatusCode explicitamente: com
+    /// [ApiController], um 404 "cru" vira ProblemDetails no corpo, e nenhum
+    /// campo dele colide com ClienteResponse — um ReadFromJsonAsync direto,
+    /// sem checar sucesso, desserializaria isso como um ClienteResponse
+    /// "zerado" (Id = Guid.Empty) em vez de null, mascarando o 404 e
+    /// quebrando tudo mais adiante (o teste falha em outro lugar, com uma
+    /// mensagem que não aponta para a causa real). Isso tornava a suíte
+    /// correta apenas por sorte de ordem entre classes que compartilham o
+    /// mesmo CPF fixo — corrigido aqui para ser correta por construção,
+    /// independente de quem rodou antes.
+    /// </summary>
+    private static async Task<ClienteResponse> ObterOuCriarClienteAsync(HttpClient http, string doc, string nome)
+    {
+        var busca = await http.GetAsync($"/api/v1/clientes?documento={doc}");
+        if (busca.StatusCode == HttpStatusCode.OK)
+            return (await busca.Content.ReadFromJsonAsync<ClienteResponse>())!;
+
+        var criado = await http.PostAsJsonAsync("/api/v1/clientes",
+            new CriarClienteRequest(nome, doc, $"c{Guid.NewGuid():N}@x.com", "11987654321"));
+        return (await criado.Content.ReadFromJsonAsync<ClienteResponse>())!;
+    }
+
     private async Task<(long numero, string documento)> CriarOsParaConsultaAsync()
     {
         var http = await AdminAsync();
         var doc = "11144477735";
 
-        var cli = await (await http.GetAsync($"/api/v1/clientes?documento={doc}"))
-            .Content.ReadFromJsonAsync<ClienteResponse>();
-        if (cli is null)
-        {
-            var r = await http.PostAsJsonAsync("/api/v1/clientes",
-                new CriarClienteRequest("Cli OS", doc, $"c{Guid.NewGuid():N}@x.com", "11987654321"));
-            cli = await r.Content.ReadFromJsonAsync<ClienteResponse>();
-        }
-        var v = await (await http.PostAsJsonAsync($"/api/v1/clientes/{cli!.Id}/veiculos",
+        var cli = await ObterOuCriarClienteAsync(http, doc, "Cli OS");
+        var v = await (await http.PostAsJsonAsync($"/api/v1/clientes/{cli.Id}/veiculos",
             new AdicionarVeiculoRequest($"OSC{new Random().Next(1000,9999)}", "F", "U", 2020)))
             .Content.ReadFromJsonAsync<VeiculoResponse>();
 
@@ -59,7 +77,7 @@ public class ConsultaPublicaTestes
     }
 
     [Fact]
-    public async Task Consultar_ComDocumentoCorreto_DeveRetornar200()
+    public async Task Consulta_da_propria_OS_retorna_200()
     {
         var (numero, doc) = await CriarOsParaConsultaAsync();
 
@@ -74,42 +92,6 @@ public class ConsultaPublicaTestes
         body!.Numero.Should().Be(numero);
         body.Status.Should().Be("AguardandoAprovacao");
         body.DocumentoMascarado.Should().NotContain("***");
-    }
-
-    [Fact]
-    public async Task Consultar_ComDocumentoErrado_DeveRetornar404()
-    {
-        var (numero, _) = await CriarOsParaConsultaAsync();
-
-        // Token valido, mas de um documento diferente do dono da OS.
-        var http = _fx.Factory.CreateClient();
-        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer", await _fx.ObterTokenClienteAsync(Guid.NewGuid(), "39053344705"));
-
-        var resp = await http.GetAsync($"/api/v1/consulta/{numero}");
-        resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task Consultar_OsInexistente_DeveRetornar404()
-    {
-        var http = _fx.Factory.CreateClient();
-        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer", await _fx.ObterTokenClienteAsync(Guid.NewGuid(), "11144477735"));
-
-        var resp = await http.GetAsync("/api/v1/consulta/9999999");
-        resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task Consulta_sem_token_retorna_401()
-    {
-        var (numero, _) = await CriarOsParaConsultaAsync();
-
-        var http = _fx.Factory.CreateClient();
-        var resp = await http.GetAsync($"/api/v1/consulta/{numero}");
-
-        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -128,33 +110,67 @@ public class ConsultaPublicaTestes
     }
 
     [Fact]
-    public async Task Consulta_da_propria_OS_retorna_200()
+    public async Task Consulta_de_OS_inexistente_retorna_404()
     {
-        var (numero, documento) = await CriarOsParaConsultaAsync();
+        var http = _fx.Factory.CreateClient();
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await _fx.ObterTokenClienteAsync(Guid.NewGuid(), "11144477735"));
+
+        var resp = await http.GetAsync("/api/v1/consulta/9999999");
+
+        resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Consulta_sem_token_retorna_401()
+    {
+        var (numero, _) = await CriarOsParaConsultaAsync();
+
+        var http = _fx.Factory.CreateClient();
+        var resp = await http.GetAsync($"/api/v1/consulta/{numero}");
+
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Consulta_de_OS_inexistente_e_de_outro_cliente_retornam_corpo_identico()
+    {
+        // A invariante anti-enumeração não é só o StatusCode — é o corpo da
+        // resposta ser indistinguível entre "não existe" e "existe, mas não
+        // é seu". Um futuro NotFound(new { erro = "..." }) só no ramo
+        // DocumentoNaoConfere passaria despercebido pelos outros testes
+        // (que só checam o status) e reabriria o oráculo de enumeração.
+        var (numero, _) = await CriarOsParaConsultaAsync();
 
         var http = _fx.Factory.CreateClient();
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer", await _fx.ObterTokenClienteAsync(Guid.NewGuid(), documento));
+            "Bearer", await _fx.ObterTokenClienteAsync(Guid.NewGuid(), "52998224725"));
 
-        var resp = await http.GetAsync($"/api/v1/consulta/{numero}");
+        var respOutroCliente = await http.GetAsync($"/api/v1/consulta/{numero}");
+        var respInexistente = await http.GetAsync("/api/v1/consulta/9999999");
 
-        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        respOutroCliente.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        respInexistente.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        // [ApiController] converte o NotFound() cru em ProblemDetails, que
+        // inclui um traceId novo a cada requisição — normalizamos esse único
+        // campo antes de comparar o resto do corpo byte a byte.
+        var corpoOutroCliente = NormalizarTraceId(await respOutroCliente.Content.ReadAsStringAsync());
+        var corpoInexistente = NormalizarTraceId(await respInexistente.Content.ReadAsStringAsync());
+
+        corpoOutroCliente.Should().Be(corpoInexistente);
     }
+
+    private static string NormalizarTraceId(string json) =>
+        Regex.Replace(json, "\"traceId\"\\s*:\\s*\"[^\"]*\"", "\"traceId\":\"\"");
 
     private async Task<OrdemResponse> CriarOsEnviadaAsync()
     {
         var http = await AdminAsync();
         var doc = "11144477735";
 
-        var cli = await (await http.GetAsync($"/api/v1/clientes?documento={doc}"))
-            .Content.ReadFromJsonAsync<ClienteResponse>();
-        if (cli is null)
-        {
-            var r = await http.PostAsJsonAsync("/api/v1/clientes",
-                new CriarClienteRequest("Cli OS", doc, $"c{Guid.NewGuid():N}@x.com", "11987654321"));
-            cli = await r.Content.ReadFromJsonAsync<ClienteResponse>();
-        }
-        var v = await (await http.PostAsJsonAsync($"/api/v1/clientes/{cli!.Id}/veiculos",
+        var cli = await ObterOuCriarClienteAsync(http, doc, "Cli OS");
+        var v = await (await http.PostAsJsonAsync($"/api/v1/clientes/{cli.Id}/veiculos",
             new AdicionarVeiculoRequest($"WHK{new Random().Next(1000,9999)}", "F", "U", 2020)))
             .Content.ReadFromJsonAsync<VeiculoResponse>();
         var s = await (await http.PostAsJsonAsync("/api/v1/servicos",

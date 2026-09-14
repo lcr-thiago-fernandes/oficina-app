@@ -23,9 +23,14 @@ public class MeEndpointsTestes
         http.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", await _fx.ObterTokenAdminAsync());
 
-        var existente = await (await http.GetAsync($"/api/v1/clientes?documento={Documento}"))
-            .Content.ReadFromJsonAsync<ClienteResponse>();
-        if (existente is not null) return existente;
+        // Checa o StatusCode explicitamente: com [ApiController], um 404 cru
+        // vira ProblemDetails no corpo, que nenhum campo colide com
+        // ClienteResponse — ReadFromJsonAsync sem checar sucesso desserializa
+        // isso como um ClienteResponse "zerado" em vez de null, mascarando o
+        // 404 e pulando a criação do cliente.
+        var busca = await http.GetAsync($"/api/v1/clientes?documento={Documento}");
+        if (busca.StatusCode == HttpStatusCode.OK)
+            return (await busca.Content.ReadFromJsonAsync<ClienteResponse>())!;
 
         var criado = await http.PostAsJsonAsync("/api/v1/clientes",
             new CriarClienteRequest("Cliente Me", Documento, $"me{Guid.NewGuid():N}@x.com", "11987654321"));
