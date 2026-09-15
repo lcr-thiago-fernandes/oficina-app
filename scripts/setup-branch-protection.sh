@@ -14,15 +14,21 @@ REPO="${1:?informe owner/repo}"
 for BRANCH in main develop; do
   echo "Protegendo ${REPO}@${BRANCH}..."
 
-  # required_status_checks fica com contexts vazio ate o CI rodar a primeira vez:
-  # exigir um check que nunca executou trava qualquer merge.
+  # Checks obrigatorios (contexts = nome do JOB no ci.yml). Ficaram vazios enquanto o
+  # CI nunca tinha rodado — exigir um check que nunca executou trava qualquer merge —
+  # e foram preenchidos depois do primeiro CI verde.
+  #
+  # "format" NAO entra de proposito: o passo do dotnet format e `continue-on-error:
+  # true` por decisao registrada, entao o job termina verde mesmo com divergencia de
+  # estilo. Exigi-lo daria a aparencia de um gate sem gate nenhum. Quando o
+  # continue-on-error sair (TODO no ci.yml), acrescente "format" aqui.
   gh api -X PUT "repos/${REPO}/branches/${BRANCH}/protection" \
     -H "Accept: application/vnd.github+json" \
     --input - <<'JSON'
 {
   "required_status_checks": {
     "strict": true,
-    "contexts": []
+    "contexts": ["build-test", "docker-build", "codeql"]
   },
   "enforce_admins": false,
   "required_pull_request_reviews": {
@@ -38,6 +44,6 @@ JSON
 done
 
 echo
-echo "OK. Depois do primeiro CI verde, adicione o check obrigatorio:"
-echo "  gh api -X PATCH repos/${REPO}/branches/main/protection/required_status_checks \\"
-echo "    -f 'contexts[]=build-test'"
+echo "OK. Checks obrigatorios aplicados: build-test (inclui o gate de 80% de"
+echo "cobertura), docker-build e codeql. Conferir com:"
+echo "  gh api repos/${REPO}/branches/main/protection/required_status_checks"

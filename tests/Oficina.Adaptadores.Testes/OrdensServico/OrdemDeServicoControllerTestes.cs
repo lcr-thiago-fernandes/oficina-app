@@ -7,6 +7,7 @@ using Oficina.Aplicacao.Estoque.Gateways;
 using Oficina.Aplicacao.OrdensServico;
 using Oficina.Aplicacao.OrdensServico.Dtos;
 using Oficina.Aplicacao.OrdensServico.Gateways;
+using Oficina.Aplicacao.OrdensServico.Telemetria;
 using Oficina.Dominio.Catalogo;
 using Oficina.Dominio.Clientes;
 using Oficina.Dominio.OrdensServico;
@@ -22,22 +23,23 @@ public class OrdemDeServicoControllerTestes
         Mock<IPecaGateway> pecas)
     {
         var notificacoes = new Mock<INotificacaoGateway>();
+        var publicador = new Mock<IPublicadorEventoOs>();
         return new(
-            new CriarOrdemUseCase(ordens.Object, clientes.Object),
-            new AbrirOrdemDeServicoUseCase(clientes.Object, servicos.Object, pecas.Object, ordens.Object),
+            new CriarOrdemUseCase(ordens.Object, clientes.Object, publicador.Object),
+            new AbrirOrdemDeServicoUseCase(clientes.Object, servicos.Object, pecas.Object, ordens.Object, publicador.Object),
             new ObterOrdemPorIdUseCase(ordens.Object),
             new ListarOrdensUseCase(ordens.Object),
-            new IniciarDiagnosticoUseCase(ordens.Object, notificacoes.Object),
-            new EnviarOrcamentoParaAprovacaoUseCase(ordens.Object, notificacoes.Object),
-            new IniciarExecucaoUseCase(ordens.Object, pecas.Object, notificacoes.Object),
-            new FinalizarOrdemUseCase(ordens.Object, notificacoes.Object),
-            new EntregarOrdemUseCase(ordens.Object, notificacoes.Object),
+            new IniciarDiagnosticoUseCase(ordens.Object, notificacoes.Object, publicador.Object),
+            new EnviarOrcamentoParaAprovacaoUseCase(ordens.Object, notificacoes.Object, publicador.Object),
+            new IniciarExecucaoUseCase(ordens.Object, pecas.Object, notificacoes.Object, publicador.Object),
+            new FinalizarOrdemUseCase(ordens.Object, notificacoes.Object, publicador.Object),
+            new EntregarOrdemUseCase(ordens.Object, notificacoes.Object, publicador.Object),
             new AdicionarItemServicoUseCase(ordens.Object, servicos.Object),
             new RemoverItemServicoUseCase(ordens.Object),
             new AdicionarItemPecaUseCase(ordens.Object, pecas.Object),
             new RemoverItemPecaUseCase(ordens.Object),
             new ObterTempoMedioExecucaoUseCase(ordens.Object),
-            new RegistrarDecisaoDeOrcamentoUseCase(ordens.Object, notificacoes.Object));
+            new RegistrarDecisaoDeOrcamentoUseCase(ordens.Object, notificacoes.Object, publicador.Object));
     }
 
     [Fact]

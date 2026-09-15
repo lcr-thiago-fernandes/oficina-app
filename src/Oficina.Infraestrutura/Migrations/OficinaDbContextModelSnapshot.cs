@@ -254,6 +254,50 @@ namespace Oficina.Infraestrutura.Migrations
                     b.ToTable("peca", "estoque");
                 });
 
+            modelBuilder.Entity("Oficina.Dominio.OrdensServico.HistoricoStatus", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long?>("DuracaoSegundos")
+                        .HasColumnType("bigint")
+                        .HasColumnName("duracao_segundos");
+
+                    b.Property<DateTimeOffset>("OcorridoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ocorrido_em");
+
+                    b.Property<string>("StatusAnterior")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status_anterior");
+
+                    b.Property<string>("StatusNovo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status_novo");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<Guid>("ordem_servico_id")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StatusAnterior", "OcorridoEm")
+                        .HasDatabaseName("ix_historico_status_data");
+
+                    b.HasIndex("ordem_servico_id", "OcorridoEm")
+                        .HasDatabaseName("ix_historico_os");
+
+                    b.ToTable("historico_status", "os");
+                });
+
             modelBuilder.Entity("Oficina.Dominio.OrdensServico.ItemPeca", b =>
                 {
                     b.Property<Guid>("Id")
@@ -286,7 +330,12 @@ namespace Oficina.Infraestrutura.Migrations
 
                     b.HasIndex("ordem_servico_id");
 
-                    b.ToTable("item_peca", "os");
+                    b.ToTable("item_peca", "os", t =>
+                        {
+                            t.HasCheckConstraint("ck_item_peca_preco_nao_negativo", "preco_snapshot >= 0");
+
+                            t.HasCheckConstraint("ck_item_peca_quantidade_positiva", "quantidade > 0");
+                        });
                 });
 
             modelBuilder.Entity("Oficina.Dominio.OrdensServico.ItemServico", b =>
@@ -321,7 +370,12 @@ namespace Oficina.Infraestrutura.Migrations
 
                     b.HasIndex("ordem_servico_id");
 
-                    b.ToTable("item_servico", "os");
+                    b.ToTable("item_servico", "os", t =>
+                        {
+                            t.HasCheckConstraint("ck_item_servico_preco_nao_negativo", "preco_snapshot >= 0");
+
+                            t.HasCheckConstraint("ck_item_servico_quantidade_positiva", "quantidade > 0");
+                        });
                 });
 
             modelBuilder.Entity("Oficina.Dominio.OrdensServico.OrdemDeServico", b =>
@@ -384,6 +438,14 @@ namespace Oficina.Infraestrutura.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("status");
 
+                    b.Property<string>("Unidade")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasDefaultValue("matriz")
+                        .HasColumnName("unidade");
+
                     b.Property<Guid>("VeiculoId")
                         .HasColumnType("uuid")
                         .HasColumnName("veiculo_id");
@@ -395,7 +457,11 @@ namespace Oficina.Infraestrutura.Migrations
                     b.HasIndex("Numero")
                         .IsUnique();
 
-                    b.HasIndex("Status");
+                    b.HasIndex("Unidade")
+                        .HasDatabaseName("ix_ordem_servico_unidade");
+
+                    b.HasIndex("Status", "CriadaEm")
+                        .HasDatabaseName("ix_ordem_servico_status_data");
 
                     b.ToTable("ordem_servico", "os");
                 });
@@ -549,6 +615,15 @@ namespace Oficina.Infraestrutura.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Oficina.Dominio.OrdensServico.HistoricoStatus", b =>
+                {
+                    b.HasOne("Oficina.Dominio.OrdensServico.OrdemDeServico", null)
+                        .WithMany("Historico")
+                        .HasForeignKey("ordem_servico_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Oficina.Dominio.OrdensServico.ItemPeca", b =>
                 {
                     b.HasOne("Oficina.Dominio.OrdensServico.OrdemDeServico", null)
@@ -579,6 +654,8 @@ namespace Oficina.Infraestrutura.Migrations
 
             modelBuilder.Entity("Oficina.Dominio.OrdensServico.OrdemDeServico", b =>
                 {
+                    b.Navigation("Historico");
+
                     b.Navigation("ItensPeca");
 
                     b.Navigation("ItensServico");

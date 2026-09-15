@@ -1,13 +1,19 @@
-### Consulta pública da OS pelo NÚMERO (cliente — sem JWT). Requer o documento do dono.
-GET {{baseUrl}}/consulta/{{numeroOs}}?documento=390.533.447-05
+### Consulta da OS pelo NÚMERO (cliente autenticado). Documento vem da claim do
+### token de Cliente emitido pela função serverless oficina-auth-api — não é mais
+### parâmetro. Capture o token dela (ou gere um localmente para testes) e defina
+### "tokenCliente" em .vscode/settings.json (rest-client.environmentVariables).
+GET {{baseUrl}}/consulta/{{numeroOs}}
+Authorization: Bearer {{tokenCliente}}
 
 ### OS inexistente (esperado 404)
-GET {{baseUrl}}/consulta/9999999?documento=390.533.447-05
+GET {{baseUrl}}/consulta/9999999
+Authorization: Bearer {{tokenCliente}}
 
-### Documento incorreto para OS existente (esperado 404 — resposta idêntica, anti-enumeração)
-GET {{baseUrl}}/consulta/{{numeroOs}}?documento=111.444.777-35
+### Token de outro cliente para a mesma OS (esperado 404 — resposta idêntica, anti-enumeração)
+GET {{baseUrl}}/consulta/{{numeroOs}}
+Authorization: Bearer {{tokenOutroCliente}}
 
-### Documento ausente (esperado 400)
+### Sem token (esperado 401)
 GET {{baseUrl}}/consulta/{{numeroOs}}
 
 ### >>> A aprovação/recusa do orçamento NÃO é mais feita aqui.

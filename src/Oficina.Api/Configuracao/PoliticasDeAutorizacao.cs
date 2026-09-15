@@ -6,6 +6,7 @@ public static class PoliticasDeAutorizacao
 {
     public const string RequerAdmin = "RequerAdmin";
     public const string RequerAdminOuAtendente = "RequerAdminOuAtendente";
+    public const string RequerCliente = "RequerCliente";
 
     public static IServiceCollection AdicionarPoliticas(this IServiceCollection services)
     {
@@ -16,6 +17,11 @@ public static class PoliticasDeAutorizacao
 
             options.AddPolicy(RequerAdminOuAtendente, p =>
                 p.RequireAuthenticatedUser().RequireClaim("perfil", "Admin", "Atendente"));
+
+            options.AddPolicy(RequerCliente, p =>
+                p.RequireAuthenticatedUser()
+                 .RequireClaim("perfil", "Cliente")
+                 .RequireClaim(ExtensoesClaims.ClaimDocumento));
         });
         return services;
     }

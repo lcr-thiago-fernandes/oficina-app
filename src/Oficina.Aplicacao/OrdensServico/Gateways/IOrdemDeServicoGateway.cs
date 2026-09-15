@@ -7,6 +7,10 @@ public interface IOrdemDeServicoGateway
     Task<OrdemDeServico?> ObterPorIdAsync(Guid id, CancellationToken ct);
     Task<OrdemDeServico?> ObterPorNumeroAsync(long numero, CancellationToken ct);
     Task<IReadOnlyList<OrdemDeServico>> ListarAsync(StatusOrdemDeServico? statusFiltro, int pagina, int tamanhoPagina, CancellationToken ct);
+
+    /// <summary>Ordens de um cliente, da mais recente para a mais antiga, com itens carregados.</summary>
+    Task<IReadOnlyList<OrdemDeServico>> ListarPorClienteAsync(Guid clienteId, CancellationToken ct);
+
     Task<int> ContarAsync(StatusOrdemDeServico? statusFiltro, CancellationToken ct);
     Task AdicionarAsync(OrdemDeServico ordem, CancellationToken ct);
     Task SalvarAsync(CancellationToken ct);

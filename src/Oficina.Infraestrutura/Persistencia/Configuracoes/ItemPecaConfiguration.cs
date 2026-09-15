@@ -19,5 +19,11 @@ public class ItemPecaConfiguration : IEntityTypeConfiguration<ItemPeca>
         b.Property(x => x.Quantidade).HasColumnName("quantidade").IsRequired();
         b.Property<Guid>("ordem_servico_id");
         b.Ignore(x => x.Subtotal);
+
+        b.ToTable(t =>
+        {
+            t.HasCheckConstraint("ck_item_peca_quantidade_positiva", "quantidade > 0");
+            t.HasCheckConstraint("ck_item_peca_preco_nao_negativo", "preco_snapshot >= 0");
+        });
     }
 }

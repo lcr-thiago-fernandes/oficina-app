@@ -2,15 +2,23 @@ apiVersion: v1
 kind: Service
 metadata:
   name: oficina-api
-  namespace: oficina
+  namespace: ${NAMESPACE}
   labels:
     app: oficina-api
 spec:
-  type: LoadBalancer
+  # NodePort, nao LoadBalancer: quem cria o NLB interno e o Terraform do repo
+  # oficina-infra-k8s, que anexa o ASG dos nos a um target group nesta porta.
+  # Um Service LoadBalancer criaria um segundo balanceador, publico, fora do
+  # controle do API Gateway.
+  type: NodePort
   selector:
     app: oficina-api
   ports:
     - name: http
       port: 80
       targetPort: 8080
+      # A porta e por ambiente: dois Services no mesmo cluster nao podem
+      # compartilhar um nodePort. 30080 = producao, 30081 = homologacao.
+      # O repo oficina-infra-k8s cria um target group para cada uma.
+      nodePort: ${NODE_PORT}
       protocol: TCP

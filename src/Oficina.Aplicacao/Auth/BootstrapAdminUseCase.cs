@@ -4,6 +4,21 @@ using Oficina.Dominio.Auth;
 
 namespace Oficina.Aplicacao.Auth;
 
+/// <summary>
+/// Cria o usuário administrativo inicial em <c>auth.usuario</c>.
+/// </summary>
+/// <remarks>
+/// CONTRATO ENTRE REPOSITÓRIOS — não é código morto, não remova.
+/// Esta API escreve o hash BCrypt do admin em <c>auth.usuario</c> e NÃO tem nenhum
+/// endpoint que o verifique: desde a Fase 3 ela não emite token. Quem lê essa tabela
+/// e compara a senha é a função serverless <c>oficina-auth-api</c> (repositório
+/// <c>oficina-lambda-auth</c>), no fluxo de login por usuário/senha de
+/// Atendente/Admin. Por isso <see cref="Oficina.Dominio.Auth.Usuario.Autenticar"/> e
+/// <c>ObterPorUsernameAsync</c> (gateway, data source, interfaces) continuam aqui sem
+/// chamador local: eles definem e sustentam o formato do dado que o outro repositório
+/// consome — trocar o algoritmo de hash, o nome da coluna ou a tabela quebra o login
+/// lá, silenciosamente, sem quebrar nenhum teste daqui.
+/// </remarks>
 public class BootstrapAdminUseCase
 {
     private readonly IUsuarioGateway _gateway;

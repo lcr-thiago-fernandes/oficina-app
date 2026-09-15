@@ -1,0 +1,311 @@
+### ============================================================
+### DEMO TECH CHALLENGE — FIAP 15SOAT Fase 3 — repositório oficina-app
+###
+### O que esta fase entrega NESTE repositório e que este roteiro demonstra:
+###   - a API não emite mais token (quem emite é a função serverless
+###     oficina-auth-api, repositório oficina-lambda-auth) — ela apenas valida;
+###   - autoatendimento do cliente: /api/v1/me/ordens-servico e /api/v1/me/veiculos;
+###   - consulta da OS autorizada por PROPRIEDADE (404 anti-enumeração para OS de
+###     outro cliente);
+###   - histórico de transições da OS (base do painel de tempo médio por status).
+###
+### O roteiro da Fase 2 (http/demo-video.http) NÃO roda mais: as duas primeiras
+### requisições dele chamam POST /auth/login, endpoint removido nesta fase.
+###
+### ------------------------------------------------------------
+### PRÉ-REQUISITOS
+### ------------------------------------------------------------
+### 1. docker compose -f docker/docker-compose.yml --env-file .env up -d --build
+### 2. VS Code: selecione o ambiente "local" no canto inferior direito.
+### 3. TOKENS. A oficina-auth-api não roda localmente, então gere os três tokens
+###    abaixo à mão, com o MESMO JWT_SECRET do .env e iss=oficina-auth /
+###    aud=oficina-api. Use como referência
+###    tests/Oficina.Integracao.Testes/Auth/GeradorTokenDeTeste.cs — ele monta
+###    exatamente as claims certas (README, seção "Token para testes locais").
+###
+###    | variável em .vscode/settings.json | claims                                  |
+###    |-----------------------------------|-----------------------------------------|
+###    | token                             | perfil=Admin                            |
+###    | tokenCliente                      | perfil=Cliente, documento=39053344705   |
+###    | tokenOutroCliente                 | perfil=Cliente, documento=52998224725   |
+###
+###    Os dois CPFs acima são válidos (dígitos verificadores conferem) e distintos
+###    de propósito: o segundo é quem prova o 404 anti-enumeração.
+###
+### 4. Preencha as demais variáveis de .vscode/settings.json conforme cada passo
+###    abaixo mandar (clienteId, servicoId, pecaId, ordemServicoId, numeroOs).
+###
+### Execute as requisições EM ORDEM.
+### ============================================================
+
+
+### ============================================================
+### PARTE 0 — A API NÃO AUTENTICA MAIS (mostrar em 30 segundos)
+### ============================================================
+
+### [0.1] O endpoint de login da Fase 2 não existe mais (esperado 404)
+### Mostrar: a emissão de token saiu para a função serverless oficina-auth-api.
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "AlteraMe@123"
+}
+
+### [0.2] Rota protegida sem token (esperado 401)
+### Mostrar: a API continua VALIDANDO — só deixou de emitir.
+GET {{baseUrl}}/clientes?pagina=1&tamanhoPagina=10
+
+### [0.3] Mesma rota com token de Admin (esperado 200)
+GET {{baseUrl}}/clientes?pagina=1&tamanhoPagina=10
+Authorization: Bearer {{token}}
+
+### [0.4] Rota de cliente com token de ADMIN (esperado 403)
+### Mostrar: a política RequerCliente exige perfil=Cliente E a claim documento —
+### um token de Admin, mesmo válido, não abre o autoatendimento.
+GET {{baseUrl}}/me/ordens-servico
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### PARTE 1 — CADASTROS BASE (token de Admin)
+### ============================================================
+
+### [1.1] Criar serviço
+# @name criarServico
+POST {{baseUrl}}/servicos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Troca de óleo",
+  "descricao": "Troca completa com filtro",
+  "precoBase": 150.00,
+  "tempoEstimadoMinutos": 30
+}
+
+### >>> COPIE o "id" para .vscode/settings.json em "servicoId"
+
+### [1.2] Criar peça
+# @name criarPeca
+POST {{baseUrl}}/pecas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sku": "FILT-001",
+  "nome": "Filtro de óleo",
+  "precoUnitario": 25.00
+}
+
+### >>> COPIE o "id" para .vscode/settings.json em "pecaId"
+
+### [1.3] Entrada de estoque (a baixa automática em [3.3] precisa de saldo)
+POST {{baseUrl}}/pecas/{{pecaId}}/movimentacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tipo": "Entrada",
+  "quantidade": 50,
+  "motivo": "Compra fornecedor X"
+}
+
+
+### ============================================================
+### PARTE 2 — ABERTURA DA OS DO CLIENTE DA DEMONSTRAÇÃO
+### ============================================================
+
+### [2.1] Abertura consolidada (cliente + veículo + serviços + peças, atômica)
+### O documento tem que ser o MESMO da claim "documento" de {{tokenCliente}}
+### (39053344705) — é isso que torna a OS "dele" nas partes 4 e 5.
+# @name abrirOs
+POST {{baseUrl}}/ordens-servico
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteDados": {
+    "documento": "39053344705",
+    "nome": "João da Silva",
+    "email": "joao.silva@example.com",
+    "telefone": "11987654321"
+  },
+  "veiculoDados": {
+    "placa": "ABC1A23",
+    "marca": "Fiat",
+    "modelo": "Uno",
+    "ano": 2020
+  },
+  "servicos": [
+    { "servicoId": "{{servicoId}}", "quantidade": 1 }
+  ],
+  "pecas": [
+    { "pecaId": "{{pecaId}}", "quantidade": 2 }
+  ],
+  "observacoes": "Cliente reportou ruído no motor."
+}
+
+### >>> COPIE o "id" da OS para "ordemServicoId" e o "numero" para "numeroOs"
+### >>> Esta requisição também emite OrdemServicoEvento{statusNovo:"Recebida",
+### >>> resultado:"Sucesso"} no New Relic — é ela que alimenta o painel de volume
+### >>> diário de OS.
+
+### [2.2] Abertura SEM itens (esperado 400)
+### Mostrar: erro do cliente, não falha de processamento — NÃO emite evento de
+### falha e portanto NÃO dispara o alerta Critical, e a tentativa falha também
+### NÃO é contada como OS criada no painel de volume diário.
+POST {{baseUrl}}/ordens-servico
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteDados": {
+    "documento": "39053344705",
+    "nome": "João da Silva",
+    "email": "joao.silva@example.com",
+    "telefone": "11987654321"
+  },
+  "veiculoDados": { "placa": "ABC1A23", "marca": "Fiat", "modelo": "Uno", "ano": 2020 },
+  "servicos": [],
+  "pecas": []
+}
+
+
+### ============================================================
+### PARTE 3 — CICLO DA OS E HISTÓRICO DE TRANSIÇÕES
+### Cada transição bem-sucedida grava uma linha em os.historico_status (com a
+### duração no status anterior) e publica OrdemServicoEvento no New Relic.
+### ============================================================
+
+### [3.1] Transição INVÁLIDA de propósito (esperado 422)
+### Recebida -> Em Execução não existe: só se inicia execução a partir de
+### Aguardando Aprovação, com orçamento aprovado.
+### Mostrar: 422 limpo, SEM evento de falha e SEM alerta Critical — foi
+### exatamente este cenário que corrompia a telemetria antes da correção.
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/execucao/iniciar
+Authorization: Bearer {{token}}
+
+### [3.2] Iniciar diagnóstico (Recebida -> EmDiagnostico)
+PATCH {{baseUrl}}/ordens-servico/{{ordemServicoId}}/diagnostico
+Authorization: Bearer {{token}}
+
+### [3.3] Enviar orçamento para aprovação (EmDiagnostico -> AguardandoAprovacao)
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/enviar
+Authorization: Bearer {{token}}
+
+### [3.4] Aprovação do cliente — via WEBHOOK, sem JWT (X-Webhook-Token)
+### Único endpoint da API com [AllowAnonymous]; token comparado em tempo constante.
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/aprovacao
+X-Webhook-Token: {{webhookToken}}
+Content-Type: application/json
+
+{
+  "decisao": "aprovado"
+}
+
+### [3.5] Webhook com token errado (esperado 401)
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/aprovacao
+X-Webhook-Token: token-invalido
+Content-Type: application/json
+
+{
+  "decisao": "aprovado"
+}
+
+### [3.6] Iniciar execução (AguardandoAprovacao -> EmExecucao)
+### Baixa de estoque na MESMA transação serializável da transição.
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/execucao/iniciar
+Authorization: Bearer {{token}}
+
+### [3.7] Conferir a baixa de estoque (saldo 50 -> 48)
+GET {{baseUrl}}/pecas/{{pecaId}}
+Authorization: Bearer {{token}}
+
+### [3.8] Finalizar (EmExecucao -> Finalizada)
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/finalizar
+Authorization: Bearer {{token}}
+
+### [3.9] Entregar (Finalizada -> Entregue)
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/entregar
+Authorization: Bearer {{token}}
+
+### [3.10] Métrica administrativa — tempo médio de execução
+GET {{baseUrl}}/ordens-servico/metricas/tempo-medio
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### PARTE 4 — AUTOATENDIMENTO DO CLIENTE (entrega funcional da Fase 3)
+### O documento NUNCA vem de rota, query ou corpo: sempre da claim do token.
+### ============================================================
+
+### [4.1] Minhas ordens de serviço (esperado 200 com a OS da parte 2)
+GET {{baseUrl}}/me/ordens-servico
+Authorization: Bearer {{tokenCliente}}
+
+### [4.2] Meus veículos (esperado 200 com ABC1A23)
+GET {{baseUrl}}/me/veiculos
+Authorization: Bearer {{tokenCliente}}
+
+### [4.3] As MESMAS rotas com o token de OUTRO cliente (esperado 200 e listas vazias)
+### Mostrar: o recorte é por token; não há como pedir os dados de outra pessoa —
+### não existe parâmetro para isso.
+GET {{baseUrl}}/me/ordens-servico
+Authorization: Bearer {{tokenOutroCliente}}
+
+### [4.4] Meus veículos com o token do outro cliente (esperado 200, lista vazia)
+GET {{baseUrl}}/me/veiculos
+Authorization: Bearer {{tokenOutroCliente}}
+
+### [4.5] Sem token (esperado 401)
+GET {{baseUrl}}/me/ordens-servico
+
+
+### ============================================================
+### PARTE 5 — CONSULTA DA OS: AUTORIZAÇÃO POR PROPRIEDADE
+### Na Fase 2 esta rota era anônima, com ?documento= na query. Na Fase 3 exige
+### token de perfil Cliente e o documento vem da claim.
+### ============================================================
+
+### [5.1] O DONO consulta a própria OS (esperado 200, com itens e total)
+GET {{baseUrl}}/consulta/{{numeroOs}}
+Authorization: Bearer {{tokenCliente}}
+
+### [5.2] OUTRO cliente consulta a mesma OS (esperado 404 — não 403)
+### Mostrar: corpo idêntico ao de OS inexistente. Um 403 confirmaria que o número
+### existe; o 404 não revela nada (anti-enumeração).
+GET {{baseUrl}}/consulta/{{numeroOs}}
+Authorization: Bearer {{tokenOutroCliente}}
+
+### [5.3] OS inexistente para o próprio dono (esperado 404 — mesmo corpo do [5.2])
+GET {{baseUrl}}/consulta/9999999
+Authorization: Bearer {{tokenCliente}}
+
+### [5.4] Sem token (esperado 401 — deixou de ser rota anônima)
+GET {{baseUrl}}/consulta/{{numeroOs}}
+
+
+### ============================================================
+### PARTE 6 — OBSERVABILIDADE
+### ============================================================
+
+### [6.1] Health (anônimo — é o alvo dos probes do Kubernetes)
+GET {{host}}/health
+
+### [6.2] Métricas Prometheus
+GET {{host}}/metrics
+
+### [6.3] Correlação de requisições: o X-Correlation-Id enviado volta no response
+### e aparece em todas as linhas de log daquela requisição (e no APM).
+GET {{baseUrl}}/ordens-servico
+Authorization: Bearer {{token}}
+X-Correlation-Id: demo-fase3-0001
+
+### >>> No New Relic (ambiente implantado, appName = 'oficina-api'):
+### >>>   - painel de volume diário     → OrdemServicoEvento WHERE statusNovo = 'Recebida'
+### >>>   - painel de tempo por status  → OrdemServicoEvento, duracaoNoStatusSegundos
+### >>>   - alerta Critical             → OrdemServicoEvento WHERE resultado = 'Falha'
+### >>> Nenhum dos erros de cliente demonstrados acima ([2.2] 400, [3.1] 422, [3.5] 401)
+### >>> aparece nesses três lugares: erro do cliente não é falha de processamento.

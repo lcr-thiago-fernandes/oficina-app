@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Oficina.Adaptadores.Auth.Controllers;
 using Oficina.Adaptadores.Auth.Gateways;
 using Oficina.Adaptadores.Catalogo.Controllers;
 using Oficina.Adaptadores.Catalogo.Gateways;
@@ -21,9 +20,9 @@ public static class DependencyInjectionAdaptadores
 {
     public static IServiceCollection AdicionarAdaptadores(this IServiceCollection services)
     {
-        // Auth
+        // Auth — apenas o gateway do usuário administrativo (bootstrap do admin).
+        // A API não emite mais token: quem autentica é a função serverless oficina-auth-api.
         services.AddScoped<IUsuarioGateway, UsuarioGateway>();
-        services.AddScoped<AutenticacaoController>();
 
         // Catálogo
         services.AddScoped<IServicoGateway, ServicoGateway>();

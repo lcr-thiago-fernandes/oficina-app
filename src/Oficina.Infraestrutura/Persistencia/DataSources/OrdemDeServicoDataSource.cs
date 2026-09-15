@@ -16,12 +16,21 @@ public class OrdemDeServicoDataSource : IOrdemDeServicoDataSource
         _db.OrdensServico
             .Include(o => o.ItensServico)
             .Include(o => o.ItensPeca)
+            // Histórico precisa vir carregado aqui: RegistrarTransicao (chamado por toda
+            // transição de status) calcula DuracaoSegundos a partir da última entrada de
+            // Historico.LastOrDefault() — sem o Include, a coleção chega vazia e a duração
+            // sai sempre nula, inutilizando a coluna que alimenta o dashboard de tempo médio
+            // por status. A ordenação por OcorridoEm garante que "a última entrada" seja de
+            // fato a mais recente (o Postgres não garante ordem de retorno sem ORDER BY, e o
+            // Id de HistoricoStatus é um Guid, sem relação com a ordem cronológica).
+            .Include(o => o.Historico.OrderBy(h => h.OcorridoEm))
             .FirstOrDefaultAsync(o => o.Id == id, ct);
 
     public Task<OrdemDeServico?> ObterPorNumeroAsync(long numero, CancellationToken ct) =>
         _db.OrdensServico
             .Include(o => o.ItensServico)
             .Include(o => o.ItensPeca)
+            .Include(o => o.Historico.OrderBy(h => h.OcorridoEm))
             .FirstOrDefaultAsync(o => o.Numero == numero, ct);
 
     public async Task<IReadOnlyList<OrdemDeServico>> ListarAsync(
@@ -43,6 +52,16 @@ public class OrdemDeServicoDataSource : IOrdemDeServicoDataSource
             .Take(tamanhoPagina)
             .ToListAsync(ct);
     }
+
+    public async Task<IReadOnlyList<OrdemDeServico>> ListarPorClienteAsync(
+        Guid clienteId, CancellationToken ct) =>
+        await _db.OrdensServico
+            .AsNoTracking()
+            .Include(o => o.ItensServico)
+            .Include(o => o.ItensPeca)
+            .Where(o => o.ClienteId == clienteId)
+            .OrderByDescending(o => o.CriadaEm)
+            .ToListAsync(ct);
 
     public Task<int> ContarAsync(StatusOrdemDeServico? status, CancellationToken ct)
     {
