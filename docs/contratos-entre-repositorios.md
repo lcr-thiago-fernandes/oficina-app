@@ -136,6 +136,54 @@ quem liga é o Deployment.
 
 ---
 
+## 6a. Fixado pelo `oficina-lambda-auth` (Plano 2) — para os repositórios de infraestrutura
+
+Detalhes em `oficina-lambda-auth/docs/contratos.md`.
+
+**`oficina-infra-k8s` precisa publicar no SSM, além do que já está na seção 2:**
+
+```
+/oficina/apigw/api_id                     → id do HTTP API
+/oficina/apigw/vpc_link_integration_id    → id da aws_apigatewayv2_integration (HTTP_PROXY via VPC Link)
+/oficina/network/vpc_id
+/oficina/network/private_subnet_ids       → StringList (separado por vírgula)
+```
+
+A rota protegida `ANY /api/v1/{proxy+}` (com o Lambda Authorizer) é criada pelo
+`oficina-lambda-auth`, apontando para essa integração. O `oficina-infra-k8s` **não
+deve criar** essa rota: dois `aws_apigatewayv2_route` disputando a mesma `route_key`
+em states diferentes dão `ConflictException` no `apply`. O `infra-k8s` cria só as
+rotas sem authorizer: `GET /health`, `GET /swagger/{proxy+}` e
+`POST /api/v1/ordens-servico/{id}/orcamento/aprovacao`. Motivo: a ordem de apply é
+`infra-k8s → infra-db → lambda-auth`; se a rota protegida ficasse no `infra-k8s`, ele
+precisaria do `authorizer_id`, que só existe depois.
+
+**Requisito, não sugestão:** o `infra-k8s` também configura throttling no stage
+`$default` para `POST /auth/cliente` e `POST /auth/admin` (`route_settings`,
+`throttling_rate_limit = 10`, `throttling_burst_limit = 20`). É a única camada
+grossa; a proteção fina por IP e por usuário está no `oficina-lambda-auth`
+(DynamoDB `oficina-auth-tentativas`).
+
+**`oficina-infra-db` precisa:**
+
+```
+/oficina/db/security_group_id             → SG do RDS
+```
+
+e declarar as regras desse SG como recursos separados (`aws_vpc_security_group_*_rule`),
+nunca inline em `aws_security_group`: o `oficina-lambda-auth` adiciona a regra
+`5432 ← sg-lambda-auth` nesse SG, e inline + separado no mesmo SG se apagam a cada apply.
+
+Vale também para o SSM já existente na seção 2: `/oficina/db/endpoint` precisa ser
+**só o hostname, sem `:porta`** (`aws_db_instance.address`, **não** `.endpoint`, que
+inclui a porta). O CD deste repositório monta `Banco__Host` diretamente com esse
+valor; um endpoint com porta embutida quebra a connection string.
+
+**`oficina-lambda-auth` publica:** `/oficina/auth/lambda_authorizer_id`,
+`/oficina/auth/api_function_name`.
+
+---
+
 ## 7. Pendência que atravessa a fronteira
 
 **Rate limiting / proteção contra brute force no endpoint de autenticação.**
@@ -143,9 +191,9 @@ quem liga é o Deployment.
 Este repositório tinha rate limit apenas no endpoint de login. Com o login removido,
 o subsistema inteiro saiu — e **não existe em lugar nenhum da arquitetura hoje**.
 
-A proteção precisa nascer no `oficina-lambda-auth` ou no API Gateway à frente dele.
-É requisito de segurança que atravessou a fronteira entre repositórios, que é
-exatamente onde esse tipo de requisito costuma se perder.
+**Resolvido no `oficina-lambda-auth`:** contador de falhas em DynamoDB por IP (10) e por
+usuário (5) a cada 15 minutos → 429. O throttling grosso no stage do API Gateway continua
+sendo responsabilidade do `oficina-infra-k8s`.
 
 ---
 
