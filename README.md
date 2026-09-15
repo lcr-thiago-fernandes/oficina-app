@@ -193,6 +193,10 @@ existirem e publicarem os parâmetros no SSM).
 
 ---
 
+> **Retomando o trabalho?** Comece por
+> **[docs/ESTADO-E-PROXIMOS-PASSOS.md](docs/ESTADO-E-PROXIMOS-PASSOS.md)** — estado atual
+> da Fase 3, decisões já tomadas e o que falta fazer nos outros três repositórios.
+
 ## Repositórios relacionados
 
 A Fase 3 divide o projeto em quatro repositórios. **Os três abaixo, além deste, ainda não
