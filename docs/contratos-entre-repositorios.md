@@ -184,6 +184,65 @@ valor; um endpoint com porta embutida quebra a connection string.
 
 ---
 
+## 6b. Fixado pelo `oficina-infra-k8s` (Plano 3) — para os demais repositórios
+
+Detalhes em `oficina-infra-k8s/docs/contratos.md`.
+
+**Throttling de `POST /auth/*` é aplicado em duas passadas.** `route_settings` do stage exige
+que a rota exista, e `POST /auth/cliente`/`POST /auth/admin` nascem no `oficina-lambda-auth`.
+Depois do primeiro `apply` do lambda-auth: `THROTTLING_AUTH_HABILITADO=true` no
+`oficina-infra-k8s` e re-execução do CD em `main`. Valores: 10 rps, burst 20.
+
+**`oficina/newrelic_license_key` sempre existe**, com o placeholder `NEW-RELIC-DESLIGADO`
+enquanto a conta New Relic não existir. O CD deste repositório (seção 3) exige o segredo; com o
+placeholder o agente .NET rejeita a licença e se desliga, e a API sobe normalmente.
+
+**Homologação não passa pelo API Gateway.** O NodePort `30081` (`oficina-hml`) é alcançado pelo
+listener `:81` do NLB interno, só dentro da VPC. O único HTTP API integra com produção
+(`30080`, listener `:80`).
+
+**Rota extra `GET /swagger`** (além de `GET /swagger/{proxy+}`), sem authorizer.
+
+**Headers `X-Perfil`, `X-Sub`, `X-Documento`** são anexados pela integração do VPC Link a partir
+do contexto do authorizer. Informativos — esta API continua validando o JWT.
+
+**Roles OIDC:** `oficina-gha-deploy` (→ secret `AWS_DEPLOY_ROLE_ARN` aqui) lê exatamente
+`/oficina/ecr/repository_url`, `/oficina/eks/cluster_name`, `/oficina/db/endpoint` e os
+segredos `oficina/jwt_secret`, `oficina/db_password`, `oficina/newrelic_license_key` — nada
+mais. Se o CD passar a ler outro parâmetro, a policy no `infra-k8s` precisa acompanhar.
+`oficina-gha-lambda` (→ `AWS_LAMBDA_ROLE_ARN` no lambda-auth) é escopada a recursos
+`oficina-auth-*`, ao id do HTTP API, à tabela `oficina-auth-tentativas` e à key
+`lambda-auth/*` do bucket de state.
+
+**Segurança de rede:** `sg-vpclink → sg-nlb (80/81) → sg-nodes (30080/30081)`, por referência de
+SG; `preserve_client_ip = false` nos target groups (IP do cliente em `X-Forwarded-For`).
+
+**Duas integrações do VPC Link.** A integração publicada em
+`/oficina/apigw/vpc_link_integration_id` carrega o mapeamento de contexto
+`X-Perfil`/`X-Sub`/`X-Documento` e é a única usada pela rota protegida
+(`ANY /api/v1/{proxy+}`, criada pelo `oficina-lambda-auth`). As quatro rotas públicas
+(`GET /health`, `GET /swagger`, `GET /swagger/{proxy+}`,
+`POST /api/v1/ordens-servico/{id}/orcamento/aprovacao`) usam uma **segunda** integração,
+sem esse mapeamento — evita que `$context.authorizer.*` vazio quebre uma rota sem
+authorizer.
+
+**`cluster_admin_principal_arns`** vem da GitHub Variable `CLUSTER_ADMIN_ARNS` do
+`oficina-infra-k8s`. Qualquer `apply` local (fora do CD) precisa passar essa mesma lista,
+ou o `apply` remove o access entry de quem não estiver nela — inclusive de quem está
+aplicando.
+
+**Autenticação dos providers Kubernetes/Helm:** via `aws eks get-token` (`exec`), não
+token estático. Quem for rodar `apply` deste repositório precisa da AWS CLI v2 no PATH.
+
+**EKS node group:** `ami_type = AL2023_x86_64_STANDARD` (AL2 não sobe em EKS 1.33+).
+
+**Nota para o `oficina-lambda-auth`:** `docs/contratos.md` desse repositório ainda descreve
+o throttling de `POST /auth/*` como exigência incondicional. É honrado em duas passadas
+(ver acima); falta lá uma nota de uma linha registrando isso — pendente, não editado por
+este PR.
+
+---
+
 ## 7. Pendência que atravessa a fronteira
 
 **Rate limiting / proteção contra brute force no endpoint de autenticação.**
