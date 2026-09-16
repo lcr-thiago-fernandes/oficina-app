@@ -30,9 +30,11 @@ repositórios**: identificadores que um lado cria e o outro precisa consumir com
 nome exato. Duas formas foram comparadas para esse contrato:
 
 **`terraform_remote_state` × SSM Parameter Store / Secrets Manager.**
-`terraform_remote_state` foi recusado por três razões, registradas nos comentários
-dos próprios `backend.tf` dos três repositórios de infraestrutura ("nenhum lê o state
-do outro (RFC-004)"):
+`terraform_remote_state` foi recusado por três razões, registradas nos comentários dos
+próprios `backend.tf` dos três repositórios de infraestrutura, todos com a mesma
+substância — "nenhum lê o state do outro" — embora só o `backend.tf` de
+`oficina-infra-k8s` e o de `oficina-infra-db` citem esta RFC pelo nome entre
+parênteses:
 
 1. **Acopla os states.** Ler o state remoto de outro repositório expõe todos os
    atributos de todos os recursos daquele state, não só o identificador necessário —

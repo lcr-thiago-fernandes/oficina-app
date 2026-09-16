@@ -8,9 +8,9 @@
 A Fase 3 precisa de dois ambientes, homologação e produção, num projeto acadêmico com custo
 relevante: o control plane do Amazon EKS tem uma cobrança fixa por cluster — estimada em
 US$ 73,00/mês na tabela de custo do `fase3-design-arquitetural.md` (seção 4, "Custo
-estimado"), a partir da AWS Pricing Calculator anexada à RFC-001, não de uma fatura real (o
-ambiente não foi aplicado na AWS). Dois clusters dobrariam esse valor e trariam, cada um, seu
-próprio node group e seu próprio NAT Gateway.
+estimado") — não de uma fatura real nem de um anexo (o ambiente não foi aplicado na
+AWS). Dois clusters dobrariam esse valor e trariam, cada um, seu próprio node group e
+seu próprio NAT Gateway.
 
 ## Decisão
 

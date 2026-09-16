@@ -67,8 +67,9 @@ escopo usa ([ADR-014](../arquitetura/ADR-014-api-gateway-http-api.md)) — e a L
   | NLB interno | ~16,00 |
   | **Total** | **~196,00** |
 
-  Este valor é uma **estimativa** derivada da AWS Pricing Calculator anexada a este
-  RFC, não uma fatura real: o ambiente descrito nesta documentação **não foi aplicado
+  Este valor é uma **estimativa**, tirada diretamente da tabela de custo da seção 4
+  ("Custo estimado") do `fase3-design-arquitetural.md` — não de uma fatura real, nem
+  de um artefato externo: o ambiente descrito nesta documentação **não foi aplicado
   na AWS** até a data acima. `terraform destroy` fora das janelas de demonstração
   reduz o custo a praticamente zero, porque nenhum dos itens da tabela é cobrado por
   reserva — todos são recursos sob demanda que somem com o `destroy`.
