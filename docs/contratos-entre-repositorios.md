@@ -243,6 +243,44 @@ este PR.
 
 ---
 
+## 6c. Fixado pelo `oficina-infra-db` (Plano 4) — para os demais repositórios
+
+Detalhes em `oficina-infra-db/docs/contratos.md`.
+
+**Descoberta pelo SSM, não por tag.** O `oficina-infra-db` lê `/oficina/network/vpc_id`,
+`/oficina/network/private_subnet_ids` e `/oficina/network/eks_node_sg_id` (publicados pelo
+`oficina-infra-k8s`). A frase "descobre a VPC por tag" do design (e da seção 8 abaixo) está
+substituída por isto.
+
+**Senha do banco gerada no `apply`** (`random_password`, 32 caracteres **alfanuméricos**), gravada
+em texto puro em `oficina/db_password` com `recovery_window_in_days = 0`. **Não existe** GitHub
+Secret `DB_PASSWORD` em nenhum repositório. Sem caracteres especiais porque o CD deste repositório
+concatena `Password=${DB_PASSWORD}` sem aspas na connection string — se o CD passar a exigir
+caracteres especiais, o `random_password` precisa acompanhar (e vice-versa).
+
+**`/oficina/db/endpoint` é `aws_db_instance.address`** (só o hostname). Porta `5432`, banco
+`oficina`, usuário `oficina_admin` — os mesmos que o CD deste repositório fixa na connection
+string. `rds.force_ssl` fica no default do RDS (`1` em PostgreSQL ≥ 15): Npgsql com
+`SSL Mode=Prefer` (default) negocia TLS; não desligar.
+
+**Security group `oficina-rds-sg` é compartilhado entre dois states.** O `infra-db` cria o SG
+**sem regras inline** e a regra `5432 ← sg-nodes`; o `oficina-lambda-auth` acrescenta
+`5432 ← sg-lambda-auth` no mesmo SG. Qualquer bloco `ingress`/`egress` inline em qualquer dos dois
+apagaria a regra do outro a cada `apply`. Egress liberada, declarada no `infra-db`.
+
+**Logs `postgresql` exportados para o CloudWatch** (log group
+`/aws/rds/instance/oficina-postgres/postgresql`, 14 dias) — é onde ficam as queries acima de
+500 ms (`log_min_duration_statement`).
+
+**Ordem:** `infra-db` aplica **depois** do `infra-k8s` (os data sources SSM falham antes) e é
+destruído **depois** do `lambda-auth` (a regra dele referencia o SG daqui).
+
+**CD do `infra-db`:** `develop → plan`, `main → apply`; secret `AWS_TERRAFORM_ROLE_ARN` (mesma role
+`oficina-gha-infra`); variable `AWS_REGION`. Fica vermelho até o `infra-k8s` ser aplicado —
+esperado.
+
+---
+
 ## 7. Pendência que atravessa a fronteira
 
 **Rate limiting / proteção contra brute force no endpoint de autenticação.**
@@ -261,7 +299,7 @@ sendo responsabilidade do `oficina-infra-k8s`.
 ```
 1. bootstrap (S3 + DynamoDB do tfstate, OIDC provider, role de infra)
 2. oficina-infra-k8s     — rede, cluster, ECR, API Gateway, VPC Link
-3. oficina-infra-db      — RDS (descobre a VPC por tag)
+3. oficina-infra-db      — RDS (lê VPC, subnets e SG dos nós do SSM /oficina/network/*)
 4. oficina-lambda-auth   — pendura rotas no API Gateway existente
 5. oficina-app           — build + deploy no cluster
 ```

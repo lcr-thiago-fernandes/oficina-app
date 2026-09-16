@@ -195,16 +195,13 @@ existirem e publicarem os parâmetros no SSM).
 
 ## Repositórios relacionados
 
-A Fase 3 divide o projeto em quatro repositórios. Um dos três abaixo ainda não existe
-(`oficina-infra-db`) — é o próximo passo da reestruturação. Enquanto não for criado, a
-tabela descreve só a responsabilidade prevista, sem link (esse nome ainda não está
-publicado no GitHub).
+A Fase 3 divide o projeto em quatro repositórios, todos publicados.
 
 | Repositório | Responsabilidade | Status |
 |---|---|---|
 | `oficina-app` (este) | API .NET 8: domínio, casos de uso, persistência, validação de JWT | Ativo |
 | [`oficina-infra-k8s`](https://github.com/lcr-thiago-fernandes/oficina-infra-k8s) | VPC, EKS, ECR, roles OIDC, NLB interno, API Gateway, VPC Link, New Relic | Ativo (Terraform validado; apply pendente do bootstrap) |
-| `oficina-infra-db` | RDS PostgreSQL 16, security group, parameter group | A criar |
+| [`oficina-infra-db`](https://github.com/lcr-thiago-fernandes/oficina-infra-db) | RDS PostgreSQL 16, subnet group, security group, parameter group, `oficina/db_password` | Ativo (Terraform validado; apply pendente do bootstrap) |
 | [`oficina-lambda-auth`](https://github.com/lcr-thiago-fernandes/oficina-lambda-auth) | Função serverless de autenticação (CPF e usuário/senha) e Lambda Authorizer | Ativo |
 
 `oficina-infra-k8s` e `oficina-infra-db` não têm dependência direta entre si.
