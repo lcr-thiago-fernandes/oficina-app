@@ -8,7 +8,9 @@
 > emite mais token, só valida; o emissor único passou a ser a função `oficina-auth-api`
 > ([ADR-015](ADR-015-lambda-authorizer-hs256.md)). A consulta do cliente deixou de ser anônima por
 > "número da OS + documento" e passou a exigir token de perfil `Cliente`. O rate limiting de 5
-> tentativas por IP virou contagem em DynamoDB, por IP e por usuário, na Lambda. Continuam válidos:
+> tentativas por IP virou contagem em DynamoDB, na Lambda. No login de cliente — o fluxo que
+> substitui a consulta anônima — o balde é só por origem (IP); o balde por identidade (usuário)
+> existe apenas em `/auth/admin`. Continuam válidos:
 > HS256, TTL de 60 minutos, BCrypt custo 12 e a política anti-enumeração de responder 404 idêntico.
 
 ## Contexto

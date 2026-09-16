@@ -3,6 +3,12 @@
 **Status:** Aceita
 **Data:** 2026-07-06
 
+> **Nota de 2026-09-16 (Fase 3).** A métrica de memória do HPA (`averageUtilization` sobre
+> `requests.memory`) foi **removida** nesta fase, por um motivo medido: ver
+> [ADR-017](ADR-017-escalabilidade-hpa.md). O restante deste ADR continua valendo — Serilog,
+> métricas OpenTelemetry em `/metrics` e o HPA escalando por CPU via `metrics-server` — e o
+> status permanece **Aceita**; este ADR não foi superseded.
+
 ## Contexto
 
 A Fase 2 valoriza resiliência e operabilidade, mas é um MVP acadêmico com custo e tempo

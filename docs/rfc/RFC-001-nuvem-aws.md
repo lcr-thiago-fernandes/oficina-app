@@ -7,20 +7,21 @@
 
 ## 1. Contexto e problema
 
-A Fase 2 já colocou a `oficina-app` inteira em produção na AWS: EKS, RDS PostgreSQL,
-ECR e OIDC do GitHub Actions, tudo em Terraform (ver
+A Fase 2 já deixou a `oficina-app` inteira escrita e validada em Terraform da AWS:
+EKS, RDS PostgreSQL, ECR e OIDC do GitHub Actions (ver
 [ADR-010](../arquitetura/ADR-010-aws-eks-rds-terraform.md)). A Fase 3 acrescenta três
 peças novas — um API Gateway na frente da aplicação, autenticação serverless (Lambda)
 e uma plataforma de observabilidade — e cada uma delas existe, com nomes e preços
 diferentes, nos três grandes provedores. A pergunta deste RFC não é "qual nuvem é
-melhor em abstrato", mas se vale a pena migrar uma base já funcional para ganhar
-alguma dessas peças, ou se a Fase 3 deve simplesmente estender o que já está no ar.
+melhor em abstrato", mas se vale a pena migrar uma base já escrita e validada para
+ganhar alguma dessas peças, ou se a Fase 3 deve simplesmente estender o que já está
+escrito e validado em Terraform desde a Fase 2.
 
 ## 2. Alternativas consideradas
 
 | Critério | AWS | Azure | GCP |
 |---|---|---|---|
-| Kubernetes gerenciado | EKS (já em produção desde a Fase 2) | AKS | GKE |
+| Kubernetes gerenciado | EKS (já escrito e validado em Terraform desde a Fase 2) | AKS | GKE |
 | Gateway de API | API Gateway HTTP API | API Management | API Gateway |
 | Serverless para .NET 8 | Lambda (suporte de primeira classe ao runtime `dotnet8`) | Functions | Cloud Functions/Run |
 | Custo do control plane gerenciado | US$ 73,00/mês (EKS, fixo) | cobrança por AKS varia por SKU do plano | GKE Autopilot/Standard, cobrança por cluster ou por pod |
@@ -32,10 +33,11 @@ Fase 2. Esse custo é pago tanto em Azure quanto em GCP e é zero em AWS.
 
 ## 3. Decisão
 
-Permanecer na **AWS**. Motivo principal: a Fase 2 inteira já está em Terraform da AWS
-(EKS, RDS, ECR, OIDC — [ADR-010](../arquitetura/ADR-010-aws-eks-rds-terraform.md)) e
-migrar para outro provedor consumiria o orçamento de tempo da Fase 3 reescrevendo
-infraestrutura que já funciona, sem entregar nenhum item avaliado na disciplina.
+Permanecer na **AWS**. Motivo principal: a Fase 2 inteira já está escrita e validada
+em Terraform da AWS (EKS, RDS, ECR, OIDC —
+[ADR-010](../arquitetura/ADR-010-aws-eks-rds-terraform.md)) e migrar para outro
+provedor consumiria o orçamento de tempo da Fase 3 reescrevendo infraestrutura já
+escrita e validada, sem entregar nenhum item avaliado na disciplina.
 Motivo secundário: dentro da própria AWS, o HTTP API do API Gateway v2 é o gateway
 mais barato dos três serviços comparados para o volume desta oficina — sem WAF nativo,
 sem chaves de API por cliente, sem modelos de request/response, nenhum dos quais este
@@ -54,8 +56,8 @@ escopo usa ([ADR-014](../arquitetura/ADR-014-api-gateway-http-api.md)) — e a L
   [RFC-004](RFC-004-topologia-quatro-repositorios.md)) não têm equivalente direto em
   Azure ou GCP — uma eventual migração de provedor não seria uma troca de nomes, seria
   um redesenho.
-- ⚠️ Custo estimado de **~US$ 196,00/mês** com todo o ambiente da Fase 3 no ar, pela
-  tabela de custo da seção 4 ("Custo estimado") do
+- ⚠️ Custo estimado de **~US$ 196,00/mês** caso todo o ambiente da Fase 3 fosse aplicado,
+  pela tabela de custo da seção 4 ("Custo estimado") do
   [`fase3-design-arquitetural.md`](../arquitetura/fase3-design-arquitetural.md):
 
   | Item | US$/mês |

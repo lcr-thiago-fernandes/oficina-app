@@ -117,12 +117,15 @@ Cinco condições de alerta, **nomes exatos como estão no Terraform**
 | `Oficina-OS-Prod-FalhaProcessamento-Critical` | `.falha_os` | `SELECT count(*) FROM OrdemServicoEvento WHERE resultado = 'Falha'` | `critical`: acima de 0, `threshold_occurrences = "at_least_once"`, `threshold_duration = 60` |
 | `Oficina-EKS-Prod-CPU-Warning` | `.cpu_nos` | `SELECT average(cpuUsedCores / allocatableCpuCores) * 100 FROM K8sNodeSample WHERE clusterName = 'oficina-eks'` | `warning`: acima de 80 (%) por 600 s |
 
-As quatro primeiras condições filtram por `appName = 'oficina-api'` (contrato de nome com
-o `oficina-app` — `NEW_RELIC_APP_NAME` fixo em `"oficina-api"`, sem sufixo de ambiente,
-`k8s/deployment.yaml`); `Oficina-OS-Prod-FalhaProcessamento-Critical` não filtra por
-`appName`, porque é um evento customizado com nome próprio e já único da aplicação
-(comentário do próprio `alertas.tf`). Cada condição carrega `runbook_url` apontando para
-uma âncora de `oficina-infra-k8s/docs/runbooks.md`.
+Três condições — `latencia`, `taxa_erro` e `uptime` — filtram por `appName =
+'oficina-api'` (contrato de nome com o `oficina-app` — `NEW_RELIC_APP_NAME` fixo em
+`"oficina-api"`, sem sufixo de ambiente, `k8s/deployment.yaml`).
+`Oficina-OS-Prod-FalhaProcessamento-Critical` não filtra por `appName`, porque é um
+evento customizado com nome próprio e já único da aplicação (comentário do próprio
+`alertas.tf`). `Oficina-EKS-Prod-CPU-Warning` também não filtra por `appName`: é métrica
+de nó do cluster (`K8sNodeSample`), filtrada por `clusterName`, não por aplicação. Cada
+condição carrega `runbook_url` apontando para uma âncora de
+`oficina-infra-k8s/docs/runbooks.md`.
 
 Um dashboard (`newrelic_one_dashboard.oficina`, nome `"Oficina Mecanica - Operacao"`,
 `permissions = "public_read_only"`), seis widgets, **nomes exatos como estão no
@@ -137,10 +140,16 @@ Terraform** (`terraform/newrelic/dashboard.tf`):
 | `widget_line` | "CPU e memoria dos pods (oficina-*)" — `average(cpuUsedCores)`/`average(memoryWorkingSetBytes)` de `K8sContainerSample` |
 | `widget_table` | "Saude dos pods" — `latest(status)`/`latest(restartCount)`/`latest(isReady)` de `K8sContainerSample` |
 
-Os nomes das condições e os títulos dos widgets no Terraform coincidem, palavra por
-palavra (a menos de acentuação, removida no `name`), com os do design
-(`fase3-design-arquitetural.md`, seção 5) — não há divergência de nomenclatura a registrar
-aqui: o que muda entre design e implementação está isolado nas seções V12 e "defeito de
+Os **cinco nomes de condição de alerta** (`name` do recurso) coincidem, palavra por
+palavra (a menos de acentuação, removida no `name`), com os cinco nomes listados na
+tabela da seção 5 do design (`fase3-design-arquitetural.md`). Os **títulos dos
+widgets** não são uma cópia literal: o design lista os seis painéis em prosa ("volume
+diário de OS", "tempo médio por status", "latência por endpoint", "taxa de erro",
+"CPU/memória dos pods", "saúde dos pods"), e os títulos do Terraform
+(`terraform/newrelic/dashboard.tf`) são elaborações dessa lista — por exemplo,
+"Latencia p95 por endpoint (ms)" precisa a métrica (`p95`) e a unidade (`ms`) que a
+prosa do design não especifica. Não há divergência de conteúdo a registrar aqui: o que
+muda entre design e implementação está isolado nas seções V12 e "defeito de
 telemetria" abaixo. Notificação por e-mail: `newrelic_notification_destination.email`
 (`"Oficina-Email"`) → `newrelic_notification_channel.email` (`"Oficina-Email-Canal"`,
 produto `IINT`) → `newrelic_workflow.oficina_prod` (`"Oficina-Prod-Workflow"`,
