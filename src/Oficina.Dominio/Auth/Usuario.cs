@@ -34,6 +34,16 @@ public sealed class Usuario
     public void Inativar() => Ativo = false;
     public void Ativar() => Ativo = true;
 
+    /// <summary>
+    /// Verifica a senha contra o hash BCrypt armazenado.
+    /// </summary>
+    /// <remarks>
+    /// Sem chamador nesta API de propósito: ela não emite token desde a Fase 3. É a
+    /// regra de verificação que corresponde ao hash gravado em <c>auth.usuario</c>
+    /// pelo bootstrap e consumido pela função serverless <c>oficina-auth-api</c>
+    /// (repositório <c>oficina-lambda-auth</c>). Ver
+    /// <c>Oficina.Aplicacao.Auth.BootstrapAdminUseCase</c>.
+    /// </remarks>
     public bool Autenticar(string textoPuro)
     {
         if (!Ativo) throw new UsuarioInativoException();

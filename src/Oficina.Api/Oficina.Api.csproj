@@ -26,6 +26,14 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.8.1" />
+    <!-- Piso de versao da stack que VALIDA o token. O JwtBearer 8.0.10 sozinho
+         resolveria Microsoft.IdentityModel para 7.1.2; estas duas linhas seguram em
+         8.2.1. Tokens: SymmetricSecurityKey/TokenValidationParameters usados em
+         Configuracao/ConfiguracaoJwt.cs. JsonWebTokens: o JsonWebTokenHandler que o
+         JwtBearer executa em runtime — sem uso direto no codigo, por isso o invariante
+         esta coberto por VersaoDaStackDeValidacaoTestes, que falha se alguem remover. -->
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.2.1" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.2.1" />
   </ItemGroup>
 
   <ItemGroup>

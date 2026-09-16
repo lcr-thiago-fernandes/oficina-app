@@ -1,17 +1,17 @@
 namespace Oficina.Dominio.Auth;
 
-public class SenhaInvalidaException : Exception
+public class SenhaInvalidaException : ExcecaoDeDominio
 {
     public SenhaInvalidaException(string mensagem) : base(mensagem) { }
 }
 
-public class CredenciaisInvalidasException : Exception
+public class CredenciaisInvalidasException : ExcecaoDeDominio
 {
     public CredenciaisInvalidasException()
         : base("Usuário ou senha inválidos.") { }
 }
 
-public class UsuarioInativoException : Exception
+public class UsuarioInativoException : ExcecaoDeDominio
 {
     public UsuarioInativoException()
         : base("Usuário inativo.") { }

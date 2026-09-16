@@ -2,6 +2,7 @@ using FluentAssertions;
 using Moq;
 using Oficina.Aplicacao.OrdensServico;
 using Oficina.Aplicacao.OrdensServico.Gateways;
+using Oficina.Aplicacao.OrdensServico.Telemetria;
 using Oficina.Dominio.OrdensServico;
 using Xunit;
 
@@ -11,9 +12,10 @@ public class RegistrarDecisaoDeOrcamentoUseCaseTestes
 {
     private readonly Mock<IOrdemDeServicoGateway> _ordens = new();
     private readonly Mock<INotificacaoGateway> _notificacoes = new();
+    private readonly Mock<IPublicadorEventoOs> _publicador = new();
 
     private RegistrarDecisaoDeOrcamentoUseCase CriarUseCase() =>
-        new(_ordens.Object, _notificacoes.Object);
+        new(_ordens.Object, _notificacoes.Object, _publicador.Object);
 
     private static OrdemDeServico OsAguardandoAprovacao()
     {
@@ -37,6 +39,9 @@ public class RegistrarDecisaoDeOrcamentoUseCaseTestes
         os.Status.Should().Be(StatusOrdemDeServico.AguardandoAprovacao); // Aprovar só carimba a data
         _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
         _notificacoes.Verify(n => n.NotificarMudancaDeStatusAsync(os, It.IsAny<CancellationToken>()), Times.Once);
+        // Aprovar() não muda o Status nem gera entrada de Historico — não há
+        // transição para publicar (o evento de negócio fica a cargo da rejeição).
+        _publicador.Verify(p => p.Publicar(It.IsAny<EventoOrdemServico>()), Times.Never);
     }
 
     [Fact]
@@ -51,6 +56,9 @@ public class RegistrarDecisaoDeOrcamentoUseCaseTestes
         os.Status.Should().Be(StatusOrdemDeServico.Cancelada);
         os.OrcamentoRejeitadoEm.Should().NotBeNull();
         _notificacoes.Verify(n => n.NotificarMudancaDeStatusAsync(os, It.IsAny<CancellationToken>()), Times.Once);
+        _publicador.Verify(p => p.Publicar(
+            It.Is<EventoOrdemServico>(e => e.StatusNovo == "Cancelada" && e.Resultado == EventoOrdemServico.ResultadoSucesso)),
+            Times.Once);
     }
 
     [Fact]
@@ -64,6 +72,7 @@ public class RegistrarDecisaoDeOrcamentoUseCaseTestes
         resp.Should().BeNull();
         _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Never);
         _notificacoes.Verify(n => n.NotificarMudancaDeStatusAsync(It.IsAny<OrdemDeServico>(), It.IsAny<CancellationToken>()), Times.Never);
+        _publicador.Verify(p => p.Publicar(It.IsAny<EventoOrdemServico>()), Times.Never);
     }
 
     [Fact]
@@ -77,5 +86,8 @@ public class RegistrarDecisaoDeOrcamentoUseCaseTestes
 
         await act.Should().ThrowAsync<TransicaoDeStatusInvalidaException>();
         _notificacoes.Verify(n => n.NotificarMudancaDeStatusAsync(It.IsAny<OrdemDeServico>(), It.IsAny<CancellationToken>()), Times.Never);
+        // Erro de negócio (4xx) NÃO é falha de processamento: publicar 'Falha' aqui
+        // dispararia o alerta Critical da Fase 3 a cada requisição inválida do cliente.
+        _publicador.Verify(p => p.Publicar(It.IsAny<EventoOrdemServico>()), Times.Never);
     }
 }

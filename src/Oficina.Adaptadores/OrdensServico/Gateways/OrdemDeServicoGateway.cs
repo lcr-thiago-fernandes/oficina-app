@@ -18,6 +18,9 @@ public class OrdemDeServicoGateway : IOrdemDeServicoGateway
     public Task<IReadOnlyList<OrdemDeServico>> ListarAsync(StatusOrdemDeServico? statusFiltro, int pagina, int tamanhoPagina, CancellationToken ct) =>
         _dataSource.ListarAsync(statusFiltro, pagina, tamanhoPagina, ct);
 
+    public Task<IReadOnlyList<OrdemDeServico>> ListarPorClienteAsync(
+        Guid clienteId, CancellationToken ct) => _dataSource.ListarPorClienteAsync(clienteId, ct);
+
     public Task<int> ContarAsync(StatusOrdemDeServico? statusFiltro, CancellationToken ct) =>
         _dataSource.ContarAsync(statusFiltro, ct);
 

@@ -23,10 +23,29 @@ public class OrdemDeServicoConfiguration : IEntityTypeConfiguration<OrdemDeServi
 
         b.Property(x => x.Status)
             .HasConversion<string>().HasColumnName("status").HasMaxLength(30).IsRequired();
-        b.HasIndex(x => x.Status);
+        // Padrão de acesso real: filtrar por status e ordenar por data de abertura.
+        // `ordem_servico` não possui coluna `atualizado_em`; `criada_em` é a data canônica.
+        b.HasIndex(x => new { x.Status, x.CriadaEm })
+            .HasDatabaseName("ix_ordem_servico_status_data");
         b.HasIndex(x => x.ClienteId);
 
         b.Property(x => x.Observacoes).HasColumnName("observacoes").HasColumnType("text");
+
+        // FORA DO ESCOPO DA FASE 3 — `unidade` NUNCA é populada com outro valor.
+        // Nenhum request, header ou configuração fornece a unidade: todo OrdemDeServico.Criar
+        // é chamado sem o parâmetro, então 100% das OSs ficam em "matriz". A coluna e o índice
+        // existem porque a especificação pede a dimensão de segmentação por unidade nos
+        // dashboards, mas a segmentação NÃO acontece hoje — o painel filtrado por unidade
+        // mostraria uma única fatia. Alimentar a coluna (unidade no token/no request/em
+        // configuração do pod) é trabalho de uma fase seguinte, deliberadamente não feito
+        // aqui. O mesmo vale para historico_status.usuario_id. Ver README, seção
+        // "Limitações conhecidas".
+        b.Property(x => x.Unidade)
+            .HasColumnName("unidade")
+            .HasMaxLength(60)
+            .HasDefaultValue("matriz")
+            .IsRequired();
+        b.HasIndex(x => x.Unidade).HasDatabaseName("ix_ordem_servico_unidade");
 
         b.Property(x => x.CriadaEm).HasColumnName("criada_em").IsRequired();
         b.Property(x => x.DiagnosticadaEm).HasColumnName("diagnosticada_em");
@@ -53,9 +72,16 @@ public class OrdemDeServicoConfiguration : IEntityTypeConfiguration<OrdemDeServi
             .HasForeignKey("ordem_servico_id")
             .OnDelete(DeleteBehavior.Cascade);
 
+        b.HasMany(x => x.Historico)
+            .WithOne()
+            .HasForeignKey("ordem_servico_id")
+            .OnDelete(DeleteBehavior.Cascade);
+
         b.Metadata.FindNavigation(nameof(OrdemDeServico.ItensServico))!
             .SetPropertyAccessMode(PropertyAccessMode.Field);
         b.Metadata.FindNavigation(nameof(OrdemDeServico.ItensPeca))!
+            .SetPropertyAccessMode(PropertyAccessMode.Field);
+        b.Metadata.FindNavigation(nameof(OrdemDeServico.Historico))!
             .SetPropertyAccessMode(PropertyAccessMode.Field);
     }
 }

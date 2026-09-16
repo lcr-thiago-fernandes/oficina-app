@@ -3,6 +3,7 @@ using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Aplicacao.Estoque.Gateways;
 using Oficina.Aplicacao.OrdensServico.Dtos;
 using Oficina.Aplicacao.OrdensServico.Gateways;
+using Oficina.Aplicacao.OrdensServico.Telemetria;
 using Oficina.Dominio.Clientes;
 using Oficina.Dominio.OrdensServico;
 
@@ -18,17 +19,20 @@ public class AbrirOrdemDeServicoUseCase
     private readonly IServicoGateway _servicos;
     private readonly IPecaGateway _pecas;
     private readonly IOrdemDeServicoGateway _ordens;
+    private readonly IPublicadorEventoOs _publicador;
 
     public AbrirOrdemDeServicoUseCase(
         IClienteGateway clientes,
         IServicoGateway servicos,
         IPecaGateway pecas,
-        IOrdemDeServicoGateway ordens)
+        IOrdemDeServicoGateway ordens,
+        IPublicadorEventoOs publicador)
     {
         _clientes = clientes;
         _servicos = servicos;
         _pecas = pecas;
         _ordens = ordens;
+        _publicador = publicador;
     }
 
     public async Task<OrdemDeServico> ExecutarAsync(AbrirOrdemRequest req, CancellationToken ct)
@@ -73,32 +77,39 @@ public class AbrirOrdemDeServicoUseCase
         var ordem = OrdemDeServico.Criar(cliente.Id, veiculo.Id, req.Observacoes);
         await _ordens.AdicionarAsync(ordem, ct);
 
-        // 4) serviços
-        foreach (var s in req.Servicos ?? Enumerable.Empty<ItemServicoDto>())
+        // 4-6) itens + persistência, instrumentados: publica o evento de criação
+        // (statusAnterior=null → statusNovo="Recebida") depois de SalvarAsync
+        // bem-sucedido, ou o evento de falha se item inválido/violação no banco
+        // interromper a abertura da OS (Task 10, revisão — ACHADO 1).
+        await _publicador.ExecutarTransicaoComTelemetriaAsync(ordem, async () =>
         {
-            var servico = await _servicos.ObterPorIdAsync(s.ServicoId, ct)
-                ?? throw new OrdemInvalidaException($"Serviço {s.ServicoId} não encontrado.");
-            if (!servico.Ativo)
-                throw new OrdemInvalidaException($"Serviço '{servico.Nome}' está inativo.");
+            // 4) serviços
+            foreach (var s in req.Servicos ?? Enumerable.Empty<ItemServicoDto>())
+            {
+                var servico = await _servicos.ObterPorIdAsync(s.ServicoId, ct)
+                    ?? throw new OrdemInvalidaException($"Serviço {s.ServicoId} não encontrado.");
+                if (!servico.Ativo)
+                    throw new OrdemInvalidaException($"Serviço '{servico.Nome}' está inativo.");
 
-            var item = ordem.AdicionarItemServico(servico.Id, servico.Nome, servico.PrecoBase, s.Quantidade);
-            _ordens.MarcarItemServicoComoNovo(item);
-        }
+                var item = ordem.AdicionarItemServico(servico.Id, servico.Nome, servico.PrecoBase, s.Quantidade);
+                _ordens.MarcarItemServicoComoNovo(item);
+            }
 
-        // 5) peças
-        foreach (var p in req.Pecas ?? Enumerable.Empty<ItemPecaDto>())
-        {
-            var peca = await _pecas.ObterPorIdAsync(p.PecaId, ct)
-                ?? throw new OrdemInvalidaException($"Peça {p.PecaId} não encontrada.");
-            if (!peca.Ativo)
-                throw new OrdemInvalidaException($"Peça '{peca.Nome}' está inativa.");
+            // 5) peças
+            foreach (var p in req.Pecas ?? Enumerable.Empty<ItemPecaDto>())
+            {
+                var peca = await _pecas.ObterPorIdAsync(p.PecaId, ct)
+                    ?? throw new OrdemInvalidaException($"Peça {p.PecaId} não encontrada.");
+                if (!peca.Ativo)
+                    throw new OrdemInvalidaException($"Peça '{peca.Nome}' está inativa.");
 
-            var item = ordem.AdicionarItemPeca(peca.Id, peca.Nome, peca.PrecoUnitario, p.Quantidade);
-            _ordens.MarcarItemPecaComoNovo(item);
-        }
+                var item = ordem.AdicionarItemPeca(peca.Id, peca.Nome, peca.PrecoUnitario, p.Quantidade);
+                _ordens.MarcarItemPecaComoNovo(item);
+            }
 
-        // 6) única unidade de trabalho — commita cliente + veículo + OS + itens
-        await _ordens.SalvarAsync(ct);
+            // 6) única unidade de trabalho — commita cliente + veículo + OS + itens
+            await _ordens.SalvarAsync(ct);
+        });
 
         // 7) recarrega para popular Numero (BIGSERIAL preenchido pelo banco)
         return await _ordens.ObterPorIdAsync(ordem.Id, ct)
