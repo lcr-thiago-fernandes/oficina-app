@@ -1,7 +1,15 @@
 # ADR-003 — Autenticação JWT e bootstrap do admin
 
-**Status:** Aceita
+**Status:** Superseded por [ADR-015](ADR-015-lambda-authorizer-hs256.md) (2026-09-15)
 **Data:** 2026-05-03
+
+> **Nota de 2026-09-15 (Fase 3).** O conteúdo abaixo está preservado como registro histórico e não
+> descreve mais o sistema. O que mudou: o endpoint de login desta API foi **removido** — a API não
+> emite mais token, só valida; o emissor único passou a ser a função `oficina-auth-api`
+> ([ADR-015](ADR-015-lambda-authorizer-hs256.md)). A consulta do cliente deixou de ser anônima por
+> "número da OS + documento" e passou a exigir token de perfil `Cliente`. O rate limiting de 5
+> tentativas por IP virou contagem em DynamoDB, por IP e por usuário, na Lambda. Continuam válidos:
+> HS256, TTL de 60 minutos, BCrypt custo 12 e a política anti-enumeração de responder 404 idêntico.
 
 ## Contexto
 
