@@ -10,7 +10,7 @@ flowchart TB
     NR["New Relic<br/>APM · nri-bundle · layer da Lambda"]
 
     subgraph AWS["AWS — us-east-1"]
-        APIGW["API Gateway HTTP API<br/>stage $default<br/>throttling 10 rps / burst 20 em POST /auth/*"]
+        APIGW["API Gateway HTTP API<br/>stage $default<br/>throttling 10 rps / burst 20 em POST /auth/*<br/>SÓ SE throttling_auth_habilitado=true (default: false)"]
         AUTHZ["Lambda oficina-auth-authorizer<br/>.NET 8 · fora da VPC · cache 300 s"]
         SM["Secrets Manager<br/>oficina/jwt_secret<br/>oficina/db_password<br/>oficina/newrelic_license_key"]
         SSM["SSM Parameter Store<br/>/oficina/network/* · /oficina/apigw/*<br/>/oficina/db/* · /oficina/eks/* · /oficina/ecr/*"]
@@ -36,10 +36,10 @@ flowchart TB
     NLB --> PRD
     NLB --> HML
     AUTHAPI --> RDS
-    AUTHAPI --> DDB
     AUTHAPI --> NAT
     AUTHZ --> SM
     NAT --> SM
+    NAT --> DDB
     PRD --> RDS
     HML --> RDS
     ECR -->|"imagem"| PRD
