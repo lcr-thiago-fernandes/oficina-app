@@ -343,6 +343,23 @@ Não configurados mais como GitHub Secret/Variable (mudaram de origem):
 
 ---
 
+## Documentação arquitetural
+
+A documentação central da Fase 3 vive neste repositório; os outros três apontam para cá.
+
+| O quê | Onde |
+|---|---|
+| Design arquitetural completo | [docs/arquitetura/fase3-design-arquitetural.md](docs/arquitetura/fase3-design-arquitetural.md) |
+| RFCs (decisões amplas, com alternativas) | [docs/rfc](docs/rfc/README.md) |
+| ADRs (decisões pontuais) | [docs/arquitetura](docs/arquitetura/README.md) |
+| Diagrama de componentes | [docs/arquitetura/diagramas/componentes.md](docs/arquitetura/diagramas/componentes.md) |
+| Sequência — autenticação por CPF | [docs/arquitetura/diagramas/sequencia-autenticacao-cpf.md](docs/arquitetura/diagramas/sequencia-autenticacao-cpf.md) |
+| Sequência — abertura de ordem de serviço | [docs/arquitetura/diagramas/sequencia-abertura-os.md](docs/arquitetura/diagramas/sequencia-abertura-os.md) |
+| Entidade-relacionamento | [docs/arquitetura/diagramas/entidade-relacionamento.md](docs/arquitetura/diagramas/entidade-relacionamento.md) |
+| Contratos entre repositórios | [docs/contratos-entre-repositorios.md](docs/contratos-entre-repositorios.md) |
+
+---
+
 ## Documentação da API
 
 - **Swagger local**: http://localhost:8080/swagger — explorável e testável no navegador (Development).
@@ -474,6 +491,8 @@ Consequência: o leitor de `sub` que existia em `ExtensoesClaims` (`IdDoSujeito`
 código de produção morto — usado só pelos próprios testes — e foi **removido**, em vez
 de mantido como API que aparenta ser suportada.
 
+Registrado em [ADR-015](docs/arquitetura/ADR-015-lambda-authorizer-hs256.md) e [RFC-003](docs/rfc/RFC-003-autenticacao-cpf-jwt.md).
+
 ### 2. `auth.usuario` é contrato com o repositório `oficina-lambda-auth` — não é código morto
 
 O bootstrap desta API cria o usuário `admin` e grava o hash **BCrypt** da senha em
@@ -486,6 +505,8 @@ interfaces das quatro camadas) permanecem **sem chamador local, de propósito**:
 definem e sustentam o formato do dado que o outro repositório consome. Trocar o
 algoritmo de hash, o nome da coluna ou o schema quebra o login lá — silenciosamente, sem
 quebrar nenhum teste daqui.
+
+Registrado em [RFC-003](docs/rfc/RFC-003-autenticacao-cpf-jwt.md).
 
 ### 3. `unidade` e `historico_status.usuario_id` nunca são populados — fora do escopo
 
@@ -502,6 +523,8 @@ propaga a identidade do chamador até o agregado, então a coluna é sempre `NUL
 request ou configuração do pod — e propagação do usuário autenticado até o domínio).
 Ficam como ponto de extensão declarado, e os comentários nas respectivas configurações
 de EF Core dizem o mesmo, para que ninguém leia o campo como funcional.
+
+Registrado em [ADR-020](docs/arquitetura/ADR-020-historico-status.md) e [RFC-002](docs/rfc/RFC-002-banco-rds-postgresql.md).
 
 ---
 
