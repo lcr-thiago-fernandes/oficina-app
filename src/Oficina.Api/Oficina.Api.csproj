@@ -32,7 +32,7 @@
          Configuracao/ConfiguracaoJwt.cs. JsonWebTokens: o JsonWebTokenHandler que o
          JwtBearer executa em runtime — sem uso direto no codigo, por isso o invariante
          esta coberto por VersaoDaStackDeValidacaoTestes, que falha se alguem remover. -->
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.2.1" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.23.0" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.2.1" />
   </ItemGroup>
 
