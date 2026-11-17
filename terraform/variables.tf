@@ -10,12 +10,6 @@ variable "project" {
   default     = "oficina"
 }
 
-variable "namespaces_k8s" {
-  description = "Namespaces cujas ServiceAccounts podem assumir a role IRSA."
-  type        = list(string)
-  default     = ["oficina-hml", "oficina-prd"]
-}
-
 variable "service_account" {
   description = "ServiceAccount do OS Service (k8s/serviceaccount.yaml)."
   type        = string

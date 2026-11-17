@@ -103,4 +103,4 @@ jobs:
 
       - name: Outputs
         if: ${{ env.ACAO == 'apply' }}
-        run: terraform -chdir=terraform output -raw irsa_role_arn
+        run: terraform -chdir=terraform output irsa_role_arns

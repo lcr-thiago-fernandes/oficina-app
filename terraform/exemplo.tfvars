@@ -5,5 +5,4 @@
 region  = "us-east-1"
 project = "oficina"
 
-namespaces_k8s  = ["oficina-hml", "oficina-prd"]
 service_account = "oficina-api"
