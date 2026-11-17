@@ -320,7 +320,8 @@ Exemplos JSON: [`docs/contratos/mensagens/`](../contratos/mensagens/).
   `auth.usuario` (lido pela Lambda), historico_status, evento New Relic de transição.
 - Muda: abertura da OS inicia a saga; estoque ganha **reserva** (reservar/confirmar/liberar);
   endpoints de transição que agora pertencem a outros serviços são removidos
-  (`enviar-orcamento`, webhook de decisão, `iniciar-execucao`, `finalizar`) — a OS só muda de
+  (`enviar-orcamento`, webhook de decisão, `iniciar-execucao`, `finalizar`, `diagnostico` e
+  adicionar/remover itens — os itens são fixados na abertura, porque a saga os envia ao Billing) — a OS só muda de
   status pela saga, exceto `entregar` e `cancelar` (atendente).
 - Novo: `GET /api/v1/ordens-servico/{id}/saga` (estado e trilha da saga, para a demo).
 - MassTransit + EF Core saga repository + bus outbox; consumidores dos eventos da execução.
@@ -419,7 +420,8 @@ padrão do `oficina-app`); a role IRSA não lê Secrets Manager.
 Igual ao `oficina-app` da Fase 3 em cada repositório: `develop` → `oficina-hml`,
 `main` → `oficina-prd`; OIDC (sem chaves estáticas); build → testes + cobertura → Sonar →
 `docker build` → push ECR → `kubectl apply` + `rollout status`. Workflow `infra.yml`
-separado para o `terraform/` do serviço (plan em PR, apply manual via `workflow_dispatch`).
+separado para o `terraform/` do serviço (fmt/validate em PR sem AWS — a trust OIDC só aceita
+`main`/`develop` —, plan em push, apply manual via `workflow_dispatch`).
 Branches `main` e `develop` protegidas com PR, 1 aprovação e checks obrigatórios.
 
 ## 9. Observabilidade
