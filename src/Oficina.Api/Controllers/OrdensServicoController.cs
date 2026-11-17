@@ -56,6 +56,36 @@ public class OrdensServicoController : ControllerBase
         return resp is null ? NotFound() : Ok(resp);
     }
 
+    // OS com saga: 202 (a saga cancela e desfaz o estoque de forma assíncrona; acompanhe em GET {id}/saga).
+    // OS da Fase 3, sem saga: cancelada na própria requisição (200).
+    [HttpPost("{id:guid}/cancelar")]
+    public async Task<IActionResult> Cancelar(
+        Guid id,
+        [FromBody] CancelarOrdemRequest req,
+        [FromServices] OrdemDeServicoController controller,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.Motivo))
+        {
+            ModelState.AddModelError(nameof(req.Motivo), "Motivo do cancelamento obrigatório.");
+            return ValidationProblem(ModelState);
+        }
+
+        var resp = await controller.CancelarAsync(id, req, ct);
+        if (resp is null) return NotFound();
+        return resp.Forma == FormaCancelamento.Solicitado ? Accepted(resp.Ordem) : Ok(resp.Ordem);
+    }
+
+    [HttpGet("{id:guid}/saga")]
+    public async Task<IActionResult> ObterSaga(
+        Guid id,
+        [FromServices] OrdemDeServicoController controller,
+        CancellationToken ct)
+    {
+        var resp = await controller.ObterSagaAsync(id, ct);
+        return resp is null ? NotFound() : Ok(resp);
+    }
+
     // ===== Métricas =====
 
     [HttpGet("metricas/tempo-medio")]
