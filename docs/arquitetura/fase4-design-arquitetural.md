@@ -285,7 +285,7 @@ porque os dois namespaces compartilham a conta AWS):
 | Fila de comandos da Execução | `{prefixo}-oficina-execucao-comandos` |
 | Fila de eventos da saga (OS Service) | `{prefixo}-oficina-os-saga` |
 | Tópico SNS de cada mensagem | `{prefixo}-oficina-saga-{Nome}` |
-| Fila padrão do bus (respostas/controle) | `{prefixo}-oficina-<os\|billing\|execucao>-bus` (via `OverrideDefaultBusEndpointQueueName`; o nome aleatório padrão ficaria fora da política IAM `*-oficina-*`) |
+| Fila padrão do bus (respostas/controle) | `{prefixo}-oficina-<os\|billing\|execucao>-bus` (via `OverrideDefaultBusEndpointQueueName`, só no transporte SQS; o nome aleatório padrão ficaria fora da política IAM `*-oficina-*`). Como a fila do bus é temporária (auto-delete) e cada réplica precisa da sua, o nome recebe o sufixo da instância: `{prefixo}-oficina-<servico>-bus-{HOSTNAME}` (nome do pod, sanitizado e truncado para o limite de 80 caracteres do SQS) |
 
 **O nome do tópico não pode depender do namespace .NET** (que difere entre repositórios — o
 padrão do MassTransit usaria o nome completo do tipo e os tópicos nunca se encontrariam). Por
@@ -304,7 +304,7 @@ verificam os dois atributos de cada tipo, além do JSON.
 formato do envelope é o mesmo nas duas versões; a interoperabilidade é coberta pelos testes de
 contrato e pelo fluxo ponta a ponta local. Nenhum repositório usa a v9 (licença comercial).
 
-Os três buses configuram `PublishFaults = false`: os tópicos `Fault<T>` seriam nomeados pelo tipo
+Os três serviços configuram `PublishFaults = false` em cada receive endpoint que consome (a propriedade não existe no configurador do bus): os tópicos `Fault<T>` seriam nomeados pelo tipo
 .NET e ficariam fora da política IAM `*-oficina-*`; falhas definitivas vão para a fila `_error`
 do endpoint (monitorada por alerta).
 
