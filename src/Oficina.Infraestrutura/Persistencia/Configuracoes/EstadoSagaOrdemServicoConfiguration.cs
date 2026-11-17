@@ -16,7 +16,8 @@ public class EstadoSagaOrdemServicoConfiguration : IEntityTypeConfiguration<Esta
         // antes de a máquina definir o estado inicial.
         b.Property(x => x.EstadoAtual).HasColumnName("estado").HasMaxLength(64).IsRequired(false);
         b.Property(x => x.NumeroOs).HasColumnName("numero_os");
-        b.Property(x => x.PagamentoId).HasColumnName("pagamento_id").HasMaxLength(64);
+        // 128: ids do Mercado Pago são numéricos e curtos; os do simulador do Billing passam de 64 (sim-a-{osId}-{valor}-{guid}).
+        b.Property(x => x.PagamentoId).HasColumnName("pagamento_id").HasMaxLength(128);
         b.Property(x => x.Motivo).HasColumnName("motivo").HasColumnType("text");
         b.Property(x => x.CriadaEm).HasColumnName("criada_em");
         b.Property(x => x.AtualizadaEm).HasColumnName("atualizada_em");

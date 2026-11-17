@@ -10,6 +10,11 @@ Regras:
 - Cada arquivo `<Nome>.json` é o corpo da mensagem cujo URN MassTransit é `oficina:saga:<Nome>`.
 - Serialização: `System.Text.Json` com `JsonSerializerDefaults.Web` (camelCase) e
   `JsonStringEnumConverter` (enum como string). Campos opcionais ausentes = `null`.
+- `pagamentoId` (`PagamentoConfirmado`, `PagamentoRecusado`, `PagamentoEstornado`) é `string`
+  com **no máximo 128 caracteres**, sem formato fixo: ids reais do Mercado Pago são numéricos e
+  curtos (`"1325123456"`); os do simulador do Billing (`Pagamento__Modo=Simulado`) são mais
+  longos (`sim-a-{osId}-{valor}-{guid}`, 72+ caracteres). O OS Service grava o id em
+  `saga.ordem_servico_saga.pagamento_id` (`varchar(128)`).
 - **Estes arquivos são copiados byte a byte** para `docs/contratos/mensagens/` dos outros dois
   repositórios. Cada repositório tem um teste de contrato que, para cada tipo que produz ou
   consome, desserializa o JSON no seu tipo, re-serializa e compara (mesmo conjunto de

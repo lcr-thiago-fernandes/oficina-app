@@ -695,8 +695,8 @@ namespace Oficina.Infraestrutura.Migrations
                         .HasColumnName("numero_os");
 
                     b.Property<string>("PagamentoId")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
                         .HasColumnName("pagamento_id");
 
                     b.Property<uint>("Versao")
