@@ -7,6 +7,7 @@ using Oficina.Aplicacao.Estoque.Gateways;
 using Oficina.Aplicacao.OrdensServico;
 using Oficina.Aplicacao.OrdensServico.Dtos;
 using Oficina.Aplicacao.OrdensServico.Gateways;
+using Oficina.Aplicacao.OrdensServico.Saga;
 using Oficina.Aplicacao.OrdensServico.Telemetria;
 using Oficina.Dominio.Catalogo;
 using Oficina.Dominio.Clientes;
@@ -25,8 +26,11 @@ public class OrdemDeServicoControllerTestes
     {
         var notificacoes = new Mock<INotificacaoGateway>();
         var publicador = new Mock<IPublicadorEventoOs>();
+        // A abertura roda dentro da transação serializável: o mock só executa a ação.
+        ordens.Setup(o => o.EmTransacaoSerializadaAsync(It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, Task>, CancellationToken>((acao, ct) => acao(ct));
         return new(
-            new AbrirOrdemDeServicoUseCase(clientes.Object, servicos.Object, pecas.Object, ordens.Object, publicador.Object),
+            new AbrirOrdemDeServicoUseCase(clientes.Object, servicos.Object, pecas.Object, ordens.Object, publicador.Object, new Mock<ISagaOrdemServicoGateway>().Object),
             new ObterOrdemPorIdUseCase(ordens.Object),
             new ListarOrdensUseCase(ordens.Object),
             new EntregarOrdemUseCase(ordens.Object, notificacoes.Object, publicador.Object),

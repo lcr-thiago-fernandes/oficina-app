@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Oficina.Aplicacao.OrdensServico.Saga;
 using Oficina.Aplicacao.OrdensServico.Telemetria;
 using Oficina.Infraestrutura.Auth;
+using Oficina.Infraestrutura.Mensageria;
 using Oficina.Infraestrutura.Notificacoes;
 using Oficina.Infraestrutura.Persistencia;
 using Oficina.Infraestrutura.Telemetria;
@@ -30,6 +32,9 @@ public static class DependencyInjection
         services.AdicionarRepositorios();
         services.AdicionarNotificacoes();
         services.AddSingleton<IPublicadorEventoOs, PublicadorEventoOsNewRelic>();
+
+        // Temporário: a Task 6 troca pelo gateway MassTransit (outbox) e apaga este registro.
+        services.AddScoped<ISagaOrdemServicoGateway, SagaOrdemServicoGatewayNulo>();
 
         return services;
     }
