@@ -134,7 +134,10 @@ public class AbrirOrdemDeServicoUseCase
                     _pecas.MarcarMovimentacaoComoNova(reserva);
                 }
 
-                // 5c) inicia a saga (só enfileira no outbox; persiste no SalvarAsync abaixo)
+                // 5c) inicia a saga (só enfileira no outbox; persiste no SalvarAsync abaixo) e marca
+                //     a OS como coordenada por saga na mesma unidade de trabalho — é o que separa
+                //     uma OS da Fase 4 (cancelamento pela saga) de uma da Fase 3 (síncrono).
+                ordem.MarcarCoordenadaPorSaga();
                 await _saga.IniciarAsync(ordem.Id, tx);
 
                 // 6) única unidade de trabalho — commita cliente + veículo + OS + itens + reservas + outbox

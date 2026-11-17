@@ -427,4 +427,22 @@ public class OrdemDeServicoTestes
         dur.Should().NotBeNull();
         dur!.Value.Should().BeGreaterThanOrEqualTo(TimeSpan.Zero);
     }
+
+    [Fact]
+    public void Criar_NaoNasceCoordenadaPorSaga()
+    {
+        // OSs da Fase 3 (e qualquer OS criada fora da abertura da Fase 4) não têm saga.
+        Nova().CoordenadaPorSaga.Should().BeFalse();
+    }
+
+    [Fact]
+    public void MarcarCoordenadaPorSaga_Marca_EIdempotente()
+    {
+        var os = Nova();
+
+        os.MarcarCoordenadaPorSaga();
+        os.MarcarCoordenadaPorSaga();
+
+        os.CoordenadaPorSaga.Should().BeTrue();
+    }
 }

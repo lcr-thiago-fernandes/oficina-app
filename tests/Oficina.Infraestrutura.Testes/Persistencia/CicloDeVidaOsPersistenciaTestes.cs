@@ -107,6 +107,38 @@ public class CicloDeVidaOsPersistenciaTestes : IAsyncLifetime
         await act.Should().ThrowAsync<DbUpdateConcurrencyException>();
     }
 
+    [Fact]
+    public async Task CoordenadaPorSaga_LinhasExistentesFicamFalse_ENovaMarcadaPersisteTrue()
+    {
+        await using var db = NovoContexto();
+        var migrator = db.GetService<IMigrator>();
+        await migrator.MigrateAsync("20261117022506_Fase4ReservaEstoque");
+
+        // OS da Fase 3, gravada antes da coluna existir.
+        var legadaId = Guid.NewGuid();
+        await db.Database.ExecuteSqlInterpolatedAsync($@"
+            INSERT INTO os.ordem_servico (id, cliente_id, veiculo_id, status, criada_em)
+            VALUES ({legadaId}, {Guid.NewGuid()}, {Guid.NewGuid()}, 'Recebida', now());");
+
+        await migrator.MigrateAsync();
+
+        (await Escalar(db, $@"SELECT count(*)::int AS ""Value"" FROM information_schema.columns
+            WHERE table_schema = 'os' AND table_name = 'ordem_servico' AND column_name = 'coordenada_por_saga'
+              AND is_nullable = 'NO' AND data_type = 'boolean' AND column_default = 'false'")).Should().Be(1);
+        (await db.OrdensServico.AsNoTracking().SingleAsync(o => o.Id == legadaId)).CoordenadaPorSaga.Should().BeFalse();
+
+        var nova = OrdemDeServico.Criar(Guid.NewGuid(), Guid.NewGuid());
+        nova.MarcarCoordenadaPorSaga();
+        await using (var escrita = NovoContexto())
+        {
+            escrita.OrdensServico.Add(nova);
+            await escrita.SaveChangesAsync();
+        }
+
+        await using var leitura = NovoContexto();
+        (await leitura.OrdensServico.SingleAsync(o => o.Id == nova.Id)).CoordenadaPorSaga.Should().BeTrue();
+    }
+
     private static Task<int> Escalar(OficinaDbContext db, FormattableString sql) =>
         db.Database.SqlQuery<int>(sql).SingleAsync();
 

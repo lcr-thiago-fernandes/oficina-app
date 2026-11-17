@@ -274,18 +274,22 @@ public class AbrirOrdemDeServicoUseCaseTestes
     [Fact]
     public async Task AbrirOrdem_IniciaSagaAntesDeSalvar()
     {
+        // IniciarAsync só enfileira no outbox; se viesse depois do SalvarAsync a mensagem nunca
+        // seria persistida. Ordem registrada nos callbacks (MockSequence não vale em mocks Loose).
         var peca = PecaComSaldo(10);
         ConfigurarRefetch();
-        var sequencia = new MockSequence();
-        _saga.InSequence(sequencia).Setup(s => s.IniciarAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        var chamadas = new List<string>();
+        _saga.Setup(s => s.IniciarAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Callback(() => chamadas.Add("IniciarAsync"))
             .Returns(Task.CompletedTask);
-        _ordens.InSequence(sequencia).Setup(o => o.SalvarAsync(It.IsAny<CancellationToken>()))
+        _ordens.Setup(o => o.SalvarAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => chamadas.Add("SalvarAsync"))
             .Returns(Task.CompletedTask);
 
-        await CriarUseCase().ExecutarAsync(RequestComPecas(new ItemPecaDto(peca.Id, 1)), default);
+        var ordem = await CriarUseCase().ExecutarAsync(RequestComPecas(new ItemPecaDto(peca.Id, 1)), default);
 
-        _saga.Verify(s => s.IniciarAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
-        _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
+        chamadas.Should().Equal("IniciarAsync", "SalvarAsync");
+        ordem.CoordenadaPorSaga.Should().BeTrue("a OS aberta na Fase 4 é marcada na mesma unidade de trabalho que inicia a saga");
     }
 
     [Fact]

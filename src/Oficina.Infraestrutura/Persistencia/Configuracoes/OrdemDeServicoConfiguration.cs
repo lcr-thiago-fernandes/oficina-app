@@ -58,6 +58,13 @@ public class OrdemDeServicoConfiguration : IEntityTypeConfiguration<OrdemDeServi
         b.Property(x => x.CanceladaEm).HasColumnName("cancelada_em");
         b.Property(x => x.MotivoCancelamento).HasColumnName("motivo_cancelamento").HasColumnType("text");
 
+        // OSs da Fase 3 (linhas existentes) ficam false: sem saga, cancelamento síncrono.
+        // O DEFAULT false fica só na migration (preenche as linhas existentes); no modelo um
+        // HasDefaultValue(false) num bool faria o EF omitir o false no INSERT (aviso de sentinel).
+        b.Property(x => x.CoordenadaPorSaga)
+            .HasColumnName("coordenada_por_saga")
+            .IsRequired();
+
         // Concorrência otimista: a saga e o atendente podem alterar a mesma OS ao mesmo tempo.
         // `xmin` é a coluna de sistema do PostgreSQL (muda a cada UPDATE) — não é criada pela migration.
         b.Property<uint>("Versao")

@@ -408,6 +408,10 @@ namespace Oficina.Infraestrutura.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("cliente_id");
 
+                    b.Property<bool>("CoordenadaPorSaga")
+                        .HasColumnType("boolean")
+                        .HasColumnName("coordenada_por_saga");
+
                     b.Property<DateTimeOffset>("CriadaEm")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("criada_em");

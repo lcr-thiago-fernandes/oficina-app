@@ -29,6 +29,13 @@ public sealed class OrdemDeServico
     public DateTimeOffset? CanceladaEm { get; private set; }
     public string? MotivoCancelamento { get; private set; }
 
+    /// <summary>
+    /// A OS foi aberta na Fase 4 e tem saga orquestrada (marcada na mesma unidade de trabalho
+    /// que enfileira <c>OrdemServicoAberta</c>). OSs da Fase 3 ficam <c>false</c>: nunca terão saga,
+    /// e o cancelamento delas é síncrono.
+    /// </summary>
+    public bool CoordenadaPorSaga { get; private set; }
+
     public IReadOnlyCollection<ItemServico> ItensServico => _itensServico.AsReadOnly();
     public IReadOnlyCollection<ItemPeca> ItensPeca => _itensPeca.AsReadOnly();
     public IReadOnlyCollection<HistoricoStatus> Historico => _historico.AsReadOnly();
@@ -72,6 +79,8 @@ public sealed class OrdemDeServico
         os.RegistrarTransicao(null, StatusOrdemDeServico.Recebida);
         return os;
     }
+
+    public void MarcarCoordenadaPorSaga() => CoordenadaPorSaga = true;
 
     public ItemServico AdicionarItemServico(Guid servicoId, string servicoNome, decimal precoSnapshot, int quantidade)
     {
