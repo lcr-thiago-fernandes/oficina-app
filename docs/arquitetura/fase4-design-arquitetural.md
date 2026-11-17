@@ -304,6 +304,10 @@ verificam os dois atributos de cada tipo, além do JSON.
 formato do envelope é o mesmo nas duas versões; a interoperabilidade é coberta pelos testes de
 contrato e pelo fluxo ponta a ponta local. Nenhum repositório usa a v9 (licença comercial).
 
+Os três buses configuram `PublishFaults = false`: os tópicos `Fault<T>` seriam nomeados pelo tipo
+.NET e ficariam fora da política IAM `*-oficina-*`; falhas definitivas vão para a fila `_error`
+do endpoint (monitorada por alerta).
+
 Exemplos JSON: [`docs/contratos/mensagens/`](../contratos/mensagens/).
 
 ---
