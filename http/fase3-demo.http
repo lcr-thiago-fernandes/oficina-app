@@ -195,24 +195,7 @@ Authorization: Bearer {{token}}
 POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/enviar
 Authorization: Bearer {{token}}
 
-### [3.4] Aprovação do cliente — via WEBHOOK, sem JWT (X-Webhook-Token)
-### Único endpoint da API com [AllowAnonymous]; token comparado em tempo constante.
-POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/aprovacao
-X-Webhook-Token: {{webhookToken}}
-Content-Type: application/json
-
-{
-  "decisao": "aprovado"
-}
-
-### [3.5] Webhook com token errado (esperado 401)
-POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/aprovacao
-X-Webhook-Token: token-invalido
-Content-Type: application/json
-
-{
-  "decisao": "aprovado"
-}
+### [3.4] (removido) A aprovação do orçamento agora é feita pelo serviço de Billing.
 
 ### [3.6] Iniciar execução (AguardandoAprovacao -> EmExecucao)
 ### Baixa de estoque na MESMA transação serializável da transição.

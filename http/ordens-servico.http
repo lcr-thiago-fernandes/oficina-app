@@ -28,7 +28,7 @@ Content-Type: application/json
 }
 
 ### >>> COPIE o "id" da OS da resposta para .vscode/settings.json em "ordemServicoId"
-### >>> e o "numero" (BIGSERIAL) para "numeroOs" (usado na consulta pública e no webhook)
+### >>> e o "numero" (BIGSERIAL) para "numeroOs" (usado na consulta pública e na aprovação)
 
 ### Obter OS por id
 GET {{baseUrl}}/ordens-servico/{{ordemServicoId}}
@@ -70,7 +70,7 @@ Content-Type: application/json
 POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/enviar
 Authorization: Bearer {{token}}
 
-### >>> Aprovação do cliente é feita pelo webhook — ver http/webhook-aprovacao.http
+### >>> Aprovação do cliente é feita pelo serviço de Billing.
 
 ### Iniciar execução (AguardandoAprovacao -> EmExecucao; baixa estoque transacional)
 POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/execucao/iniciar

@@ -23,7 +23,6 @@ deploy contínuo via **OIDC** e **escalabilidade horizontal automática (HPA)**.
 - **Controle de estoque** de peças com saldo, entradas e saídas
 - **Abertura consolidada de OS** (cliente + veículo + serviços + peças em uma requisição, atômica)
 - **Ordem de Serviço** com máquina de estados (Recebida → Em Diagnóstico → Aguardando Aprovação → Em Execução → Finalizada → Entregue; Cancelada via rejeição)
-- **Webhook de aprovação de orçamento** autenticado por token (`X-Webhook-Token`)
 - **Consulta do orçamento pelo cliente**, autenticada por token de CPF (perfil `Cliente`; resposta 404 idêntica para OS inexistente e documento não conferente — anti-enumeração)
 - **Autoatendimento do cliente** (`/api/v1/me/*`): minhas ordens de serviço, meus veículos
 - **Notificação de mudança de status** (mock de e-mail em log estruturado)
@@ -75,9 +74,7 @@ mesma tabela de usuários desta API. A API **apenas valida** a assinatura HS256,
 
 O usuário `admin` inicial é criado **por esta API**, no bootstrap (migração/startup), a
 partir de `AdminBootstrap__Password` — mas quem transforma usuário+senha em token é a
-Lambda, não um endpoint aqui. O único endpoint desta API que dispensa token é o webhook
-de aprovação de orçamento (`WebhooksController`, protegido por `X-Webhook-Token` em vez
-de JWT — é a única exceção a `[Authorize]` em todo o projeto).
+Lambda, não um endpoint aqui. A aprovação do orçamento não é mais um endpoint desta API (migrou para o serviço de Billing).
 
 ---
 
@@ -160,7 +157,7 @@ flowchart TD
     A2 --> A3["docker build/push -> ECR (tag = SHA)"]
     A3 --> A4["aws eks update-kubeconfig"]
     A4 --> A5["kubectl apply namespace-hml/prd + configmap"]
-    A5 --> A6["Secret real via AWS Secrets Manager<br/>(JWT, senha do RDS, licença New Relic)<br/>+ ADMIN_BOOTSTRAP_PASSWORD / WEBHOOK_TOKEN (GitHub Secrets)"]
+    A5 --> A6["Secret real via AWS Secrets Manager<br/>(JWT, senha do RDS, licença New Relic)<br/>+ ADMIN_BOOTSTRAP_PASSWORD (GitHub Secrets)"]
     A6 --> A7["Job oficina-migrate + kubectl wait"]
     A7 --> A8["kubectl apply deployment + service + hpa"]
     A8 --> A9["kubectl rollout status"]
@@ -230,7 +227,7 @@ deles falha em silêncio se divergir, por isso está escrito e não subentendido
 ```bash
 git clone https://github.com/lcr-thiago-fernandes/oficina-app
 cd oficina-app
-cp .env.example .env   # ajuste ADMIN_BOOTSTRAP_PASSWORD, JWT_SECRET (>=32 chars), WEBHOOK_TOKEN
+cp .env.example .env   # ajuste ADMIN_BOOTSTRAP_PASSWORD, JWT_SECRET (>=32 chars)
 ```
 
 ### 2. Subir o ambiente
@@ -318,7 +315,6 @@ Store em runtime, via OIDC.
 |---|---|
 | `AWS_DEPLOY_ROLE_ARN` | Role assumida via OIDC para autenticar no AWS (ECR, EKS, Secrets Manager, SSM) |
 | `ADMIN_BOOTSTRAP_PASSWORD` | Senha do usuário `admin` de bootstrap → `AdminBootstrap__Password` no Secret do K8s |
-| `WEBHOOK_TOKEN` | Token do webhook de aprovação → `Webhook__Token` no Secret do K8s |
 
 **Variables (não sensíveis):**
 
@@ -372,7 +368,6 @@ A documentação central da Fase 3 vive neste repositório; os outros três apon
   - `servicos.http` — CRUD catálogo
   - `pecas.http` — CRUD peça + movimentações
   - `ordens-servico.http` — abertura consolidada + fluxo completo da OS
-  - `webhook-aprovacao.http` — aprovação/recusa do orçamento via webhook (`X-Webhook-Token`, sem JWT)
   - `consulta.http` — consulta do orçamento pelo cliente, **com token JWT de perfil `Cliente`** na claim `documento` (deixou de ser anônima na Fase 3)
   - `fase3-demo.http` — **roteiro da demonstração da Fase 3**: token de Cliente, `/me/ordens-servico`,
     `/me/veiculos`, consulta da própria OS (200) vs. OS de outro cliente (404 anti-enumeração),
@@ -380,7 +375,7 @@ A documentação central da Fase 3 vive neste repositório; os outros três apon
   - `demo-video.http` — roteiro fim-a-fim da Fase 2 (**histórico**; as duas primeiras requisições
     usam o `POST /auth/login` removido, então o roteiro não roda mais nesta API)
 
-As variáveis (`baseUrl`, `token`, `tokenCliente`, `tokenOutroCliente`, `webhookToken`, IDs)
+As variáveis (`baseUrl`, `token`, `tokenCliente`, `tokenOutroCliente`, IDs)
 ficam em [`.vscode/settings.json`](.vscode/settings.json) (`rest-client.environmentVariables`).
 Selecione o ambiente **local** no canto inferior do VS Code.
 
@@ -456,7 +451,6 @@ VPC/EKS/RDS foi para os repositórios listados em
 
 - Senhas do usuário administrativo com BCrypt cost 12
 - JWT HS256 validado por esta API (assinatura, emissor, audiência, expiração); quem emite é a Lambda de autenticação
-- Webhook de aprovação autenticado por token (`X-Webhook-Token`), comparação em tempo constante e fail-closed — único endpoint com `[AllowAnonymous]` em todo o projeto
 - Validação de CPF/CNPJ (dígitos verificadores), placa (antigo + Mercosul), e-mail
 - Saldo de peça nunca negativo (invariante + check constraint SQL)
 - Anti-enumeração na consulta do orçamento (404 idêntico para OS inexistente e documento não conferente)

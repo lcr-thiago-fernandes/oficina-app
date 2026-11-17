@@ -33,7 +33,6 @@ services:
       Jwt__Issuer: ${JWT_ISSUER:-oficina-auth}
       Jwt__Audience: ${JWT_AUDIENCE:-oficina-api}
       AdminBootstrap__Password: ${ADMIN_BOOTSTRAP_PASSWORD}
-      Webhook__Token: ${WEBHOOK_TOKEN}
       # Agente APM do New Relic: instalado na imagem, mas inerte aqui porque
       # CORECLR_ENABLE_PROFILING=0 vem por padrao no Dockerfile. Quem liga o
       # profiling (=1) e o Deployment do Kubernetes, nao o compose local.
