@@ -1,3 +1,4 @@
+using Oficina.Aplicacao.OrdensServico.Saga.Telemetria;
 using Oficina.Infraestrutura.Persistencia;
 
 namespace Oficina.Infraestrutura.Mensageria.Saga;
@@ -9,12 +10,21 @@ namespace Oficina.Infraestrutura.Mensageria.Saga;
 public sealed class RegistradorPassoSaga : IRegistradorPassoSaga
 {
     private readonly OficinaDbContext _db;
+    private readonly IPublicadorEventoSaga _publicador;
 
-    public RegistradorPassoSaga(OficinaDbContext db) => _db = db;
+    public RegistradorPassoSaga(OficinaDbContext db, IPublicadorEventoSaga publicador)
+    {
+        _db = db;
+        _publicador = publicador;
+    }
 
     public void Registrar(EstadoSagaOrdemServico saga, string passo, string resultado, bool compensacao, string? detalhe = null)
     {
         var agora = DateTime.UtcNow;
+        // Antes de avançar AtualizadaEm: a duração é o tempo desde o passo anterior.
+        _publicador.Publicar(new EventoSagaOrdemServico(
+            saga.CorrelationId, saga.NumeroOs, passo, resultado, compensacao,
+            (long)(agora - saga.AtualizadaEm).TotalMilliseconds, saga.EstadoAtual, detalhe));
         _db.Set<PassoSaga>().Add(new PassoSaga
         {
             Id = Guid.NewGuid(),

@@ -57,6 +57,7 @@ public sealed class LocalStackFixture : IAsyncLifetime
         services.AddLogging();
         services.AddDbContext<OficinaDbContext>(o =>
             o.UseNpgsql("Host=127.0.0.1;Port=1;Database=x;Username=x;Password=x;Timeout=2"));
+        services.AddSingleton<Oficina.Aplicacao.OrdensServico.Saga.Telemetria.IPublicadorEventoSaga, Oficina.Infraestrutura.Telemetria.PublicadorEventoSagaNewRelic>();
         services.AdicionarMensageria(configuracao);
         _provider = services.BuildServiceProvider(true);
 

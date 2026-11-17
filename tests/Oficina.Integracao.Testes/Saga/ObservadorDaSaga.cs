@@ -20,7 +20,7 @@ public sealed class ObservadorDaSaga : IFilter<ConsumeContext>
     private readonly ConcurrentDictionary<string, int> _tentativasPorTipo = new();
     private readonly ConcurrentQueue<ComandoRecebido> _comandos = new();
 
-    public sealed record ComandoRecebido(object Mensagem, Guid OrdemServicoId, Uri? Destino, Uri? FaultAddress);
+    public sealed record ComandoRecebido(object Mensagem, Guid OrdemServicoId, Uri? Destino, Uri? FaultAddress, string? CorrelationId = null);
 
     public IReadOnlyList<ComandoRecebido> Comandos => _comandos.ToList();
 
@@ -45,7 +45,8 @@ public sealed class ObservadorDaSaga : IFilter<ConsumeContext>
 
     private Task Capturar<T>(ConsumeContext<T> ctx) where T : class, IMensagemDaSaga
     {
-        _comandos.Enqueue(new ComandoRecebido(ctx.Message, ctx.Message.OrdemServicoId, ctx.DestinationAddress, ctx.FaultAddress));
+        _comandos.Enqueue(new ComandoRecebido(ctx.Message, ctx.Message.OrdemServicoId, ctx.DestinationAddress, ctx.FaultAddress,
+            ctx.Headers.Get<string>("X-Correlation-Id")));
         return Task.CompletedTask;
     }
 

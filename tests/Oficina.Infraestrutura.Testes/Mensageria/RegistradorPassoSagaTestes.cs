@@ -1,4 +1,6 @@
 using FluentAssertions;
+using Moq;
+using Oficina.Aplicacao.OrdensServico.Saga.Telemetria;
 using Microsoft.EntityFrameworkCore;
 using Oficina.Infraestrutura.Mensageria.Saga;
 using Oficina.Infraestrutura.Persistencia;
@@ -23,7 +25,7 @@ public class RegistradorPassoSagaTestes
             AtualizadaEm = DateTime.UtcNow.AddMinutes(-5),
         };
 
-        new RegistradorPassoSaga(db).Registrar(saga, PassosSaga.GerarOrcamento, PassosSaga.Falha, true, "sem itens");
+        new RegistradorPassoSaga(db, Mock.Of<IPublicadorEventoSaga>()).Registrar(saga, PassosSaga.GerarOrcamento, PassosSaga.Falha, true, "sem itens");
 
         var passo = db.ChangeTracker.Entries<PassoSaga>().Should().ContainSingle().Subject;
         passo.State.Should().Be(EntityState.Added);
@@ -37,5 +39,50 @@ public class RegistradorPassoSagaTestes
         passo.Entity.OcorridoEm.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
         passo.Entity.OcorridoEm.Kind.Should().Be(DateTimeKind.Utc);
         saga.AtualizadaEm.Should().Be(passo.Entity.OcorridoEm);
+    }
+
+    [Fact]
+    public void Registrar_PublicaEventoComDuracaoDesdeUltimoPasso()
+    {
+        using var db = NovoContexto();
+        var publicador = new Mock<IPublicadorEventoSaga>();
+        var anterior = DateTime.UtcNow.AddSeconds(-2);
+        var saga = new EstadoSagaOrdemServico
+        {
+            CorrelationId = Guid.NewGuid(), NumeroOs = 77, EstadoAtual = "AguardandoAprovacao", AtualizadaEm = anterior,
+        };
+
+        new RegistradorPassoSaga(db, publicador.Object).Registrar(saga, PassosSaga.GerarOrcamento, PassosSaga.Sucesso, false);
+
+        var evento = publicador.Invocations.Should().ContainSingle().Subject.Arguments[0]
+            .Should().BeOfType<EventoSagaOrdemServico>().Subject;
+        evento.OrdemServicoId.Should().Be(saga.CorrelationId);
+        evento.NumeroOs.Should().Be(77);
+        evento.Passo.Should().Be(PassosSaga.GerarOrcamento);
+        evento.Resultado.Should().Be(PassosSaga.Sucesso);
+        evento.Compensacao.Should().BeFalse();
+        evento.Estado.Should().Be("AguardandoAprovacao");
+        evento.Motivo.Should().BeNull();
+        evento.DuracaoMs.Should().BeInRange(1900, 5000);
+        saga.AtualizadaEm.Should().BeAfter(anterior);
+        db.ChangeTracker.Entries<PassoSaga>().Should().ContainSingle().Which.State.Should().Be(EntityState.Added);
+    }
+
+    [Fact]
+    public void Registrar_EstornoFalhou_PublicaResultadoCompensacaoFalhou()
+    {
+        using var db = NovoContexto();
+        var publicador = new Mock<IPublicadorEventoSaga>();
+        var saga = new EstadoSagaOrdemServico
+        {
+            CorrelationId = Guid.NewGuid(), EstadoAtual = "Compensando", AtualizadaEm = DateTime.UtcNow.AddSeconds(-1),
+        };
+
+        new RegistradorPassoSaga(db, publicador.Object)
+            .Registrar(saga, PassosSaga.EstornarPagamento, PassosSaga.CompensacaoFalhou, true, "gateway fora");
+
+        publicador.Verify(p => p.Publicar(It.Is<EventoSagaOrdemServico>(e =>
+            e.Passo == PassosSaga.EstornarPagamento && e.Resultado == "CompensacaoFalhou" && e.Compensacao
+            && e.Estado == "Compensando" && e.Motivo == "gateway fora")), Times.Once);
     }
 }

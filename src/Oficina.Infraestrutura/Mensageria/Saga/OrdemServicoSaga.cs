@@ -64,6 +64,8 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
             [nameof(Cancelada)] = TodosOsEventos().Where(e => e != nameof(PagamentoConfirmado)).ToArray(),
         };
 
+    private const string HeaderCorrelacao = "X-Correlation-Id";
+
     private readonly NomesMensageria _nomes;
 
     public State AguardandoOrcamento { get; private set; } = null!;
@@ -106,7 +108,7 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
                     ctx.Saga.CriadaEm = ctx.Saga.AtualizadaEm = DateTime.UtcNow;
                     Guardar(ctx, pedido);
                 })
-                .Send(_nomes.EnderecoComandosBilling, ctx => CriarGerarOrcamento(ctx.Saga, Obter<PedidoOrcamento>(ctx)!))
+                .ThenAsync(ctx => EnviarComCorrelacaoAsync(ctx, _nomes.EnderecoComandosBilling, CriarGerarOrcamento(ctx.Saga, Obter<PedidoOrcamento>(ctx)!)))
                 .TransitionTo(AguardandoOrcamento)
                 .Then(ctx => Registrar(ctx, PassosSaga.SolicitarOrcamento, PassosSaga.Sucesso, false)));
 
@@ -139,14 +141,14 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
                 })
                 .IfElse(ctx => Obter<PedidoExecucao>(ctx) is not null,
                     confirmado => confirmado
-                        .Send(_nomes.EnderecoComandosExecucao, ctx => CriarIniciarExecucao(ctx.Saga, Obter<PedidoExecucao>(ctx)!))
+                        .ThenAsync(ctx => EnviarComCorrelacaoAsync(ctx, _nomes.EnderecoComandosExecucao, CriarIniciarExecucao(ctx.Saga, Obter<PedidoExecucao>(ctx)!)))
                         .TransitionTo(AguardandoExecucao)
                         .Then(ctx => Registrar(ctx, PassosSaga.ConfirmarPagamento, PassosSaga.Sucesso, false)),
                     // OS cancelada ou reserva liberada antes do pagamento: nada foi baixado do estoque;
                     // o pagamento é estornado e a compensação termina em Cancelada (PagamentoEstornado).
                     naoHonrado => naoHonrado
                         .Then(ctx => ctx.Saga.Motivo = MotivoPagamentoNaoHonrado)
-                        .Send(_nomes.EnderecoComandosBilling, ctx => CriarEstornarPagamento(ctx.Saga, MotivoPagamentoNaoHonrado))
+                        .ThenAsync(ctx => EnviarComCorrelacaoAsync(ctx, _nomes.EnderecoComandosBilling, CriarEstornarPagamento(ctx.Saga, MotivoPagamentoNaoHonrado)))
                         .TransitionTo(Compensando)
                         .Then(ctx => Registrar(ctx, PassosSaga.ConfirmarPagamento, PassosSaga.Falha, true, ctx.Message.PagamentoId))),
             // Qualquer motivo do Billing (cartao_recusado, valor_divergente, pagamento_estornado...) é
@@ -161,12 +163,12 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
             When(CancelamentoSolicitado)
                 .Then(ctx => ctx.Saga.Motivo = ctx.Message.Motivo)
                 .ThenAsync(ctx => Passos(ctx).CancelarAsync(ctx.Saga.CorrelationId, ctx.Saga.Motivo!, ctx.CancellationToken))
-                .Send(_nomes.EnderecoComandosBilling, ctx => new CancelarOrcamento
+                .ThenAsync(ctx => EnviarComCorrelacaoAsync(ctx, _nomes.EnderecoComandosBilling, new CancelarOrcamento
                 {
                     OrdemServicoId = ctx.Saga.CorrelationId,
                     OcorridoEm = DateTime.UtcNow,
                     Motivo = ctx.Saga.Motivo!,
-                })
+                }))
                 .TransitionTo(Cancelada)
                 .Then(ctx => Registrar(ctx, PassosSaga.Cancelamento, PassosSaga.Compensado, true)));
 
@@ -183,7 +185,7 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
                 .Then(ctx => Registrar(ctx, PassosSaga.EnfileirarExecucao, PassosSaga.Sucesso, false)),
             When(ExecucaoRecusada)
                 .Then(ctx => ctx.Saga.Motivo = ctx.Message.Motivo)
-                .Send(_nomes.EnderecoComandosBilling, ctx => CriarEstornarPagamento(ctx.Saga, ctx.Message.Motivo))
+                .ThenAsync(ctx => EnviarComCorrelacaoAsync(ctx, _nomes.EnderecoComandosBilling, CriarEstornarPagamento(ctx.Saga, ctx.Message.Motivo)))
                 .TransitionTo(Compensando)
                 .Then(ctx => Registrar(ctx, PassosSaga.EnfileirarExecucao, PassosSaga.Falha, true)));
 
@@ -215,7 +217,7 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
             When(PagamentoConfirmado)
                 .If(ctx => ctx.Message.PagamentoId != ctx.Saga.PagamentoId,
                     outro => outro
-                        .Send(_nomes.EnderecoComandosBilling, ctx => CriarEstornarPagamento(ctx.Saga, MotivoPagamentoAposCancelamento))
+                        .ThenAsync(ctx => EnviarComCorrelacaoAsync(ctx, _nomes.EnderecoComandosBilling, CriarEstornarPagamento(ctx.Saga, MotivoPagamentoAposCancelamento)))
                         .Then(ctx => Registrar(ctx, PassosSaga.EstornarPagamento, PassosSaga.Falha, true, ctx.Message.PagamentoId))));
 
         // Pagamento chegou depois do cancelamento (corrida com CancelamentoSolicitado, Review Focus 2):
@@ -226,7 +228,7 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
                 .If(ctx => ctx.Message.PagamentoId != ctx.Saga.PagamentoId,
                     tardio => tardio
                         .Then(ctx => ctx.Saga.PagamentoId = ctx.Message.PagamentoId)
-                        .Send(_nomes.EnderecoComandosBilling, ctx => CriarEstornarPagamento(ctx.Saga, MotivoPagamentoAposCancelamento))
+                        .ThenAsync(ctx => EnviarComCorrelacaoAsync(ctx, _nomes.EnderecoComandosBilling, CriarEstornarPagamento(ctx.Saga, MotivoPagamentoAposCancelamento)))
                         .TransitionTo(Compensando)
                         .Then(ctx => Registrar(ctx, PassosSaga.EstornarPagamento, PassosSaga.Falha, true, ctx.Message.PagamentoId))));
 
@@ -299,6 +301,18 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
                 ctx.Saga.CorrelationId, ctx.Message.Motivo, ctx.CancellationToken))
             .TransitionTo(Cancelada)
             .Then(ctx => Registrar(ctx, PassosSaga.AprovarOrcamento, PassosSaga.Falha, true));
+
+    /// <summary>
+    /// Envia o comando repassando o <c>X-Correlation-Id</c> da mensagem em consumo. O header é gravado no
+    /// momento do Send: com o outbox a entrega real acontece depois, em outro escopo.
+    /// </summary>
+    private static Task EnviarComCorrelacaoAsync<T>(BehaviorContext<EstadoSagaOrdemServico> ctx, Uri destino, T mensagem)
+        where T : class =>
+        ctx.Send(destino, mensagem, s =>
+        {
+            if (ctx.Headers.TryGetHeader(HeaderCorrelacao, out var valor) && valor is not null)
+                s.Headers.Set(HeaderCorrelacao, valor);
+        });
 
     private static IPassosSagaOrdemServico Passos(ConsumeContext ctx) =>
         ctx.GetServiceOrCreateInstance<IPassosSagaOrdemServico>();

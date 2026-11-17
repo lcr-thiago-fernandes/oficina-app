@@ -55,6 +55,9 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AdicionarInfraestrutura(builder.Configuration);
 builder.Services.AdicionarMensageria(builder.Configuration);
+// Substitui o acessor nulo da mensageria: o X-Correlation-Id da requisição vai no header das mensagens.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<Oficina.Infraestrutura.Mensageria.Observabilidade.IAcessorCorrelacao, AcessorCorrelacaoHttp>();
 builder.Services.AdicionarAplicacao();
 builder.Services.AdicionarAdaptadores();
 builder.Services.AdicionarJwtBearer(builder.Configuration);

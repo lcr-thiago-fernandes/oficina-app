@@ -46,6 +46,7 @@ public class DependencyInjectionMensageriaTestes
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddDbContext<OficinaDbContext>(o => o.UseNpgsql(ConexaoFicticia));
+        services.AddSingleton<Oficina.Aplicacao.OrdensServico.Saga.Telemetria.IPublicadorEventoSaga, Oficina.Infraestrutura.Telemetria.PublicadorEventoSagaNewRelic>();
         services.AdicionarMensageria(Configuracao(prefixo));
         return services;
     }

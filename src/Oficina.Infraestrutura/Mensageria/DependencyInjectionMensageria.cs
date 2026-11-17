@@ -96,7 +96,13 @@ public static class DependencyInjectionMensageria
             .Endpoint(e => e.Name = nomes.FilaSaga);
 
         // Só vale para endpoints criados por ConfigureEndpoints (produção e harness).
-        x.AddConfigureEndpointsCallback((ctx, _, cfg) => ConfigurarEndpoint(ctx, cfg, opcoes));
+        x.AddConfigureEndpointsCallback((ctx, _, cfg) =>
+        {
+            // Mais externo e só para logging/New Relic (escopo com ordemServicoId e correlationId): o header
+            // X-Correlation-Id é gravado no Publish/Send, não em filtro.
+            cfg.UseConsumeFilter(typeof(FiltroCorrelacaoConsumo<>), ctx);
+            ConfigurarEndpoint(ctx, cfg, opcoes);
+        });
     }
 
     /// <summary>Só o que é do bus (usado só na produção; nos testes o bus é o in-memory do harness).</summary>
