@@ -158,6 +158,10 @@ public class InicioDaSagaTestes
 
             await AguardarAsync(() => Task.FromResult(_fx.Observador.Tentativas(idPagamento) >= 4),
                 TimeSpan.FromSeconds(15), "1 entrega + 3 retries, todas falhando no outbox");
+            // O observador conta a tentativa ao entrar no pipe, antes do SaveChanges que falha: a 4ª falha
+            // pode ainda não ter acontecido quando a 4ª tentativa já foi contada.
+            await AguardarAsync(() => Task.FromResult(_fx.InjetorDeFalhas.FalhasDeOutbox >= 4),
+                TimeSpan.FromSeconds(10), "4 falhas ao gravar o outbox");
             _fx.InjetorDeFalhas.FalhasDeOutbox.Should().BeGreaterThanOrEqualTo(4);
 
             // Ainda com a falha armada (redeliveries também falham): cada tentativa baixou o estoque e avançou
