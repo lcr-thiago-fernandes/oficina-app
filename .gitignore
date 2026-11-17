@@ -43,3 +43,6 @@ docs/superpowers/
 
 ## Roteiro do video (artefato de preparacao — nao versionar)
 docs/entrega/roteiro-video-fase2.md
+
+## Reqnroll (code-behind gerado a partir dos .feature no build)
+*.feature.cs
