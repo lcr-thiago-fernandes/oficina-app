@@ -12,6 +12,7 @@ using Oficina.Infraestrutura.Mensageria.Contratos;
 using Oficina.Infraestrutura.Mensageria.Internos;
 using Oficina.Infraestrutura.Mensageria.Saga;
 using Oficina.Infraestrutura.Persistencia;
+using Oficina.Testes.Compartilhado;
 
 namespace Oficina.Infraestrutura.Testes.Mensageria;
 
@@ -129,8 +130,7 @@ public class DependencyInjectionMensageriaTestes
     public async Task HarnessComConfigurarRegistro_MantemRepositorioEfDaSaga()
     {
         var services = Servicos();
-        var acao = () => services.AddMassTransitTestHarness(x =>
-            DependencyInjectionMensageria.ConfigurarRegistro(x, new OpcoesMensageria { IntervaloOutboxMs = 100 }));
+        var acao = () => services.SubstituirMensageriaPeloHarness(new OpcoesMensageria { IntervaloOutboxMs = 100 });
 
         acao.Should().NotThrow();
         await using var provider = services.BuildServiceProvider(true);
@@ -140,6 +140,20 @@ public class DependencyInjectionMensageriaTestes
         var fabrica = scope.ServiceProvider.GetRequiredService<MassTransit.Saga.ISagaRepositoryContextFactory<EstadoSagaOrdemServico>>();
 
         fabrica.GetType().Namespace.Should().StartWith("MassTransit.EntityFrameworkCoreIntegration");
+    }
+
+    [Fact]
+    public void SubstituirMensageriaPeloHarness_DeixaUmSoCallbackDeEndpointEUmaSoNotificacaoDoOutbox()
+    {
+        var services = Servicos();
+        int Contar<T>() => services.Count(d => d.ServiceType == typeof(T));
+        // Sem a limpeza do helper, o AddMassTransitTestHarness deixaria os dois (o de produção primeiro).
+        Contar<MassTransit.DependencyInjection.Bind<IBus, IConfigureReceiveEndpoint>>().Should().Be(1);
+
+        services.SubstituirMensageriaPeloHarness(new OpcoesMensageria());
+
+        Contar<MassTransit.DependencyInjection.Bind<IBus, IConfigureReceiveEndpoint>>().Should().Be(1);
+        Contar<MassTransit.Middleware.Outbox.IBusOutboxNotification>().Should().Be(1);
     }
 
     [Fact]

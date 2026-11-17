@@ -79,36 +79,54 @@ public class InicioDaSagaTestes
         await Task.Delay(1000); // > IntervaloOutboxMs (100 ms): uma mensagem gravada já teria sido entregue
         (await ContarOutboxAsync()).Should().Be(0);
         _fx.Observador.TotalDeTentativas<OrdemServicoAberta>().Should().Be(aberturasAntes);
+
+        // Controle positivo: uma abertura válida é contada (a contagem por tipo funciona).
+        await AbrirOrdemComPecaAsync();
+        await AguardarAsync(() => Task.FromResult(_fx.Observador.TotalDeTentativas<OrdemServicoAberta>() == aberturasAntes + 1),
+            TimeSpan.FromSeconds(10), "OrdemServicoAberta da abertura válida consumida");
     }
 
     [Fact]
-    public async Task EventoAdiantado_ERetentadoSemPublicarFault()
+    public async Task EventoAdiantado_ERetentadoEAplicadoPeloRedelivery()
     {
         var (os, _) = await AbrirOrdemComPecaAsync();
         await LevarSagaAteAguardandoExecucaoAsync(os.Id);
-        var adiantado = new StatusExecucaoAlterado
-        {
-            OrdemServicoId = os.Id, OcorridoEm = DateTime.UtcNow, StatusExecucao = StatusExecucao.EmDiagnostico,
-        };
 
-        var idAdiantado = await PublicarAsync(adiantado);
+        var idAdiantado = await PublicarAsync(StatusEmDiagnostico(os.Id));
 
         await AguardarAsync(() => Task.FromResult(_fx.Observador.Tentativas(idAdiantado) >= 4),
             TimeSpan.FromSeconds(10), "1 entrega + 3 retries");
-        await Task.Delay(1000);
-        _fx.Observador.Tentativas(idAdiantado).Should().Be(4, "depois dos retries vem o redelivery de 30 s");
-        _fx.Harness.Published.Select<Fault<StatusExecucaoAlterado>>().Should().BeEmpty("PublishFaults = false");
         (await ObterOrdemAsync(os.Id)).Status.Should().Be(StatusOrdemDeServico.AguardandoPagamento);
 
         await _fx.Harness.Bus.Publish(new ExecucaoEnfileirada { OrdemServicoId = os.Id, OcorridoEm = DateTime.UtcNow, PosicaoFila = 1 });
         await AguardarSagaAsync(os.Id, "EmExecucao");
 
-        // Redelivery (30 s) do evento adiantado, agora no estado certo.
+        // Redelivery do evento adiantado, agora no estado certo.
         await AguardarAsync(async () => (await ObterOrdemAsync(os.Id)).Status == StatusOrdemDeServico.EmDiagnostico,
-            TimeSpan.FromSeconds(60), "OS EmDiagnostico pelo redelivery");
-        _fx.Harness.Published.Select<Fault<StatusExecucaoAlterado>>().Should().BeEmpty();
+            TimeSpan.FromSeconds(30), "OS EmDiagnostico pelo redelivery");
         (await TrilhaAsync(os.Id)).Where(p => p.Passo == PassosSaga.Execucao).Should().ContainSingle()
             .Which.Estado.Should().Be("EmExecucao");
+    }
+
+    /// <summary>
+    /// As opções passadas ao harness (<see cref="AuthFixture.OpcoesMensageria"/>: retry 20 ms, redelivery
+    /// 1 s/4 s/10 s) valem no endpoint da saga, e não as de produção lidas do appsettings (200 ms; 30 s/2 min/5 min).
+    /// </summary>
+    [Fact]
+    public async Task HarnessDaApi_OpcoesDaFixture_ValemNoEndpointDaSaga()
+    {
+        var (os, _) = await AbrirOrdemComPecaAsync();
+        await LevarSagaAteAguardandoExecucaoAsync(os.Id);
+
+        // Nunca chega ExecucaoEnfileirada: todas as tentativas falham.
+        var id = await PublicarAsync(StatusEmDiagnostico(os.Id));
+
+        // (1 + 3 retries) x (1 + 3 redeliveries) em ~15 s; com as opções de produção seriam 4 em 30 s.
+        await AguardarAsync(() => Task.FromResult(_fx.Observador.Tentativas(id) >= 16),
+            TimeSpan.FromSeconds(30), "16 tentativas com retry/redelivery da fixture");
+        await Task.Delay(2000);
+        _fx.Observador.Tentativas(id).Should().Be(16, "esgotado o redelivery, a mensagem vai para a _error");
+        (await AguardarSagaAsync(os.Id, "AguardandoExecucao")).Should().NotBeNull();
     }
 
     [Fact]
@@ -140,24 +158,24 @@ public class InicioDaSagaTestes
 
             await AguardarAsync(() => Task.FromResult(_fx.Observador.Tentativas(idPagamento) >= 4),
                 TimeSpan.FromSeconds(15), "1 entrega + 3 retries, todas falhando no outbox");
-            await Task.Delay(500);
             _fx.InjetorDeFalhas.FalhasDeOutbox.Should().BeGreaterThanOrEqualTo(4);
+
+            // Ainda com a falha armada (redeliveries também falham): cada tentativa baixou o estoque e avançou
+            // a saga antes de falhar no outbox, e nada disso ficou.
+            (await AguardarSagaAsync(os.Id, "AguardandoPagamento")).PagamentoId.Should().BeNull();
+            var peca = await ObterPecaAsync(pecaId);
+            peca.SaldoAtual.Should().Be(SaldoInicial);
+            peca.SaldoReservado.Should().Be(QuantidadePeca);
+            (await TrilhaAsync(os.Id)).Should().NotContain(p => p.Passo == PassosSaga.ConfirmarPagamento);
+            _fx.Observador.ComandosDoTipo<IniciarExecucao>(os.Id).Should().BeEmpty();
         }
         finally
         {
             _fx.InjetorDeFalhas.FalharOutboxDaSaga(null);
         }
 
-        // Cada tentativa baixou o estoque e avançou a saga antes de falhar no outbox: nada disso ficou.
-        (await AguardarSagaAsync(os.Id, "AguardandoPagamento")).PagamentoId.Should().BeNull();
-        var peca = await ObterPecaAsync(pecaId);
-        peca.SaldoAtual.Should().Be(SaldoInicial);
-        peca.SaldoReservado.Should().Be(QuantidadePeca);
-        (await TrilhaAsync(os.Id)).Should().NotContain(p => p.Passo == PassosSaga.ConfirmarPagamento);
-        _fx.Observador.ComandosDoTipo<IniciarExecucao>(os.Id).Should().BeEmpty();
-
-        // Redelivery (30 s) sem a falha: aplica tudo uma única vez.
-        await AguardarSagaAsync(os.Id, "AguardandoExecucao", TimeSpan.FromSeconds(60));
+        // Próximo redelivery, sem a falha: aplica tudo uma única vez.
+        await AguardarSagaAsync(os.Id, "AguardandoExecucao", TimeSpan.FromSeconds(30));
         await DeveTerBaixadoOEstoqueUmaVezAsync(os.Id, pecaId);
         await DeveTerEnviadoIniciarExecucaoUmaVezAsync(os.Id);
         (await TrilhaAsync(os.Id)).Where(p => p.Passo == PassosSaga.ConfirmarPagamento).Should().ContainSingle()
@@ -211,6 +229,11 @@ public class InicioDaSagaTestes
         await PublicarPagamentoConfirmadoAsync(osId);
         await AguardarSagaAsync(osId, "AguardandoExecucao");
     }
+
+    private static StatusExecucaoAlterado StatusEmDiagnostico(Guid osId) => new()
+    {
+        OrdemServicoId = osId, OcorridoEm = DateTime.UtcNow, StatusExecucao = StatusExecucao.EmDiagnostico,
+    };
 
     /// <summary>Publica com MessageId conhecido, para contar as tentativas de consumo.</summary>
     private async Task<Guid> PublicarAsync<T>(T mensagem) where T : class

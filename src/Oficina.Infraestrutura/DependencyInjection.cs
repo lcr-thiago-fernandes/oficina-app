@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Oficina.Aplicacao.OrdensServico.Telemetria;
@@ -18,9 +19,12 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("ConnectionStrings:Default não configurada.");
 
-        services.AddDbContext<OficinaDbContext>(options =>
+        // Interceptadores do SaveChanges registrados no DI entram no contexto (nenhum em produção; os testes
+        // de integração registram um para simular falhas de banco sem duplicar esta configuração).
+        services.AddDbContext<OficinaDbContext>((sp, options) =>
             options.UseNpgsql(connectionString, npgsql =>
-                npgsql.MigrationsHistoryTable("__migrations_history", "public")));
+                    npgsql.MigrationsHistoryTable("__migrations_history", "public"))
+                .AddInterceptors(sp.GetServices<ISaveChangesInterceptor>()));
 
         // Reutilizável pelo startup (HostedService) e pelo Job de migração (Program "migrate").
         // Singleton stateless: cria o próprio escopo a partir do IServiceProvider recebido.

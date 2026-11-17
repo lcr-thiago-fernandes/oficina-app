@@ -34,6 +34,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Troca o bus de produção pelo test harness (compartilhado com a Integração e o BDD). -->
+    <Compile Include="../Compartilhado/HarnessMensageria.cs" Link="Compartilhado/HarnessMensageria.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Oficina.Infraestrutura\Oficina.Infraestrutura.csproj" />
   </ItemGroup>
 

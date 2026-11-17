@@ -3,9 +3,9 @@ using MassTransit.Testing;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Oficina.Dominio.OrdensServico;
 using Oficina.Infraestrutura.Mensageria;
 using Oficina.Infraestrutura.Persistencia;
@@ -27,7 +27,22 @@ public class AuthFixture : IAsyncLifetime
 
     public WebApplicationFactory<Program> Factory { get; private set; } = null!;
 
-    /// <summary>Bus da Api nos testes: o in-memory do harness, com o registro de produção (saga EF + outbox).</summary>
+    /// <summary>
+    /// Opções de mensageria da Api nos testes: retry e redelivery encurtados (produção: 200 ms e 30 s), para a
+    /// mensagem que falha voltar em segundos. <c>InicioDaSagaTestes</c> prova que valem no endpoint da saga.
+    /// </summary>
+    public static readonly OpcoesMensageria OpcoesMensageria = new()
+    {
+        IntervaloOutboxMs = 100,
+        IntervaloMinimoRetry = TimeSpan.FromMilliseconds(20),
+        IntervaloBaseRedelivery = TimeSpan.FromSeconds(1),
+    };
+
+    /// <summary>
+    /// Bus da Api nos testes: o in-memory do harness, com o registro de produção (saga EF + outbox). Só para
+    /// publicar: o harness não é iniciado por <c>Start()</c> (o host já iniciou o bus), então
+    /// Published/Sent/Consumed não são observados — use <see cref="Observador"/>.
+    /// </summary>
     public ITestHarness Harness { get; private set; } = null!;
 
     /// <summary>Comandos que a saga enviou e tentativas de consumo (ver <see cref="ObservadorDaSaga"/>).</summary>
@@ -54,27 +69,17 @@ public class AuthFixture : IAsyncLifetime
 
         Factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.ConfigureTestServices(s =>
         {
-            // Mesmas opções do AdicionarInfraestrutura, mais o interceptador de falhas.
-            s.RemoveAll<DbContextOptions<OficinaDbContext>>();
-            s.AddDbContext<OficinaDbContext>(o => o
-                .UseNpgsql(conexao, npgsql => npgsql.MigrationsHistoryTable("__migrations_history", "public"))
-                .AddInterceptors(InjetorDeFalhas));
+            // O AddDbContext de produção aplica os ISaveChangesInterceptor do DI.
+            s.AddSingleton<ISaveChangesInterceptor>(InjetorDeFalhas);
 
-            s.AddMassTransitTestHarness(x =>
-            {
-                // A fixture vive a coleção inteira: o timeout do harness não pode vencer no meio dela.
-                x.SetTestTimeouts(testTimeout: TimeSpan.FromMinutes(30));
-                DependencyInjectionMensageria.ConfigurarRegistro(x, new OpcoesMensageria { IntervaloOutboxMs = 100 });
-                // Registrado depois do ConfigurarRegistro: fica por dentro do retry e conta cada tentativa.
-                x.AddConfigureEndpointsCallback((_, _, cfg) => cfg.UseFilter(Observador));
-            });
+            // Registrado depois do ConfigurarRegistro: o filtro fica por dentro do retry e conta cada tentativa.
+            s.SubstituirMensageriaPeloHarness(OpcoesMensageria,
+                x => x.AddConfigureEndpointsCallback((_, _, cfg) => cfg.UseFilter(Observador)));
         }));
 
         // dispara o startup, que aplica migrations, cria admin e sobe o bus
         _ = Factory.CreateClient();
         Harness = Factory.Services.GetRequiredService<ITestHarness>();
-        // Conecta os observadores do harness (Published/Sent/Consumed); o bus já foi iniciado pelo host.
-        await Harness.Start();
         Observador.ConectarComandos(Harness.Bus, Factory.Services.GetRequiredService<NomesMensageria>());
     }
 

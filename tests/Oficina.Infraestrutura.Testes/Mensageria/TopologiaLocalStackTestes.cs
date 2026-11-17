@@ -141,6 +141,24 @@ public sealed class TopologiaLocalStackTestes : IClassFixture<LocalStackFixture>
     }
 
     [Fact]
+    public async Task AmazonSqs_FilaDaSagaAssinaCadaEventoQueBillingEExecucaoPublicam()
+    {
+        var arns = await _fx.ListarTopicosAsync();
+        var esperados = EventosAssinados.Select(t => $"test-oficina-saga-{t.Name}")
+            .Concat(new[] { "test-oficina-os-OrdemServicoAberta", "test-oficina-os-CancelamentoSolicitado" });
+
+        foreach (var topico in esperados)
+        {
+            var arn = arns.Single(a => NomeFinal(a, ':') == topico);
+            var assinaturas = (await _fx.Sns.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest { TopicArn = arn }))
+                .Subscriptions ?? new List<Subscription>();
+
+            assinaturas.Should().Contain(a => a.Protocol == "sqs" && a.Endpoint.EndsWith(":test-oficina-os-saga"),
+                $"a fila da saga deve assinar {topico}");
+        }
+    }
+
+    [Fact]
     public async Task AmazonSqs_FilaDaSagaEFilaDoBusPorInstancia()
     {
         var filaBus = new NomesMensageria(LocalStackFixture.Prefixo).FilaBus(NomesMensageria.InstanciaAtual());

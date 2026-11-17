@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Amazon.SimpleNotificationService;
 using Amazon.SQS;
 using MassTransit;
@@ -86,7 +85,6 @@ public static class DependencyInjectionMensageria
             o.UseBusOutbox();
             o.QueryDelay = TimeSpan.FromMilliseconds(opcoes.IntervaloOutboxMs);
         });
-        ManterSoUltimaNotificacaoDoBusOutbox(x);
 
         x.AddSagaStateMachine<OrdemServicoSaga, EstadoSagaOrdemServico>()
             .EntityFrameworkRepository(r =>
@@ -101,21 +99,6 @@ public static class DependencyInjectionMensageria
         x.AddConfigureEndpointsCallback((ctx, _, cfg) => ConfigurarEndpoint(ctx, cfg, opcoes));
     }
 
-    /// <summary>
-    /// O <c>AddMassTransitTestHarness</c> sobre um <c>AddMassTransit</c> anterior deixa dois
-    /// <see cref="MassTransit.Middleware.Outbox.IBusOutboxNotification"/> registrados; o serviço de entrega
-    /// do bus outbox recebe um que o bus nunca inicializou e falha em loop (NullReferenceException em
-    /// <c>WaitForDelivery</c>). Fica só o último (o deste registro). Em produção há um só: no-op.
-    /// </summary>
-    private static void ManterSoUltimaNotificacaoDoBusOutbox(IServiceCollection services)
-    {
-        var registros = services
-            .Where(d => d.ServiceType == typeof(MassTransit.Middleware.Outbox.IBusOutboxNotification))
-            .ToList();
-        foreach (var anterior in registros.Take(registros.Count - 1))
-            services.Remove(anterior);
-    }
-
     /// <summary>Só o que é do bus (usado só na produção; nos testes o bus é o in-memory do harness).</summary>
     public static void ConfigurarBus<TEndpoint>(
         IBusRegistrationContext ctx, IBusFactoryConfigurator<TEndpoint> cfg, NomesMensageria nomes)
@@ -128,19 +111,8 @@ public static class DependencyInjectionMensageria
         cfg.ConfigureEndpoints(ctx);
     }
 
-    /// <summary>
-    /// Endpoints já configurados. O <c>AddMassTransitTestHarness</c> refaz o registro sobre um
-    /// <c>AddMassTransit</c> anterior sem remover os callbacks de endpoint dele: sem esta guarda, outbox,
-    /// retry e redelivery seriam aplicados duas vezes (outbox aninhado falha com "connection is already
-    /// in a transaction").
-    /// </summary>
-    private static readonly ConditionalWeakTable<IReceiveEndpointConfigurator, object> EndpointsConfigurados = new();
-
     public static void ConfigurarEndpoint(IRegistrationContext ctx, IReceiveEndpointConfigurator cfg, OpcoesMensageria opcoes)
     {
-        if (!EndpointsConfigurados.TryAdd(cfg, EndpointsConfigurados))
-            return;
-
         ConfigurarRetentativas(cfg, opcoes);
         // Mais interno: cada tentativa (retry/redelivery) abre escopo, DbContext e transação novos.
         cfg.UseEntityFrameworkOutbox<OficinaDbContext>(ctx);
