@@ -88,9 +88,10 @@ que não compensam.
   três repositórios.
 - ⚠️ `EstornoFalhou` exige intervenção manual (saga em `Compensando`, alerta Critical); não há
   timeout de aprovação (não-objetivo).
-- ⚠️ A [RFC-004](RFC-004-topologia-quatro-repositorios.md) dizia que o `oficina-app` nunca
-  aplica Terraform; na Fase 4 ele aplica o próprio `terraform/` (role IRSA), via `infra.yml`
-  com a role compartilhada `oficina-gha-infra`.
+- ⚠️ A [RFC-004](RFC-004-topologia-quatro-repositorios.md) tratava o `oficina-app` como
+  consumidor do contrato SSM, sem Terraform próprio. Na Fase 4 ele passa a ter um `terraform/`
+  (role IRSA e o parâmetro `/oficina/os-service/<amb>/irsa_role_arn`), aplicado pelo
+  `infra.yml` com a role compartilhada `oficina-gha-infra`.
 
 ## 5. Como isto está implementado
 

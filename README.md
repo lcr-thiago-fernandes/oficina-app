@@ -75,6 +75,27 @@ Mercado Pago entram pelo API Gateway. Entre os serviços, **só mensageria assí
 outro. A Lambda de autenticação lê o PostgreSQL do OS Service (`auth.usuario` e
 `clientes.cliente`) por contrato da Fase 3, inalterado.
 
+### Por que três serviços e estas tecnologias
+
+Cada escolha abaixo tem alternativas avaliadas e consequências registradas no documento
+linkado; aqui fica o resumo para quem lê só este README.
+
+| Decisão | Por quê | Alternativa descartada | Registro |
+|---|---|---|---|
+| **Três serviços: OS, Billing, Execução** | Mapeiam as três áreas do desafio (atendimento, cobrança, oficina) e têm ciclos e dados próprios; o Billing isola a integração externa (Mercado Pago). Clientes, veículos, catálogo e estoque ficam no OS Service: são o contexto de atendimento e a origem dos preços do orçamento | Separar também Clientes/Catálogo/Estoque (5–6 serviços para um projeto solo, sem ganho para o fluxo da OS) | [RFC-006 §2.1](docs/rfc/RFC-006-microsservicos-saga-orquestrada.md#21-divisão-em-serviços) |
+| **Saga orquestrada no OS Service** (MassTransit State Machine) | 4 participantes, 3 pontos de falha e compensação em cascata: fluxo e compensações num lugar só, testável no CI com o test harness e o BDD | Coreografia (fluxo espalhado, dependência cíclica); AWS Step Functions (lógica fora do .NET, difícil de testar no CI) | [RFC-006 §2.2](docs/rfc/RFC-006-microsservicos-saga-orquestrada.md#22-coordenação-da-transação), [ADR-021](docs/arquitetura/ADR-021-saga-orquestrada-masstransit.md) |
+| **Assíncrono entre serviços, REST só na borda** | Um serviço fora do ar não trava os outros: a mensagem espera na fila e a saga retoma | REST síncrono em cadeia (monolito distribuído, sem compensação) | [RFC-006 §2.2](docs/rfc/RFC-006-microsservicos-saga-orquestrada.md#22-coordenação-da-transação) |
+| **Amazon SNS + SQS via MassTransit 8.x** | Gerenciado (nada para operar no EKS), custo praticamente zero, LocalStack no ambiente local; MassTransit 8.x é Apache-2.0 e traz saga, outbox, retry e test harness | RabbitMQ no cluster (StatefulSet para operar); Kafka/MSK (caro e desproporcional); MassTransit 9 (licença comercial) | [ADR-022](docs/arquitetura/ADR-022-mensageria-sns-sqs-masstransit.md) |
+| **PostgreSQL 16 no OS Service** | Domínio relacional (cliente ↔ veículo ↔ OS ↔ itens ↔ peças), reserva de estoque em transação `Serializable`, estado da saga e outbox na mesma transação do domínio | — (já era o banco da Fase 3; continua no RDS do `oficina-infra-db`) | [ADR-023](docs/arquitetura/ADR-023-bancos-por-servico.md), [ADR-002](docs/arquitetura/ADR-002-postgresql.md) |
+| **DynamoDB no Billing e na Execução** (o banco NoSQL exigido) | Orçamento/pagamento e fila de execução são documentos por OS lidos por chave; escrita condicional dá idempotência e lock otimista; on-demand custa centavos | MongoDB/DocumentDB (cluster e VPC; ~US$ 60/mês no menor porte) | [ADR-023](docs/arquitetura/ADR-023-bancos-por-servico.md) |
+| **Outbox no OS Service, idempotência nos participantes** | Nenhuma mensagem da saga se perde nem é aplicada duas vezes; o DynamoDB não compartilha transação com o SQS, então Billing e Execução usam escrita condicional | Publicar direto após o commit (perde mensagem se o processo cair no meio) | [ADR-024](docs/arquitetura/ADR-024-outbox-e-idempotencia.md) |
+| **Reserva de estoque (*semantic lock*)** | Sem o "I" de ACID na saga, outra OS não pode ler um saldo que ainda pode voltar | Baixar na abertura e devolver na compensação (leitura de saldo sujo) | [ADR-025](docs/arquitetura/ADR-025-reserva-estoque-semantic-lock.md) |
+| **SonarQube no CI** (efêmero; SonarCloud com `SONAR_TOKEN`) | Análise real com quality gate em todo PR, sem depender de conta externa | Pular a análise sem token (CI verde sem análise) | [ADR-026](docs/arquitetura/ADR-026-sonarqube-efemero-no-ci.md) |
+
+Mantidos da Fase 3: AWS (EKS, RDS, API Gateway + Lambda Authorizer), .NET 8 com Clean
+Architecture, New Relic e GitHub Actions com OIDC ([RFC-001](docs/rfc/RFC-001-nuvem-aws.md) a
+[RFC-005](docs/rfc/RFC-005-observabilidade-new-relic.md)).
+
 ### Repositórios da Fase 4
 
 | Repositório | Papel | Banco | PR da Fase 4 |
@@ -573,9 +594,14 @@ docker compose -f docker/docker-compose.fase4.yml --env-file .env up -d --build
 
 Sobe PostgreSQL, DynamoDB Local, LocalStack e os três serviços (OS em `:8080`, Billing em
 `:8082/billing`, Execução em `:8083/execucao`), com o Billing no modo de pagamento simulado
-(`Pagamento__Modo=Simulado`). O roteiro [`http/fase4-demo.http`](http/fase4-demo.http)
-percorre o caminho feliz e as três falhas; para a falha da execução, a Execução sobe com
-capacidade 0 (`CAPACIDADE_EXECUCAO=0`).
+(`Pagamento__Modo=Simulado`: o pagamento é decidido por
+`POST /billing/api/v1/simulador/pagamentos/{osId}`, perfil Admin). O roteiro
+[`http/fase4-demo.http`](http/fase4-demo.http) percorre o caminho feliz e as três falhas; para
+a falha da execução, recrie só a Execução com capacidade 0:
+
+```bash
+CAPACIDADE_EXECUCAO=0 docker compose -f docker/docker-compose.fase4.yml --env-file .env up -d --wait execucao-service
+```
 
 ### Token para testes locais
 
