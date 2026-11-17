@@ -105,15 +105,15 @@ public sealed class PassosSagaOrdemServico : IPassosSagaOrdemServico
     public Task RegistrarExecucaoEnfileiradaAsync(Guid ordemServicoId, CancellationToken ct) =>
         AplicarTransicaoAsync(ordemServicoId, StatusOrdemDeServico.EmFilaExecucao, os => os.EnfileirarExecucao(), ct);
 
-    public Task RegistrarStatusExecucaoAsync(Guid ordemServicoId, EtapaExecucao etapa, CancellationToken ct) =>
-        etapa switch
+    public async Task<bool> RegistrarStatusExecucaoAsync(Guid ordemServicoId, EtapaExecucao etapa, CancellationToken ct) =>
+        await (etapa switch
         {
             EtapaExecucao.EmDiagnostico => AplicarTransicaoAsync(
                 ordemServicoId, StatusOrdemDeServico.EmDiagnostico, os => os.IniciarDiagnostico(), ct),
             EtapaExecucao.EmReparo => AplicarTransicaoAsync(
                 ordemServicoId, StatusOrdemDeServico.EmReparo, os => os.IniciarReparo(), ct),
             _ => throw new ArgumentOutOfRangeException(nameof(etapa), etapa, "Etapa de execução desconhecida.")
-        };
+        }) is not null;
 
     public Task RegistrarExecucaoFinalizadaAsync(Guid ordemServicoId, CancellationToken ct) =>
         AplicarTransicaoAsync(ordemServicoId, StatusOrdemDeServico.Finalizada, os => os.Finalizar(), ct);

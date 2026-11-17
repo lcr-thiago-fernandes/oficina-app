@@ -2,6 +2,15 @@
   "version": 1,
   "dependencies": {
     "net8.0": {
+      "AWSSDK.SecurityToken": {
+        "type": "Direct",
+        "requested": "[3.7.401, )",
+        "resolved": "3.7.401",
+        "contentHash": "I/o0UWNCZumf23JKnEqQlr4j4VXuwdEZ1y+1gG4/RrG0xzF85VIA8lLbJFV/bHguSKVKp5bPdI8ahVft9q98aQ==",
+        "dependencies": {
+          "AWSSDK.Core": "[3.7.400.51, 4.0.0)"
+        }
+      },
       "MassTransit": {
         "type": "Direct",
         "requested": "[8.4.1, )",

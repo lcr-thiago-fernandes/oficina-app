@@ -3,6 +3,7 @@ using Oficina.Adaptadores;
 using Oficina.Aplicacao;
 using Oficina.Api.Configuracao;
 using Oficina.Infraestrutura;
+using Oficina.Infraestrutura.Mensageria;
 using Oficina.Infraestrutura.Persistencia;
 using OpenTelemetry.Metrics;
 using Serilog;
@@ -53,6 +54,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AdicionarInfraestrutura(builder.Configuration);
+builder.Services.AdicionarMensageria(builder.Configuration);
 builder.Services.AdicionarAplicacao();
 builder.Services.AdicionarAdaptadores();
 builder.Services.AdicionarJwtBearer(builder.Configuration);

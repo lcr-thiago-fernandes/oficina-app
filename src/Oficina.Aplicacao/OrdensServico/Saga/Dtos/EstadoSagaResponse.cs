@@ -11,9 +11,11 @@ public sealed record EstadoSagaResponse(
     DateTimeOffset AtualizadaEm,
     IReadOnlyList<PassoSagaResponse> Trilha);
 
+/// <param name="Estado">Estado da saga depois do passo.</param>
 public sealed record PassoSagaResponse(
     string Passo,
     string Resultado,
     bool Compensacao,
     DateTimeOffset OcorridoEm,
-    string? Detalhe);
+    string? Detalhe,
+    string Estado);

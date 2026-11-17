@@ -95,6 +95,8 @@ public sealed class OrdemServicoSagaTestes : IAsyncLifetime
             .ReturnsAsync(Pedido);
         _passos.Setup(p => p.ConfirmarPagamentoAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(PedidoExecucao);
+        _passos.Setup(p => p.RegistrarStatusExecucaoAsync(It.IsAny<Guid>(), It.IsAny<EtapaExecucao>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         _provider = new ServiceCollection()
             .AddSingleton(Options.Create(new OpcoesMensageria { PrefixoAmbiente = "teste" }))
@@ -370,6 +372,56 @@ public sealed class OrdemServicoSagaTestes : IAsyncLifetime
         var etapa = Enum.Parse<EtapaExecucao>(status.ToString());
         _passos.Verify(p => p.RegistrarStatusExecucaoAsync(_id, etapa, It.IsAny<CancellationToken>()), Times.Once);
         _registrador.Registros.Should().Equal((PassosSaga.Execucao, PassosSaga.Sucesso, false, status.ToString()));
+    }
+
+    [Fact]
+    public async Task StatusExecucaoAlterado_StatusJaAplicadoNaOs_NaoGravaPassoNaTrilha()
+    {
+        await LevarSagaAteAsync("EmExecucao");
+        _passos.Setup(p => p.RegistrarStatusExecucaoAsync(_id, EtapaExecucao.EmDiagnostico, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        await PublicarSemErroAsync(new StatusExecucaoAlterado { OrdemServicoId = _id, OcorridoEm = DateTime.UtcNow, StatusExecucao = StatusExecucao.EmDiagnostico });
+
+        await DeveEstarEmAsync("EmExecucao");
+        _passos.Verify(p => p.RegistrarStatusExecucaoAsync(_id, EtapaExecucao.EmDiagnostico, It.IsAny<CancellationToken>()), Times.Once);
+        _registrador.Registros.Should().BeEmpty("o status repetido não muda a OS e não é um passo novo");
+    }
+
+    [Fact]
+    public async Task Trilha_CaminhoFeliz_RegistraOEstadoNovoDeCadaPasso()
+    {
+        await LevarSagaAteAsync("EmExecucao", limparRegistros: false);
+        await PublicarSemErroAsync(Mensagem("StatusExecucaoAlterado"));
+        await PublicarSemErroAsync(Mensagem("ExecucaoFinalizada"));
+
+        _registrador.Estados.Should().Equal(
+            "AguardandoOrcamento", "AguardandoAprovacao", "AguardandoPagamento", "AguardandoExecucao",
+            "EmExecucao", "EmExecucao", "Concluida");
+    }
+
+    [Fact]
+    public async Task Trilha_Compensacao_RegistraOEstadoNovoDeCadaPasso()
+    {
+        await LevarSagaAteAsync("Compensando", limparRegistros: false);
+        await PublicarSemErroAsync(Mensagem("PagamentoEstornado"));
+
+        _registrador.Passos.Select(p => p.Passo).Should().Equal(
+            PassosSaga.SolicitarOrcamento, PassosSaga.GerarOrcamento, PassosSaga.AprovarOrcamento,
+            PassosSaga.ConfirmarPagamento, PassosSaga.EnfileirarExecucao, PassosSaga.EstornarPagamento);
+        _registrador.Estados.Should().Equal(
+            "AguardandoOrcamento", "AguardandoAprovacao", "AguardandoPagamento", "AguardandoExecucao",
+            "Compensando", "Cancelada");
+    }
+
+    [Fact]
+    public async Task Trilha_OrcamentoGeradoImplicito_RegistraAguardandoAprovacaoAntesDeAguardandoPagamento()
+    {
+        await LevarSagaAteAsync("AguardandoOrcamento");
+
+        await PublicarSemErroAsync(Mensagem("OrcamentoAprovado"));
+
+        _registrador.Estados.Should().Equal("AguardandoAprovacao", "AguardandoPagamento");
     }
 
     [Fact]

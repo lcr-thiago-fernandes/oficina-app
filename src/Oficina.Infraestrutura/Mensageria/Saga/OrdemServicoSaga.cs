@@ -107,19 +107,19 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
                     Guardar(ctx, pedido);
                 })
                 .Send(_nomes.EnderecoComandosBilling, ctx => CriarGerarOrcamento(ctx.Saga, Obter<PedidoOrcamento>(ctx)!))
-                .Then(ctx => Registrar(ctx, PassosSaga.SolicitarOrcamento, PassosSaga.Sucesso, false))
-                .TransitionTo(AguardandoOrcamento));
+                .TransitionTo(AguardandoOrcamento)
+                .Then(ctx => Registrar(ctx, PassosSaga.SolicitarOrcamento, PassosSaga.Sucesso, false)));
 
         During(AguardandoOrcamento,
             When(OrcamentoGerado)
                 .ThenAsync(ctx => Passos(ctx).RegistrarOrcamentoGeradoAsync(ctx.Saga.CorrelationId, ctx.CancellationToken))
-                .Then(ctx => Registrar(ctx, PassosSaga.GerarOrcamento, PassosSaga.Sucesso, false))
-                .TransitionTo(AguardandoAprovacao),
+                .TransitionTo(AguardandoAprovacao)
+                .Then(ctx => Registrar(ctx, PassosSaga.GerarOrcamento, PassosSaga.Sucesso, false)),
             When(OrcamentoFalhou)
                 .Then(ctx => ctx.Saga.Motivo = ctx.Message.Motivo)
                 .ThenAsync(ctx => Passos(ctx).CancelarAsync(ctx.Saga.CorrelationId, ctx.Saga.Motivo!, ctx.CancellationToken))
-                .Then(ctx => Registrar(ctx, PassosSaga.GerarOrcamento, PassosSaga.Falha, true))
-                .TransitionTo(Cancelada),
+                .TransitionTo(Cancelada)
+                .Then(ctx => Registrar(ctx, PassosSaga.GerarOrcamento, PassosSaga.Falha, true)),
             // Billing pode cair entre salvar o orçamento e publicar OrcamentoGerado (o GerarOrcamento
             // reentregue não republica): a decisão do cliente chega sem o OrcamentoGerado. A OS
             // passa por AguardandoAprovacao antes, como no caminho normal.
@@ -140,22 +140,22 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
                 .IfElse(ctx => Obter<PedidoExecucao>(ctx) is not null,
                     confirmado => confirmado
                         .Send(_nomes.EnderecoComandosExecucao, ctx => CriarIniciarExecucao(ctx.Saga, Obter<PedidoExecucao>(ctx)!))
-                        .Then(ctx => Registrar(ctx, PassosSaga.ConfirmarPagamento, PassosSaga.Sucesso, false))
-                        .TransitionTo(AguardandoExecucao),
+                        .TransitionTo(AguardandoExecucao)
+                        .Then(ctx => Registrar(ctx, PassosSaga.ConfirmarPagamento, PassosSaga.Sucesso, false)),
                     // OS cancelada ou reserva liberada antes do pagamento: nada foi baixado do estoque;
                     // o pagamento é estornado e a compensação termina em Cancelada (PagamentoEstornado).
                     naoHonrado => naoHonrado
                         .Then(ctx => ctx.Saga.Motivo = MotivoPagamentoNaoHonrado)
                         .Send(_nomes.EnderecoComandosBilling, ctx => CriarEstornarPagamento(ctx.Saga, MotivoPagamentoNaoHonrado))
-                        .Then(ctx => Registrar(ctx, PassosSaga.ConfirmarPagamento, PassosSaga.Falha, true, ctx.Message.PagamentoId))
-                        .TransitionTo(Compensando)),
+                        .TransitionTo(Compensando)
+                        .Then(ctx => Registrar(ctx, PassosSaga.ConfirmarPagamento, PassosSaga.Falha, true, ctx.Message.PagamentoId))),
             // Qualquer motivo do Billing (cartao_recusado, valor_divergente, pagamento_estornado...) é
             // falha de pagamento. O Billing já cancelou o orçamento: sem EstornarPagamento nem CancelarOrcamento.
             When(PagamentoRecusado)
                 .Then(ctx => ctx.Saga.Motivo = ctx.Message.Motivo)
                 .ThenAsync(ctx => Passos(ctx).CancelarAsync(ctx.Saga.CorrelationId, ctx.Saga.Motivo!, ctx.CancellationToken))
-                .Then(ctx => Registrar(ctx, PassosSaga.ConfirmarPagamento, PassosSaga.Falha, true, ctx.Message.Motivo))
-                .TransitionTo(Cancelada));
+                .TransitionTo(Cancelada)
+                .Then(ctx => Registrar(ctx, PassosSaga.ConfirmarPagamento, PassosSaga.Falha, true, ctx.Message.Motivo)));
 
         During(AguardandoOrcamento, AguardandoAprovacao, AguardandoPagamento,
             When(CancelamentoSolicitado)
@@ -167,8 +167,8 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
                     OcorridoEm = DateTime.UtcNow,
                     Motivo = ctx.Saga.Motivo!,
                 })
-                .Then(ctx => Registrar(ctx, PassosSaga.Cancelamento, PassosSaga.Compensado, true))
-                .TransitionTo(Cancelada));
+                .TransitionTo(Cancelada)
+                .Then(ctx => Registrar(ctx, PassosSaga.Cancelamento, PassosSaga.Compensado, true)));
 
         // Pagamento já confirmado: o atendente não cancela mais (o CancelarOrdemUseCase barra; isto
         // cobre a janela entre a checagem dele e o consumo). Fica registrado na trilha.
@@ -179,30 +179,33 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
         During(AguardandoExecucao,
             When(ExecucaoEnfileirada)
                 .ThenAsync(ctx => Passos(ctx).RegistrarExecucaoEnfileiradaAsync(ctx.Saga.CorrelationId, ctx.CancellationToken))
-                .Then(ctx => Registrar(ctx, PassosSaga.EnfileirarExecucao, PassosSaga.Sucesso, false))
-                .TransitionTo(EmExecucao),
+                .TransitionTo(EmExecucao)
+                .Then(ctx => Registrar(ctx, PassosSaga.EnfileirarExecucao, PassosSaga.Sucesso, false)),
             When(ExecucaoRecusada)
                 .Then(ctx => ctx.Saga.Motivo = ctx.Message.Motivo)
                 .Send(_nomes.EnderecoComandosBilling, ctx => CriarEstornarPagamento(ctx.Saga, ctx.Message.Motivo))
-                .Then(ctx => Registrar(ctx, PassosSaga.EnfileirarExecucao, PassosSaga.Falha, true))
-                .TransitionTo(Compensando));
+                .TransitionTo(Compensando)
+                .Then(ctx => Registrar(ctx, PassosSaga.EnfileirarExecucao, PassosSaga.Falha, true)));
 
         During(EmExecucao,
+            // Status repetido (ou atrasado) não muda a OS e não vira passo na trilha.
             When(StatusExecucaoAlterado)
-                .ThenAsync(ctx => Passos(ctx).RegistrarStatusExecucaoAsync(
-                    ctx.Saga.CorrelationId, MapearEtapa(ctx.Message.StatusExecucao), ctx.CancellationToken))
-                .Then(ctx => Registrar(ctx, PassosSaga.Execucao, PassosSaga.Sucesso, false, ctx.Message.StatusExecucao.ToString())),
+                .ThenAsync(async ctx => Guardar(ctx, new StatusExecucaoAplicado(await Passos(ctx).RegistrarStatusExecucaoAsync(
+                    ctx.Saga.CorrelationId, MapearEtapa(ctx.Message.StatusExecucao), ctx.CancellationToken))))
+                .If(ctx => Obter<StatusExecucaoAplicado>(ctx)!.Aplicado,
+                    aplicado => aplicado
+                        .Then(ctx => Registrar(ctx, PassosSaga.Execucao, PassosSaga.Sucesso, false, ctx.Message.StatusExecucao.ToString()))),
             When(ExecucaoFinalizada)
                 .ThenAsync(ctx => Passos(ctx).RegistrarExecucaoFinalizadaAsync(ctx.Saga.CorrelationId, ctx.CancellationToken))
-                .Then(ctx => Registrar(ctx, PassosSaga.FinalizarExecucao, PassosSaga.Sucesso, false))
-                .TransitionTo(Concluida));
+                .TransitionTo(Concluida)
+                .Then(ctx => Registrar(ctx, PassosSaga.FinalizarExecucao, PassosSaga.Sucesso, false)));
 
         During(Compensando,
             When(PagamentoEstornado)
                 .ThenAsync(ctx => Passos(ctx).CancelarAsync(
                     ctx.Saga.CorrelationId, ctx.Saga.Motivo ?? "Pagamento estornado", ctx.CancellationToken))
-                .Then(ctx => Registrar(ctx, PassosSaga.EstornarPagamento, PassosSaga.Compensado, true))
-                .TransitionTo(Cancelada),
+                .TransitionTo(Cancelada)
+                .Then(ctx => Registrar(ctx, PassosSaga.EstornarPagamento, PassosSaga.Compensado, true)),
             // Nada no domínio: intervenção manual. A saga fica em Compensando com o motivo.
             When(EstornoFalhou)
                 .Then(ctx => ctx.Saga.Motivo = "Estorno falhou: " + ctx.Message.Motivo)
@@ -224,8 +227,8 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
                     tardio => tardio
                         .Then(ctx => ctx.Saga.PagamentoId = ctx.Message.PagamentoId)
                         .Send(_nomes.EnderecoComandosBilling, ctx => CriarEstornarPagamento(ctx.Saga, MotivoPagamentoAposCancelamento))
-                        .Then(ctx => Registrar(ctx, PassosSaga.EstornarPagamento, PassosSaga.Falha, true, ctx.Message.PagamentoId))
-                        .TransitionTo(Compensando)));
+                        .TransitionTo(Compensando)
+                        .Then(ctx => Registrar(ctx, PassosSaga.EstornarPagamento, PassosSaga.Falha, true, ctx.Message.PagamentoId))));
 
         foreach (var (estado, eventos) in EventosIgnoradosPorEstado)
             During(GetState(estado), eventos.Select(e => Ignore(((StateMachine)this).GetEvent(e))).ToArray());
@@ -274,18 +277,19 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
         nameof(PagamentoEstornado), nameof(EstornoFalhou), nameof(CancelamentoSolicitado),
     };
 
-    private static EventActivityBinder<EstadoSagaOrdemServico, T> RegistrarOrcamentoGeradoImplicito<T>(
+    private EventActivityBinder<EstadoSagaOrdemServico, T> RegistrarOrcamentoGeradoImplicito<T>(
         EventActivityBinder<EstadoSagaOrdemServico, T> binder) where T : class =>
         binder
             .ThenAsync(ctx => Passos(ctx).RegistrarOrcamentoGeradoAsync(ctx.Saga.CorrelationId, ctx.CancellationToken))
+            .TransitionTo(AguardandoAprovacao)
             .Then(ctx => Registrar(ctx, PassosSaga.GerarOrcamento, PassosSaga.Sucesso, false, DetalheSemOrcamentoGerado));
 
     private EventActivityBinder<EstadoSagaOrdemServico, OrcamentoAprovado> AprovarOrcamento(
         EventActivityBinder<EstadoSagaOrdemServico, OrcamentoAprovado> binder) =>
         binder
             .ThenAsync(ctx => Passos(ctx).RegistrarOrcamentoAprovadoAsync(ctx.Saga.CorrelationId, ctx.CancellationToken))
-            .Then(ctx => Registrar(ctx, PassosSaga.AprovarOrcamento, PassosSaga.Sucesso, false))
-            .TransitionTo(AguardandoPagamento);
+            .TransitionTo(AguardandoPagamento)
+            .Then(ctx => Registrar(ctx, PassosSaga.AprovarOrcamento, PassosSaga.Sucesso, false));
 
     private EventActivityBinder<EstadoSagaOrdemServico, OrcamentoRejeitado> RejeitarOrcamento(
         EventActivityBinder<EstadoSagaOrdemServico, OrcamentoRejeitado> binder) =>
@@ -293,12 +297,16 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
             .Then(ctx => ctx.Saga.Motivo = "Orçamento rejeitado: " + (ctx.Message.Motivo ?? "sem motivo"))
             .ThenAsync(ctx => Passos(ctx).RegistrarOrcamentoRejeitadoAsync(
                 ctx.Saga.CorrelationId, ctx.Message.Motivo, ctx.CancellationToken))
-            .Then(ctx => Registrar(ctx, PassosSaga.AprovarOrcamento, PassosSaga.Falha, true))
-            .TransitionTo(Cancelada);
+            .TransitionTo(Cancelada)
+            .Then(ctx => Registrar(ctx, PassosSaga.AprovarOrcamento, PassosSaga.Falha, true));
 
     private static IPassosSagaOrdemServico Passos(ConsumeContext ctx) =>
         ctx.GetServiceOrCreateInstance<IPassosSagaOrdemServico>();
 
+    /// <summary>
+    /// Grava o passo na trilha. Sempre chamado <b>depois</b> do <c>TransitionTo</c> do mesmo evento: o
+    /// registrador lê <see cref="EstadoSagaOrdemServico.EstadoAtual"/>, que deve ser o estado novo.
+    /// </summary>
     private static void Registrar(
         BehaviorContext<EstadoSagaOrdemServico> ctx, string passo, string resultado, bool compensacao, string? detalhe = null) =>
         ctx.GetServiceOrCreateInstance<IRegistradorPassoSaga>().Registrar(ctx.Saga, passo, resultado, compensacao, detalhe);
@@ -312,6 +320,8 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
         public ResultadoDoPasso(T? valor) => Valor = valor;
         public T? Valor { get; }
     }
+
+    private sealed record StatusExecucaoAplicado(bool Aplicado);
 
     private static void Guardar<T>(PipeContext ctx, T? valor) where T : class =>
         ctx.AddOrUpdatePayload(() => new ResultadoDoPasso<T>(valor), _ => new ResultadoDoPasso<T>(valor));

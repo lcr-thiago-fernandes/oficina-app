@@ -24,7 +24,13 @@ public interface IPassosSagaOrdemServico
     Task<PedidoExecucao?> ConfirmarPagamentoAsync(Guid ordemServicoId, CancellationToken ct);
 
     Task RegistrarExecucaoEnfileiradaAsync(Guid ordemServicoId, CancellationToken ct);
-    Task RegistrarStatusExecucaoAsync(Guid ordemServicoId, EtapaExecucao etapa, CancellationToken ct);
+
+    /// <summary>
+    /// Avança a OS para a etapa informada pela Execução. Devolve <c>false</c> (no-op) quando a OS já está
+    /// nessa etapa ou além dela, ou cancelada: status repetido/atrasado não é um passo novo da trilha.
+    /// </summary>
+    Task<bool> RegistrarStatusExecucaoAsync(Guid ordemServicoId, EtapaExecucao etapa, CancellationToken ct);
+
     Task RegistrarExecucaoFinalizadaAsync(Guid ordemServicoId, CancellationToken ct);
 
     /// <summary>

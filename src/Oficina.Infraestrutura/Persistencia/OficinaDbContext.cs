@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Oficina.Dominio.Auth;
@@ -26,6 +27,12 @@ public class OficinaDbContext : DbContext
     {
         modelBuilder.HasDefaultSchema("public");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(OficinaDbContext).Assembly);
+
+        // Inbox/outbox do MassTransit (consumo da saga e bus outbox da Api) no schema da saga.
+        modelBuilder.AddInboxStateEntity(b => b.ToTable("inbox_state", "saga"));
+        modelBuilder.AddOutboxMessageEntity(b => b.ToTable("outbox_message", "saga"));
+        modelBuilder.AddOutboxStateEntity(b => b.ToTable("outbox_state", "saga"));
+
         base.OnModelCreating(modelBuilder);
     }
 

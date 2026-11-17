@@ -79,6 +79,14 @@
         "resolved": "3.7.402.47",
         "contentHash": "hOUUidv5tmxRb6S4Vgt/Vr17Gix+g1VOIRU14AkzxRixBPHyIXxfKlVQ3jRyItO+4yB24RdTkRor8VkteMlyuA=="
       },
+      "AWSSDK.SecurityToken": {
+        "type": "Transitive",
+        "resolved": "3.7.401",
+        "contentHash": "I/o0UWNCZumf23JKnEqQlr4j4VXuwdEZ1y+1gG4/RrG0xzF85VIA8lLbJFV/bHguSKVKp5bPdI8ahVft9q98aQ==",
+        "dependencies": {
+          "AWSSDK.Core": "[3.7.400.51, 4.0.0)"
+        }
+      },
       "AWSSDK.SimpleNotificationService": {
         "type": "Transitive",
         "resolved": "3.7.400.141",
@@ -1880,6 +1888,7 @@
       "oficina.infraestrutura": {
         "type": "Project",
         "dependencies": {
+          "AWSSDK.SecurityToken": "[3.7.401, )",
           "MassTransit": "[8.4.1, )",
           "MassTransit.AmazonSQS": "[8.4.1, )",
           "MassTransit.EntityFrameworkCore": "[8.4.1, )",

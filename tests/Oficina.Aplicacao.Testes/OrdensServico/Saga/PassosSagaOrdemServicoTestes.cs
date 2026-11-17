@@ -261,8 +261,9 @@ public class PassosSagaOrdemServicoTestes
     {
         var (os, _) = OsComReserva(StatusOrdemDeServico.EmFilaExecucao);
 
-        await Sut.RegistrarStatusExecucaoAsync(os.Id, EtapaExecucao.EmDiagnostico, default);
+        var aplicado = await Sut.RegistrarStatusExecucaoAsync(os.Id, EtapaExecucao.EmDiagnostico, default);
 
+        aplicado.Should().BeTrue();
         os.Status.Should().Be(StatusOrdemDeServico.EmDiagnostico);
     }
 
@@ -271,8 +272,9 @@ public class PassosSagaOrdemServicoTestes
     {
         var (os, _) = OsComReserva(StatusOrdemDeServico.EmFilaExecucao);
 
-        await Sut.RegistrarStatusExecucaoAsync(os.Id, EtapaExecucao.EmReparo, default);
+        var aplicado = await Sut.RegistrarStatusExecucaoAsync(os.Id, EtapaExecucao.EmReparo, default);
 
+        aplicado.Should().BeTrue();
         os.Status.Should().Be(StatusOrdemDeServico.EmReparo);
         _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -282,8 +284,9 @@ public class PassosSagaOrdemServicoTestes
     {
         var (os, _) = OsComReserva(StatusOrdemDeServico.EmReparo);
 
-        await Sut.RegistrarStatusExecucaoAsync(os.Id, EtapaExecucao.EmDiagnostico, default);
+        var aplicado = await Sut.RegistrarStatusExecucaoAsync(os.Id, EtapaExecucao.EmDiagnostico, default);
 
+        aplicado.Should().BeFalse();
         os.Status.Should().Be(StatusOrdemDeServico.EmReparo);
         VerificarNadaPersistido();
     }
@@ -293,9 +296,22 @@ public class PassosSagaOrdemServicoTestes
     {
         var (os, _) = OsComReserva(StatusOrdemDeServico.Finalizada);
 
-        await Sut.RegistrarStatusExecucaoAsync(os.Id, EtapaExecucao.EmDiagnostico, default);
+        var aplicado = await Sut.RegistrarStatusExecucaoAsync(os.Id, EtapaExecucao.EmDiagnostico, default);
 
+        aplicado.Should().BeFalse();
         os.Status.Should().Be(StatusOrdemDeServico.Finalizada);
+        VerificarNadaPersistido();
+    }
+
+    [Fact]
+    public async Task RegistrarStatusExecucao_StatusRepetido_DevolveFalseSemPersistir()
+    {
+        var (os, _) = OsComReserva(StatusOrdemDeServico.EmDiagnostico);
+
+        var aplicado = await Sut.RegistrarStatusExecucaoAsync(os.Id, EtapaExecucao.EmDiagnostico, default);
+
+        aplicado.Should().BeFalse();
+        os.Status.Should().Be(StatusOrdemDeServico.EmDiagnostico);
         VerificarNadaPersistido();
     }
 
