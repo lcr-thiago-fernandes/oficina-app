@@ -6,5 +6,7 @@ public sealed record PecaResponse(
     string Nome,
     decimal PrecoUnitario,
     int SaldoAtual,
+    int SaldoReservado,
+    int SaldoDisponivel,
     bool Ativo,
     DateTimeOffset CriadoEm);

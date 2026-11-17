@@ -4,8 +4,8 @@ namespace Oficina.Dominio.Clientes;
 
 public sealed class Placa : IEquatable<Placa>
 {
-    private static readonly Regex Antigo = new("^[A-Z]{3}[0-9]{4}$", RegexOptions.Compiled);
-    private static readonly Regex Mercosul = new("^[A-Z]{3}[0-9][A-Z][0-9]{2}$", RegexOptions.Compiled);
+    private static readonly Regex Antigo = new("^[A-Z]{3}[0-9]{4}$", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+    private static readonly Regex Mercosul = new("^[A-Z]{3}[0-9][A-Z][0-9]{2}$", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
 
     public string Valor { get; }
 

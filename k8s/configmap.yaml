@@ -18,3 +18,9 @@ data:
   # OBS: a connection string completa contém a SENHA do banco → fica no Secret
   # (chave ConnectionStrings__Default), não aqui. O endpoint do RDS PostgreSQL vem
   # do output do Terraform (Plano 09) e é injetado na criação do Secret pelo CI.
+  # Mensageria (MassTransit sobre Amazon SQS/SNS). As credenciais vem do IRSA
+  # (ServiceAccount oficina-api), nao de chaves. PrefixoAmbiente isola as filas/topicos
+  # de hml e prd na mesma conta ("prd" ou "hml").
+  Mensageria__Transporte: "AmazonSqs"
+  Mensageria__PrefixoAmbiente: "${AMBIENTE}"
+  Mensageria__Regiao: "${AWS_REGION}"

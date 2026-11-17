@@ -19,4 +19,6 @@ public sealed record OrdemResponse(
     DateTimeOffset? FinalizadaEm,
     DateTimeOffset? EntregueEm,
     IReadOnlyList<ItemServicoResponse> ItensServico,
-    IReadOnlyList<ItemPecaResponse> ItensPeca);
+    IReadOnlyList<ItemPecaResponse> ItensPeca,
+    string? MotivoCancelamento,
+    DateTimeOffset? CanceladaEm);

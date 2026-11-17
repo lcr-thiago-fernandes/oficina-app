@@ -81,6 +81,234 @@ jobs:
         continue-on-error: true
         run: dotnet format Oficina.sln --verify-no-changes --no-restore --verbosity diagnostic
 
+  sonar:
+    # S2068 ignorado em appsettings.json: so a connection string de dev local (localhost); segredos reais vem de env/SSM.
+    # Validacao de qualidade (SonarQube) em dois modos:
+    #  - SONAR_TOKEN configurado -> SonarCloud (organizacao em vars.SONAR_ORGANIZATION).
+    #  - SONAR_TOKEN ausente     -> SonarQube Community efemero (service container), sem conta externa:
+    #    analise real com quality gate + resumo das medidas em $GITHUB_STEP_SUMMARY e artefato.
+    # Bloco portavel: chave/nome do projeto derivados de github.event.repository.name.
+    runs-on: ubuntu-latest
+    services:
+      sonarqube:
+        # Sobe sempre: o GitHub Actions nao aceita o contexto `secrets` em services.image
+        # (workflow invalido), entao nao ha condicionamento barato pelo SONAR_TOKEN.
+        image: sonarqube:26.10.0.133078-community
+        env:
+          SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+        ports:
+          - 9000:9000
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || github.repository_owner }}
+      SONARCLOUD_PROJECT_KEY: ${{ github.repository_owner }}_${{ github.event.repository.name }}
+      SONAR_PROJECT_KEY: ${{ github.event.repository.name }}
+      SONAR_PROJECT_NAME: ${{ github.event.repository.name }}
+      SONAR_LOCAL_URL: http://localhost:9000
+      SONAR_EXCLUSIONS: "terraform/**,k8s/**,docker/**,**/Migrations/**"
+      SONAR_COVERAGE_EXCLUSIONS: "**/Migrations/**,tests/**"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Install SonarScanner
+        run: dotnet tool install --global dotnet-sonarscanner --version 12.1.0
+
+      - name: Detect solution
+        run: |
+          sln=$(ls *.sln | head -1)
+          test -n "$sln" || { echo "::error::Nenhuma .sln na raiz"; exit 1; }
+          echo "SOLUTION=$sln" >> "$GITHUB_ENV"
+
+      # ---------- Modo SonarCloud (SONAR_TOKEN presente) ----------
+      - name: Sonar begin (SonarCloud)
+        if: env.SONAR_TOKEN != ''
+        run: |
+          dotnet sonarscanner begin \
+            /k:"$SONARCLOUD_PROJECT_KEY" \
+            /o:"$SONAR_ORGANIZATION" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.token="$SONAR_TOKEN" \
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.qualitygate.wait=true \
+            /d:sonar.issue.ignore.multicriteria=e1             /d:sonar.issue.ignore.multicriteria.e1.ruleKey="csharpsquid:S2068"             /d:sonar.issue.ignore.multicriteria.e1.resourceKey="**/appsettings.json"             /d:sonar.exclusions="$SONAR_EXCLUSIONS" \
+            /d:sonar.coverage.exclusions="$SONAR_COVERAGE_EXCLUSIONS"
+
+      - name: Build (SonarCloud)
+        if: env.SONAR_TOKEN != ''
+        run: dotnet build "$SOLUTION" -c Release
+
+      - name: Test (SonarCloud)
+        if: env.SONAR_TOKEN != ''
+        run: dotnet test "$SOLUTION" --no-build -c Release --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+
+      - name: Sonar end (SonarCloud)
+        if: env.SONAR_TOKEN != ''
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+
+      # ---------- Modo SonarQube efemero (SONAR_TOKEN ausente) ----------
+      - name: Wait SonarQube UP
+        if: env.SONAR_TOKEN == ''
+        run: |
+          for i in $(seq 1 90); do
+            status=$(curl -fsS "$SONAR_LOCAL_URL/api/system/status" 2>/dev/null | jq -r '.status' 2>/dev/null || true)
+            echo "[$i] status=$status"
+            [ "$status" = "UP" ] && exit 0
+            sleep 5
+          done
+          echo "::error::SonarQube nao ficou UP a tempo"
+          exit 1
+
+      - name: Provision SonarQube (senha admin, token, projeto)
+        if: env.SONAR_TOKEN == ''
+        run: |
+          set -euo pipefail
+          pass="Aa1!$(openssl rand -hex 16)"
+          echo "::add-mask::$pass"
+          curl -fsS -u admin:admin -X POST "$SONAR_LOCAL_URL/api/users/change_password" \
+            --data-urlencode "login=admin" \
+            --data-urlencode "previousPassword=admin" \
+            --data-urlencode "password=$pass"
+          token=$(curl -fsS -u "admin:$pass" -X POST "$SONAR_LOCAL_URL/api/user_tokens/generate" \
+            --data-urlencode "name=ci-${GITHUB_RUN_ID}" | jq -r '.token')
+          test -n "$token" && test "$token" != "null"
+          echo "::add-mask::$token"
+          curl -fsS -u "$token:" -X POST "$SONAR_LOCAL_URL/api/projects/create" \
+            --data-urlencode "project=$SONAR_PROJECT_KEY" \
+            --data-urlencode "name=$SONAR_PROJECT_NAME"
+          echo
+          echo "SONAR_LOCAL_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Sonar begin (SonarQube local)
+        if: env.SONAR_TOKEN == ''
+        run: |
+          dotnet sonarscanner begin \
+            /k:"$SONAR_PROJECT_KEY" \
+            /n:"$SONAR_PROJECT_NAME" \
+            /d:sonar.host.url="$SONAR_LOCAL_URL" \
+            /d:sonar.token="$SONAR_LOCAL_TOKEN" \
+            /d:sonar.cs.opencover.reportsPaths="$GITHUB_WORKSPACE/SonarTestResults/**/coverage.opencover.xml" \
+            /d:sonar.cs.vstest.reportsPaths="$GITHUB_WORKSPACE/SonarTestResults/**/*.trx" \
+            /d:sonar.issue.ignore.multicriteria=e1             /d:sonar.issue.ignore.multicriteria.e1.ruleKey="csharpsquid:S2068"             /d:sonar.issue.ignore.multicriteria.e1.resourceKey="**/appsettings.json"             /d:sonar.exclusions="$SONAR_EXCLUSIONS" \
+            /d:sonar.coverage.exclusions="$SONAR_COVERAGE_EXCLUSIONS"
+
+      - name: Build (SonarQube local)
+        if: env.SONAR_TOKEN == ''
+        run: dotnet build "$SOLUTION" -c Release
+
+      - name: Test with coverage (SonarQube local)
+        if: env.SONAR_TOKEN == ''
+        run: |
+          dotnet test "$SOLUTION" --no-build -c Release \
+            --collect:"XPlat Code Coverage" --settings coverlet.runsettings \
+            --logger trx --results-directory "$GITHUB_WORKSPACE/SonarTestResults"
+          echo "Relatorios OpenCover:"
+          find "$GITHUB_WORKSPACE/SonarTestResults" -name 'coverage.opencover.xml'
+
+      - name: Sonar end (SonarQube local)
+        if: env.SONAR_TOKEN == ''
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_LOCAL_TOKEN"
+
+      - name: Quality gate + resumo (SonarQube local)
+        if: env.SONAR_TOKEN == ''
+        run: |
+          set -euo pipefail
+          auth="$SONAR_LOCAL_TOKEN:"
+          task_id=$(grep '^ceTaskId=' .sonarqube/out/.sonar/report-task.txt | cut -d= -f2)
+          ce=""
+          for i in $(seq 1 60); do
+            ce=$(curl -fsS -u "$auth" "$SONAR_LOCAL_URL/api/ce/task?id=$task_id" | jq -r '.task.status')
+            echo "[$i] CE task $task_id: $ce"
+            if [ "$ce" = "SUCCESS" ]; then break; fi
+            if [ "$ce" = "FAILED" ] || [ "$ce" = "CANCELED" ]; then
+              echo "::error::Processamento da analise falhou ($ce)"
+              exit 1
+            fi
+            sleep 5
+          done
+          if [ "$ce" != "SUCCESS" ]; then
+            echo "::error::Timeout no processamento da analise"
+            exit 1
+          fi
+
+          qg=$(curl -fsS -u "$auth" "$SONAR_LOCAL_URL/api/qualitygates/project_status?projectKey=$SONAR_PROJECT_KEY")
+          qg_status=$(echo "$qg" | jq -r '.projectStatus.status')
+          metrics="coverage,line_coverage,tests,bugs,vulnerabilities,security_hotspots,code_smells,duplicated_lines,duplicated_lines_density,ncloc,sqale_rating,reliability_rating,security_rating"
+          ms=$(curl -fsS -u "$auth" "$SONAR_LOCAL_URL/api/measures/component?component=$SONAR_PROJECT_KEY&metricKeys=$metrics")
+          issues=$(curl -fsS -u "$auth" "$SONAR_LOCAL_URL/api/issues/search?componentKeys=$SONAR_PROJECT_KEY&types=BUG,VULNERABILITY&resolved=false&ps=100")
+          version=$(curl -fsS "$SONAR_LOCAL_URL/api/server/version")
+          m() { echo "$ms" | jq -r --arg k "$1" '([.component.measures[] | select(.metric==$k) | .value] | first) // "n/a"'; }
+
+          mkdir -p sonar-summary
+          {
+            echo "## SonarQube - ${SONAR_PROJECT_NAME}"
+            echo
+            echo "Analise real em SonarQube Community ${version} efemero (service container do job), commit \`${GITHUB_SHA}\`."
+            echo
+            echo "**Quality Gate:** \`${qg_status}\`"
+            echo
+            echo "| Medida | Valor |"
+            echo "|---|---|"
+            echo "| Cobertura (%) | $(m coverage) |"
+            echo "| Cobertura de linhas (%) | $(m line_coverage) |"
+            echo "| Testes | $(m tests) |"
+            echo "| Bugs | $(m bugs) |"
+            echo "| Vulnerabilidades | $(m vulnerabilities) |"
+            echo "| Security hotspots | $(m security_hotspots) |"
+            echo "| Code smells | $(m code_smells) |"
+            echo "| Linhas duplicadas | $(m duplicated_lines) |"
+            echo "| Duplicacao (%) | $(m duplicated_lines_density) |"
+            echo "| Linhas de codigo (ncloc) | $(m ncloc) |"
+            echo "| Ratings manutenibilidade / confiabilidade / seguranca (1=A) | $(m sqale_rating) / $(m reliability_rating) / $(m security_rating) |"
+            echo
+            echo "<details><summary>Condicoes do quality gate</summary>"
+            echo
+            echo '```json'
+            echo "$qg" | jq '.projectStatus.conditions'
+            echo '```'
+            echo
+            echo "</details>"
+            echo
+            echo "### Issues BUG / VULNERABILITY (abertas)"
+            echo
+            if [ "$(echo "$issues" | jq '.issues | length')" = "0" ]; then
+              echo "Nenhuma."
+            else
+              echo "| Tipo | Severidade | Regra | Arquivo:linha | Mensagem |"
+              echo "|---|---|---|---|---|"
+              echo "$issues" | jq -r '.issues[] | (.message | gsub("[|]"; "/")) as $msg | (.component | sub("^[^:]*:"; "")) as $file | "| \(.type) | \(.severity // "-") | \(.rule) | \($file):\(.line // "-") | \($msg) |"'
+            fi
+          } > sonar-summary/sonar-summary.md
+          echo "$issues" | jq '.' > sonar-summary/issues.json
+          echo "$ms" | jq '.' > sonar-summary/measures.json
+          echo "$qg" | jq '.' > sonar-summary/quality-gate.json
+          cat sonar-summary/sonar-summary.md
+          cat sonar-summary/sonar-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$qg_status" = "ERROR" ]; then
+            echo "::error::Quality Gate do SonarQube reprovado (ERROR)"
+            exit 1
+          fi
+
+      - name: Upload Sonar summary
+        if: always() && env.SONAR_TOKEN == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonar-summary
+          path: sonar-summary
+          if-no-files-found: warn
+
+
   docker-build:
     runs-on: ubuntu-latest
     steps:
@@ -104,3 +332,21 @@ jobs:
       - uses: github/codeql-action/analyze@v3
         with:
           category: "/language:csharp"
+
+  terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.5
+
+      - name: terraform fmt
+        run: terraform -chdir=terraform fmt -check -recursive
+
+      - name: terraform init (sem backend)
+        run: terraform -chdir=terraform init -backend=false
+
+      - name: terraform validate
+        run: terraform -chdir=terraform validate

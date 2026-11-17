@@ -7,6 +7,7 @@ using Oficina.Aplicacao.Catalogo.Dtos;
 using Oficina.Aplicacao.Clientes.Dtos;
 using Oficina.Aplicacao.Consulta.Dtos;
 using Oficina.Aplicacao.OrdensServico.Dtos;
+using Oficina.Dominio.OrdensServico;
 using Oficina.Integracao.Testes.Auth;
 using Xunit;
 
@@ -75,8 +76,8 @@ public class ConsultaDeOrdemPorClienteTestes
                 new VeiculoDadosDto(v!.Placa, "F", "U", 2020),
                 new[] { new ItemServicoDto(s!.Id, 1) },
                 Array.Empty<ItemPecaDto>()))).Content.ReadFromJsonAsync<OrdemResponse>();
-        await http.PatchAsync($"/api/v1/ordens-servico/{os!.Id}/diagnostico", null);
-        await http.PostAsync($"/api/v1/ordens-servico/{os.Id}/orcamento/enviar", null);
+        // Orçamento enviado pela saga (Billing) — aqui, direto no banco.
+        await _fx.LevarOrdemAteStatusNoBancoAsync(os!.Id, StatusOrdemDeServico.AguardandoAprovacao);
 
         return (os.Numero, doc);
     }
@@ -168,90 +169,4 @@ public class ConsultaDeOrdemPorClienteTestes
 
     private static string NormalizarTraceId(string json) =>
         Regex.Replace(json, "\"traceId\"\\s*:\\s*\"[^\"]*\"", "\"traceId\":\"\"");
-
-    private async Task<OrdemResponse> CriarOsEnviadaAsync()
-    {
-        var http = await AdminAsync();
-        var doc = "11144477735";
-
-        var cli = await ObterOuCriarClienteAsync(http, doc, "Cli OS");
-        var v = await (await http.PostAsJsonAsync($"/api/v1/clientes/{cli.Id}/veiculos",
-            new AdicionarVeiculoRequest($"WHK{new Random().Next(1000,9999)}", "F", "U", 2020)))
-            .Content.ReadFromJsonAsync<VeiculoResponse>();
-        var s = await (await http.PostAsJsonAsync("/api/v1/servicos",
-            new CriarServicoRequest("S webhook", "x", 10m, 10)))
-            .Content.ReadFromJsonAsync<ServicoResponse>();
-
-        var os = await (await http.PostAsJsonAsync("/api/v1/ordens-servico",
-            new AbrirOrdemRequest(
-                new ClienteDadosDto(doc, "Cli OS", $"c{Guid.NewGuid():N}@x.com", "11987654321"),
-                new VeiculoDadosDto(v!.Placa, "F", "U", 2020),
-                new[] { new ItemServicoDto(s!.Id, 1) },
-                Array.Empty<ItemPecaDto>()))).Content.ReadFromJsonAsync<OrdemResponse>();
-        await http.PatchAsync($"/api/v1/ordens-servico/{os!.Id}/diagnostico", null);
-        await http.PostAsync($"/api/v1/ordens-servico/{os.Id}/orcamento/enviar", null);
-        return os;
-    }
-
-    [Fact]
-    public async Task Webhook_ComTokenValido_Aprovado_DeveRetornar200()
-    {
-        var os = await CriarOsEnviadaAsync();
-        var publico = _fx.Factory.CreateClient();
-        publico.DefaultRequestHeaders.Add("X-Webhook-Token", "token-teste-webhook");
-
-        var resp = await publico.PostAsJsonAsync(
-            $"/api/v1/ordens-servico/{os.Id}/orcamento/aprovacao",
-            new DecisaoOrcamentoRequest("aprovado"));
-
-        resp.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await resp.Content.ReadFromJsonAsync<OrdemResponse>();
-        body!.OrcamentoAprovadoEm.Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task Webhook_SemToken_DeveRetornar401()
-    {
-        var os = await CriarOsEnviadaAsync();
-        var publico = _fx.Factory.CreateClient();
-
-        var resp = await publico.PostAsJsonAsync(
-            $"/api/v1/ordens-servico/{os.Id}/orcamento/aprovacao",
-            new DecisaoOrcamentoRequest("aprovado"));
-
-        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    [Fact]
-    public async Task Webhook_SemTokenESemBody_DeveRetornar401_NaoBadRequest()
-    {
-        // Regressão: com [ApiController], a auto-validação do [FromBody] roda
-        // como filtro ANTES do corpo da action. Sem o ValidacaoTokenWebhookFilter
-        // (IAuthorizationFilter, que roda ANTES do model binding), uma requisição
-        // sem body/Content-Type retornaria 400/415 em vez de 401 — vazando para um
-        // atacante sem token a informação de que o recurso existe/aceita a rota.
-        var os = await CriarOsEnviadaAsync();
-        var publico = _fx.Factory.CreateClient();
-
-        using var req = new HttpRequestMessage(
-            HttpMethod.Post, $"/api/v1/ordens-servico/{os.Id}/orcamento/aprovacao");
-        // Sem header X-Webhook-Token e sem body/Content-Type algum.
-        var resp = await publico.SendAsync(req);
-
-        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    [Fact]
-    public async Task Webhook_DecisaoInvalida_DeveRetornar422()
-    {
-        var os = await CriarOsEnviadaAsync();
-        var publico = _fx.Factory.CreateClient();
-        publico.DefaultRequestHeaders.Add("X-Webhook-Token", "token-teste-webhook");
-
-        var resp = await publico.PostAsJsonAsync(
-            $"/api/v1/ordens-servico/{os.Id}/orcamento/aprovacao",
-            new DecisaoOrcamentoRequest("talvez"));
-
-        resp.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
-    }
 }

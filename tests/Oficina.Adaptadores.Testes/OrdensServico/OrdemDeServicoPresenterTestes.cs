@@ -31,6 +31,21 @@ public class OrdemDeServicoPresenterTestes
         resp.TotalGeral.Should().Be(200m);
         resp.ItensServico.Should().ContainSingle(i => i.Nome == "Troca de óleo");
         resp.ItensPeca.Should().ContainSingle(i => i.Nome == "Filtro");
+        resp.MotivoCancelamento.Should().BeNull();
+        resp.CanceladaEm.Should().BeNull();
+    }
+
+    [Fact]
+    public void Apresentar_OrdemCancelada_MapeiaMotivoEData()
+    {
+        var os = CriarOrdemComItens();
+        os.Cancelar("Cliente desistiu");
+
+        var resp = OrdemDeServicoPresenter.Apresentar(os);
+
+        resp.Status.Should().Be("Cancelada");
+        resp.MotivoCancelamento.Should().Be("Cliente desistiu");
+        resp.CanceladaEm.Should().Be(os.CanceladaEm);
     }
 
     [Fact]

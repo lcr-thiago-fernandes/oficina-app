@@ -6,7 +6,7 @@ public sealed class Email : IEquatable<Email>
 {
     private static readonly Regex Padrao = new(
         @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        RegexOptions.Compiled | RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
 
     public string Valor { get; }
 

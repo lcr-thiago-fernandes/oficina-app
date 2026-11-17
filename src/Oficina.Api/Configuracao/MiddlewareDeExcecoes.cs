@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Oficina.Dominio.Auth;
 using Oficina.Dominio.Catalogo;
 using Oficina.Dominio.Clientes;
@@ -34,7 +36,7 @@ public class MiddlewareDeExcecoes
 
             context.Response.StatusCode = status;
             context.Response.ContentType = "application/problem+json";
-            await context.Response.WriteAsJsonAsync(problema);
+            await context.Response.WriteAsJsonAsync(problema, context.RequestAborted);
         }
     }
 
@@ -53,22 +55,18 @@ public class MiddlewareDeExcecoes
         PecaInvalidaException or
         SkuInvalidoException or
         MovimentacaoInvalidaException or
-        SaldoInsuficienteException
+        SaldoInsuficienteException or
+        ReservaInvalidaException
             => (StatusCodes.Status422UnprocessableEntity,
                 new ProblemDetails { Title = "Operação inválida", Detail = ex.Message, Status = 422 }),
 
         TransicaoDeStatusInvalidaException or
         OrdemSemItensException or
-        OrcamentoNaoAprovadoException or
         ItemInvalidoException or
         OrdemImutavelException or
         Oficina.Aplicacao.OrdensServico.OrdemInvalidaException
             => (StatusCodes.Status422UnprocessableEntity,
                 new ProblemDetails { Title = "Operação inválida", Detail = ex.Message, Status = 422 }),
-
-        ItemNaoEncontradoException
-            => (StatusCodes.Status404NotFound,
-                new ProblemDetails { Title = "Não encontrado", Detail = ex.Message, Status = 404 }),
 
         DocumentoJaCadastradoException or
         PlacaJaCadastradaException
@@ -83,6 +81,15 @@ public class MiddlewareDeExcecoes
             => (StatusCodes.Status404NotFound,
                 new ProblemDetails { Title = "Não encontrado", Detail = ex.Message, Status = 404 }),
 
+        _ when EhConflitoDeConcorrencia(ex)
+            => (StatusCodes.Status409Conflict,
+                new ProblemDetails
+                {
+                    Title = "Conflito de concorrência",
+                    Detail = "O recurso foi alterado por outra operação. Tente novamente.",
+                    Status = 409
+                }),
+
         _ => (StatusCodes.Status500InternalServerError,
               new ProblemDetails
               {
@@ -94,4 +101,22 @@ public class MiddlewareDeExcecoes
                               : $" | INNER: {ex.InnerException.GetType().FullName}: {ex.InnerException.Message}")
               })
     };
+
+    // Concorrência otimista (xmin), falha de serialização (40001, transações Serializable) ou
+    // violação de unicidade (23505, p.ex. dois POST concorrentes criando o mesmo cliente/veículo):
+    // a operação perdeu a corrida e pode ser repetida pelo cliente.
+    private const string FalhaDeSerializacao = "40001";
+    private const string ViolacaoDeUnicidade = "23505";
+
+    private static bool EhConflitoDeConcorrencia(Exception ex)
+    {
+        if (ex is DbUpdateConcurrencyException) return true;
+
+        for (var atual = ex; atual is not null; atual = atual.InnerException)
+        {
+            if (atual is PostgresException { SqlState: FalhaDeSerializacao or ViolacaoDeUnicidade })
+                return true;
+        }
+        return false;
+    }
 }

@@ -9,6 +9,13 @@ public class HistoricoStatusTestes
     private static OrdemDeServico NovaOrdem() =>
         OrdemDeServico.Criar(Guid.NewGuid(), Guid.NewGuid());
 
+    private static OrdemDeServico NovaOrdemComItem()
+    {
+        var os = NovaOrdem();
+        os.AdicionarItemServico(Guid.NewGuid(), "Revisao", 50m, 1);
+        return os;
+    }
+
     [Fact]
     public void Criar_registra_a_primeira_transicao_para_Recebida()
     {
@@ -22,50 +29,48 @@ public class HistoricoStatusTestes
     }
 
     [Fact]
-    public void IniciarDiagnostico_registra_transicao_com_duracao_do_status_anterior()
+    public void AguardarAprovacao_registra_transicao_com_duracao_do_status_anterior()
     {
-        var os = NovaOrdem();
+        var os = NovaOrdemComItem();
 
-        os.IniciarDiagnostico();
+        os.AguardarAprovacao();
 
         os.Historico.Should().HaveCount(2);
         var h = os.Historico.Last();
         h.StatusAnterior.Should().Be(StatusOrdemDeServico.Recebida);
-        h.StatusNovo.Should().Be(StatusOrdemDeServico.EmDiagnostico);
+        h.StatusNovo.Should().Be(StatusOrdemDeServico.AguardandoAprovacao);
         h.DuracaoSegundos.Should().NotBeNull();
         h.DuracaoSegundos.Should().BeGreaterThanOrEqualTo(0);
     }
 
     [Fact]
-    public void Ciclo_completo_registra_uma_entrada_por_transicao()
+    public void Ciclo_sem_diagnostico_registra_uma_entrada_por_transicao()
     {
-        var os = NovaOrdem();
-        os.IniciarDiagnostico();
-        os.AdicionarItemServico(Guid.NewGuid(), "Troca de oleo", 100m, 1);
-        os.EnviarOrcamentoParaAprovacao();
-        os.Aprovar();
-        os.IniciarExecucao();
+        var os = NovaOrdemComItem();
+        os.AguardarAprovacao();
+        os.AguardarPagamento();
+        os.EnfileirarExecucao();
+        os.IniciarReparo();
         os.Finalizar();
         os.Entregar();
 
-        // Recebida, EmDiagnostico, AguardandoAprovacao, EmExecucao, Finalizada, Entregue
-        os.Historico.Should().HaveCount(6);
-        os.Historico.Select(h => h.StatusNovo).Should().ContainInOrder(
+        os.Historico.Select(h => h.StatusNovo).Should().Equal(
             StatusOrdemDeServico.Recebida,
-            StatusOrdemDeServico.EmDiagnostico,
             StatusOrdemDeServico.AguardandoAprovacao,
-            StatusOrdemDeServico.EmExecucao,
+            StatusOrdemDeServico.AguardandoPagamento,
+            StatusOrdemDeServico.EmFilaExecucao,
+            StatusOrdemDeServico.EmReparo,
             StatusOrdemDeServico.Finalizada,
             StatusOrdemDeServico.Entregue);
+        os.Historico.Skip(1).Select(h => h.StatusAnterior).Should().Equal(
+            os.Historico.Take(os.Historico.Count - 1).Select(h => (StatusOrdemDeServico?)h.StatusNovo));
     }
 
     [Fact]
     public void Rejeitar_registra_transicao_para_Cancelada()
     {
-        var os = NovaOrdem();
-        os.IniciarDiagnostico();
-        os.AdicionarItemServico(Guid.NewGuid(), "Revisao", 50m, 1);
-        os.EnviarOrcamentoParaAprovacao();
+        var os = NovaOrdemComItem();
+        os.AguardarAprovacao();
 
         os.Rejeitar();
 
@@ -74,17 +79,15 @@ public class HistoricoStatusTestes
     }
 
     [Fact]
-    public void Aprovar_nao_registra_transicao_porque_nao_muda_o_status()
+    public void AguardarPagamento_registra_transicao()
     {
-        var os = NovaOrdem();
-        os.IniciarDiagnostico();
-        os.AdicionarItemServico(Guid.NewGuid(), "Revisao", 50m, 1);
-        os.EnviarOrcamentoParaAprovacao();
-        var antes = os.Historico.Count;
+        var os = NovaOrdemComItem();
+        os.AguardarAprovacao();
 
-        os.Aprovar();
+        os.AguardarPagamento();
 
-        os.Historico.Should().HaveCount(antes);
+        os.Historico.Last().StatusAnterior.Should().Be(StatusOrdemDeServico.AguardandoAprovacao);
+        os.Historico.Last().StatusNovo.Should().Be(StatusOrdemDeServico.AguardandoPagamento);
     }
 
     [Fact]

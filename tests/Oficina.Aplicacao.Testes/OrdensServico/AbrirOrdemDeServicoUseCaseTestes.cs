@@ -6,6 +6,7 @@ using Oficina.Aplicacao.Estoque.Gateways;
 using Oficina.Aplicacao.OrdensServico;
 using Oficina.Aplicacao.OrdensServico.Dtos;
 using Oficina.Aplicacao.OrdensServico.Gateways;
+using Oficina.Aplicacao.OrdensServico.Saga;
 using Oficina.Aplicacao.OrdensServico.Telemetria;
 using Oficina.Dominio.Catalogo;
 using Oficina.Dominio.Clientes;
@@ -22,9 +23,17 @@ public class AbrirOrdemDeServicoUseCaseTestes
     private readonly Mock<IPecaGateway> _pecas = new();
     private readonly Mock<IOrdemDeServicoGateway> _ordens = new();
     private readonly Mock<IPublicadorEventoOs> _publicador = new();
+    private readonly Mock<ISagaOrdemServicoGateway> _saga = new();
+
+    public AbrirOrdemDeServicoUseCaseTestes()
+    {
+        // A transação serializável só executa a ação recebida (o commit é do gateway real).
+        _ordens.Setup(o => o.EmTransacaoSerializadaAsync(It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, Task>, CancellationToken>((acao, ct) => acao(ct));
+    }
 
     private AbrirOrdemDeServicoUseCase CriarUseCase() =>
-        new(_clientes.Object, _servicos.Object, _pecas.Object, _ordens.Object, _publicador.Object);
+        new(_clientes.Object, _servicos.Object, _pecas.Object, _ordens.Object, _publicador.Object, _saga.Object);
 
     // Simula o re-fetch final: devolve a mesma OS que foi adicionada.
     private void ConfigurarRefetch()
@@ -192,6 +201,7 @@ public class AbrirOrdemDeServicoUseCaseTestes
     public async Task Executar_ServicosOmitidos_DeveAbrirOrdemComApenasPecas()
     {
         var peca = Peca.Criar(Sku.Criar("ABC-123"), "Filtro de óleo", 50m);
+        peca.RegistrarEntrada(5, "Compra"); // a abertura reserva o estoque
         _clientes.Setup(c => c.ObterPorDocumentoAsync(It.IsAny<Documento>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Cliente?)null);
         _pecas.Setup(p => p.ObterPorIdAsync(peca.Id, It.IsAny<CancellationToken>())).ReturnsAsync(peca);
@@ -208,5 +218,101 @@ public class AbrirOrdemDeServicoUseCaseTestes
         ordem.Should().NotBeNull();
         ordem.ItensPeca.Should().ContainSingle();
         _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private static AbrirOrdemRequest RequestComPecas(params ItemPecaDto[] pecas) => new(
+        new ClienteDadosDto("39053344705", "João", "joao@x.com", "11987654321"),
+        new VeiculoDadosDto("ABC1234", "Fiat", "Uno", 2020),
+        null!,
+        pecas);
+
+    private Peca PecaComSaldo(int saldo)
+    {
+        var peca = Peca.Criar(Sku.Criar("FIL-001"), "Filtro", 50m);
+        peca.RegistrarEntrada(saldo, "Compra");
+        _pecas.Setup(p => p.ObterPorIdAsync(peca.Id, It.IsAny<CancellationToken>())).ReturnsAsync(peca);
+        _clientes.Setup(c => c.ObterPorDocumentoAsync(It.IsAny<Documento>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Cliente?)null);
+        return peca;
+    }
+
+    [Fact]
+    public async Task AbrirOrdem_ReservaEstoqueAgrupadoPorPeca()
+    {
+        var peca = PecaComSaldo(10);
+        ConfigurarRefetch();
+
+        var ordem = await CriarUseCase().ExecutarAsync(
+            RequestComPecas(new ItemPecaDto(peca.Id, 1), new ItemPecaDto(peca.Id, 2)), default);
+
+        peca.SaldoReservado.Should().Be(3);
+        peca.SaldoAtual.Should().Be(10);
+        peca.SituacaoReserva(ordem.Id).Should().Be(SituacaoReservaPeca.Reservada);
+        ordem.ItensPeca.Should().HaveCount(2);
+        // A movimentação de reserva (Id Guid pré-setado) tem de ser marcada como nova, senão o EF gera UPDATE.
+        _pecas.Verify(p => p.MarcarMovimentacaoComoNova(It.Is<MovimentacaoEstoque>(m =>
+            m.Tipo == TipoMovimentacao.Reserva && m.Quantidade == 3 && m.OrdemServicoId == ordem.Id)), Times.Once);
+        _pecas.Verify(p => p.ObterPorIdAsync(peca.Id, It.IsAny<CancellationToken>()), Times.Once);
+        _saga.Verify(s => s.IniciarAsync(ordem.Id, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AbrirOrdem_SaldoInsuficiente_LancaENaoIniciaSaga()
+    {
+        var peca = PecaComSaldo(2);
+
+        var act = async () => await CriarUseCase().ExecutarAsync(
+            RequestComPecas(new ItemPecaDto(peca.Id, 1), new ItemPecaDto(peca.Id, 2)), default);
+
+        await act.Should().ThrowAsync<SaldoInsuficienteException>();
+        peca.SaldoReservado.Should().Be(0);
+        _saga.Verify(s => s.IniciarAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _publicador.Verify(p => p.Publicar(It.IsAny<EventoOrdemServico>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AbrirOrdem_IniciaSagaAntesDeSalvar()
+    {
+        // IniciarAsync só enfileira no outbox; se viesse depois do SalvarAsync a mensagem nunca
+        // seria persistida. Ordem registrada nos callbacks (MockSequence não vale em mocks Loose).
+        var peca = PecaComSaldo(10);
+        ConfigurarRefetch();
+        var chamadas = new List<string>();
+        _saga.Setup(s => s.IniciarAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Callback(() => chamadas.Add("IniciarAsync"))
+            .Returns(Task.CompletedTask);
+        _ordens.Setup(o => o.SalvarAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => chamadas.Add("SalvarAsync"))
+            .Returns(Task.CompletedTask);
+
+        var ordem = await CriarUseCase().ExecutarAsync(RequestComPecas(new ItemPecaDto(peca.Id, 1)), default);
+
+        chamadas.Should().Equal("IniciarAsync", "SalvarAsync");
+        ordem.CoordenadaPorSaga.Should().BeTrue("a OS aberta na Fase 4 é marcada na mesma unidade de trabalho que inicia a saga");
+    }
+
+    [Fact]
+    public async Task AbrirOrdem_RodaDentroDeTransacaoSerializada()
+    {
+        var peca = PecaComSaldo(10);
+        ConfigurarRefetch();
+        var dentroDaTransacao = false;
+        var salvouDentro = false;
+        _ordens.Setup(o => o.EmTransacaoSerializadaAsync(It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, Task>, CancellationToken>(async (acao, ct) =>
+            {
+                dentroDaTransacao = true;
+                await acao(ct);
+                dentroDaTransacao = false;
+            });
+        _ordens.Setup(o => o.SalvarAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => salvouDentro = dentroDaTransacao)
+            .Returns(Task.CompletedTask);
+
+        await CriarUseCase().ExecutarAsync(RequestComPecas(new ItemPecaDto(peca.Id, 1)), default);
+
+        _ordens.Verify(o => o.EmTransacaoSerializadaAsync(It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()), Times.Once);
+        salvouDentro.Should().BeTrue();
     }
 }

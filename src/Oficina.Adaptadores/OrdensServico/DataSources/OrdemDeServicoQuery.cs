@@ -19,15 +19,17 @@ public static class OrdemDeServicoQuery
             o.Status != StatusOrdemDeServico.Cancelada);
     }
 
-    // Prioridade: fila de trabalho do pátio — o que está em execução primeiro,
-    // depois aguardando aprovação, diagnóstico e recém-recebidas; empate por
-    // data de criação ascendente (mais antigas primeiro).
+    // Prioridade: fila de trabalho do pátio — o que está em reparo primeiro, depois
+    // diagnóstico, fila de execução, aguardando pagamento, aguardando aprovação e
+    // recém-recebidas; empate por data de criação ascendente (mais antigas primeiro).
     public static IQueryable<OrdemDeServico> AplicarOrdenacao(IQueryable<OrdemDeServico> query) =>
         query
             .OrderBy(o =>
-                o.Status == StatusOrdemDeServico.EmExecucao ? 1 :
-                o.Status == StatusOrdemDeServico.AguardandoAprovacao ? 2 :
-                o.Status == StatusOrdemDeServico.EmDiagnostico ? 3 :
-                o.Status == StatusOrdemDeServico.Recebida ? 4 : 5)
+                o.Status == StatusOrdemDeServico.EmReparo ? 1 :
+                o.Status == StatusOrdemDeServico.EmDiagnostico ? 2 :
+                o.Status == StatusOrdemDeServico.EmFilaExecucao ? 3 :
+                o.Status == StatusOrdemDeServico.AguardandoPagamento ? 4 :
+                o.Status == StatusOrdemDeServico.AguardandoAprovacao ? 5 :
+                o.Status == StatusOrdemDeServico.Recebida ? 6 : 7)
             .ThenBy(o => o.CriadaEm);
 }

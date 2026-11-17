@@ -14,7 +14,8 @@ public static class OrdemDeServicoPresenter
         o.OrcamentoAprovadoEm, o.OrcamentoRejeitadoEm,
         o.IniciadaEm, o.FinalizadaEm, o.EntregueEm,
         o.ItensServico.Select(ApresentarItemServico).ToList(),
-        o.ItensPeca.Select(ApresentarItemPeca).ToList());
+        o.ItensPeca.Select(ApresentarItemPeca).ToList(),
+        o.MotivoCancelamento, o.CanceladaEm);
 
     public static ItemServicoResponse ApresentarItemServico(ItemServico i) =>
         new(i.Id, i.ServicoId, i.ServicoNome, i.PrecoSnapshot, i.Quantidade, i.Subtotal);

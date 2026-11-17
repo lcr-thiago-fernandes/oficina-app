@@ -7,6 +7,7 @@ using Oficina.Aplicacao.Clientes;
 using Oficina.Aplicacao.Consulta;
 using Oficina.Aplicacao.Estoque;
 using Oficina.Aplicacao.OrdensServico;
+using Oficina.Aplicacao.OrdensServico.Saga;
 
 namespace Oficina.Aplicacao;
 
@@ -46,21 +47,16 @@ public static class DependencyInjectionAplicacao
         services.AddScoped<ListarMovimentacoesUseCase>();
 
         // Ordens de Serviço
-        services.AddScoped<CriarOrdemUseCase>();
         services.AddScoped<AbrirOrdemDeServicoUseCase>();
         services.AddScoped<ObterOrdemPorIdUseCase>();
         services.AddScoped<ListarOrdensUseCase>();
-        services.AddScoped<IniciarDiagnosticoUseCase>();
-        services.AddScoped<EnviarOrcamentoParaAprovacaoUseCase>();
-        services.AddScoped<IniciarExecucaoUseCase>();
-        services.AddScoped<FinalizarOrdemUseCase>();
         services.AddScoped<EntregarOrdemUseCase>();
-        services.AddScoped<AdicionarItemServicoUseCase>();
-        services.AddScoped<RemoverItemServicoUseCase>();
-        services.AddScoped<AdicionarItemPecaUseCase>();
-        services.AddScoped<RemoverItemPecaUseCase>();
         services.AddScoped<ObterTempoMedioExecucaoUseCase>();
-        services.AddScoped<RegistrarDecisaoDeOrcamentoUseCase>();
+        services.AddScoped<CancelarOrdemUseCase>();
+        services.AddScoped<ObterSagaDaOrdemUseCase>();
+
+        // Passos locais (OS + estoque) da saga orquestrada
+        services.AddScoped<IPassosSagaOrdemServico, PassosSagaOrdemServico>();
 
         // Consulta pública (sem auth) — apenas leitura de status (anti-enumeração)
         services.AddScoped<ConsultarOrdemPorNumeroUseCase>();

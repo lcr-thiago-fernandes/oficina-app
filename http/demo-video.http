@@ -1,3 +1,6 @@
+### >>> HISTÓRICO (Fase 2). NÃO roda mais: POST /auth/login saiu na Fase 3 e orçamento,
+### >>> aprovação, pagamento e execução saíram desta API na Fase 4.
+### >>> Roteiro atual: http/fase4-demo.http.
 ### ============================================================
 ### DEMO TECH CHALLENGE — FIAP 15SOAT Fase 2
 ###
@@ -193,10 +196,10 @@ Authorization: Bearer {{token}}
 
 
 ### ============================================================
-### PARTE 4 — CONSULTA PÚBLICA (só leitura) + APROVAÇÃO VIA WEBHOOK
+### PARTE 4 — CONSULTA PÚBLICA (só leitura) + APROVAÇÃO (SERVIÇO DE BILLING)
 ### Consulta: rota pública (sem JWT), exige o CPF do dono (anti-enumeração:
 ### 404 idêntico para OS inexistente e para documento que não bate).
-### Aprovação/recusa: agora via webhook autenticado por X-Webhook-Token.
+### A aprovação do orçamento deixou de ser um endpoint desta API (agora no serviço de Billing).
 ### ============================================================
 
 ### [4.1] Consulta pública pelo cliente (status do orçamento)
@@ -208,16 +211,6 @@ GET {{baseUrl}}/consulta/1?documento=39053344705
 
 ### [4.2] Tentativa com documento errado (deve retornar 404, igual a OS inexistente)
 GET {{baseUrl}}/consulta/1?documento=12345678909
-
-
-### [4.3] APROVAR orçamento via WEBHOOK (autenticado por X-Webhook-Token; substitui a rota pública antiga)
-POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/aprovacao
-X-Webhook-Token: {{webhookToken}}
-Content-Type: application/json
-
-{
-  "decisao": "aprovado"
-}
 
 
 ### ============================================================

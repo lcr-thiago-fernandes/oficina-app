@@ -7,10 +7,13 @@ using Oficina.Aplicacao.Estoque.Gateways;
 using Oficina.Aplicacao.OrdensServico;
 using Oficina.Aplicacao.OrdensServico.Dtos;
 using Oficina.Aplicacao.OrdensServico.Gateways;
+using Oficina.Aplicacao.OrdensServico.Saga;
+using Oficina.Aplicacao.OrdensServico.Saga.Dtos;
 using Oficina.Aplicacao.OrdensServico.Telemetria;
 using Oficina.Dominio.Catalogo;
 using Oficina.Dominio.Clientes;
 using Oficina.Dominio.OrdensServico;
+using Oficina.Testes.Compartilhado;
 
 namespace Oficina.Adaptadores.Testes.OrdensServico;
 
@@ -20,50 +23,25 @@ public class OrdemDeServicoControllerTestes
         Mock<IOrdemDeServicoGateway> ordens,
         Mock<IClienteGateway> clientes,
         Mock<IServicoGateway> servicos,
-        Mock<IPecaGateway> pecas)
+        Mock<IPecaGateway> pecas,
+        Mock<ISagaOrdemServicoGateway>? saga = null,
+        Mock<IPassosSagaOrdemServico>? passos = null)
     {
+        saga ??= new Mock<ISagaOrdemServicoGateway>();
+        passos ??= new Mock<IPassosSagaOrdemServico>();
         var notificacoes = new Mock<INotificacaoGateway>();
         var publicador = new Mock<IPublicadorEventoOs>();
+        // A abertura roda dentro da transação serializável: o mock só executa a ação.
+        ordens.Setup(o => o.EmTransacaoSerializadaAsync(It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, Task>, CancellationToken>((acao, ct) => acao(ct));
         return new(
-            new CriarOrdemUseCase(ordens.Object, clientes.Object, publicador.Object),
-            new AbrirOrdemDeServicoUseCase(clientes.Object, servicos.Object, pecas.Object, ordens.Object, publicador.Object),
+            new AbrirOrdemDeServicoUseCase(clientes.Object, servicos.Object, pecas.Object, ordens.Object, publicador.Object, saga.Object),
             new ObterOrdemPorIdUseCase(ordens.Object),
             new ListarOrdensUseCase(ordens.Object),
-            new IniciarDiagnosticoUseCase(ordens.Object, notificacoes.Object, publicador.Object),
-            new EnviarOrcamentoParaAprovacaoUseCase(ordens.Object, notificacoes.Object, publicador.Object),
-            new IniciarExecucaoUseCase(ordens.Object, pecas.Object, notificacoes.Object, publicador.Object),
-            new FinalizarOrdemUseCase(ordens.Object, notificacoes.Object, publicador.Object),
             new EntregarOrdemUseCase(ordens.Object, notificacoes.Object, publicador.Object),
-            new AdicionarItemServicoUseCase(ordens.Object, servicos.Object),
-            new RemoverItemServicoUseCase(ordens.Object),
-            new AdicionarItemPecaUseCase(ordens.Object, pecas.Object),
-            new RemoverItemPecaUseCase(ordens.Object),
             new ObterTempoMedioExecucaoUseCase(ordens.Object),
-            new RegistrarDecisaoDeOrcamentoUseCase(ordens.Object, notificacoes.Object, publicador.Object));
-    }
-
-    [Fact]
-    public async Task CriarAsync_DeveRetornarOrdemResponseFormatada()
-    {
-        var ordens = new Mock<IOrdemDeServicoGateway>();
-        var clientes = new Mock<IClienteGateway>();
-        var servicos = new Mock<IServicoGateway>();
-        var pecas = new Mock<IPecaGateway>();
-
-        var cliente = Cliente.Criar("J", Documento.Criar("39053344705"),
-            Email.Criar("e@x.com"), Telefone.Criar("11987654321"));
-        var veiculo = Veiculo.Criar(Placa.Criar("ABC1234"), "F", "U", 2020);
-        cliente.AdicionarVeiculo(veiculo);
-        clientes.Setup(c => c.ObterPorIdAsync(cliente.Id, It.IsAny<CancellationToken>())).ReturnsAsync(cliente);
-        ordens.Setup(o => o.ObterPorIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(OrdemDeServico.Criar(cliente.Id, veiculo.Id));
-
-        var controller = CriarController(ordens, clientes, servicos, pecas);
-        var resp = await controller.CriarAsync(new CriarOrdemRequest(cliente.Id, veiculo.Id, null), default);
-
-        resp.Should().BeOfType<OrdemResponse>();
-        resp.Status.Should().Be("Recebida");
-        ordens.Verify(o => o.AdicionarAsync(It.IsAny<OrdemDeServico>(), It.IsAny<CancellationToken>()), Times.Once);
+            new CancelarOrdemUseCase(ordens.Object, saga.Object, passos.Object),
+            new ObterSagaDaOrdemUseCase(saga.Object));
     }
 
     [Fact]
@@ -94,26 +72,6 @@ public class OrdemDeServicoControllerTestes
 
         pagina.Total.Should().Be(1);
         pagina.Itens.Should().ContainSingle(o => o.Status == "Recebida");
-    }
-
-    [Fact]
-    public async Task AdicionarItemServicoAsync_DeveRetornarItemServicoResponse()
-    {
-        var ordens = new Mock<IOrdemDeServicoGateway>();
-        var servicos = new Mock<IServicoGateway>();
-        var ordem = OrdemDeServico.Criar(Guid.NewGuid(), Guid.NewGuid());
-        var serv = Servico.Criar("Troca de óleo", "x", 150m, 30);
-        ordens.Setup(o => o.ObterPorIdAsync(ordem.Id, It.IsAny<CancellationToken>())).ReturnsAsync(ordem);
-        servicos.Setup(s => s.ObterPorIdAsync(serv.Id, It.IsAny<CancellationToken>())).ReturnsAsync(serv);
-        var controller = CriarController(ordens, new Mock<IClienteGateway>(), servicos, new Mock<IPecaGateway>());
-
-        var resp = await controller.AdicionarItemServicoAsync(
-            ordem.Id, new AdicionarItemServicoRequest(serv.Id, 2), default);
-
-        resp.Should().NotBeNull();
-        resp!.Nome.Should().Be("Troca de óleo");
-        resp.Subtotal.Should().Be(300m);
-        ordens.Verify(o => o.MarcarItemServicoComoNovo(It.IsAny<ItemServico>()), Times.Once);
     }
 
     [Fact]
@@ -170,27 +128,25 @@ public class OrdemDeServicoControllerTestes
     }
 
     [Fact]
-    public async Task RegistrarDecisaoDeOrcamentoAsync_Aprovado_DeveRetornarOrdemResponse()
+    public async Task EntregarAsync_OrdemFinalizada_DeveRetornarOrdemEntregue()
     {
         var ordens = new Mock<IOrdemDeServicoGateway>();
-        var os = OrdemDeServico.Criar(Guid.NewGuid(), Guid.NewGuid());
-        os.AdicionarItemServico(Guid.NewGuid(), "S", 10m, 1);
-        os.IniciarDiagnostico();
-        os.EnviarOrcamentoParaAprovacao();
+        var os = OrdemEmStatus.Criar(StatusOrdemDeServico.Finalizada);
         ordens.Setup(o => o.ObterPorIdAsync(os.Id, It.IsAny<CancellationToken>())).ReturnsAsync(os);
 
         var controller = CriarController(ordens, new Mock<IClienteGateway>(),
             new Mock<IServicoGateway>(), new Mock<IPecaGateway>());
 
-        var resp = await controller.RegistrarDecisaoDeOrcamentoAsync(os.Id, true, default);
+        var resp = await controller.EntregarAsync(os.Id, default);
 
         resp.Should().NotBeNull();
-        resp!.OrcamentoAprovadoEm.Should().NotBeNull();
+        resp!.Status.Should().Be("Entregue");
+        resp.EntregueEm.Should().NotBeNull();
         ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task RegistrarDecisaoDeOrcamentoAsync_OsInexistente_DeveRetornarNull()
+    public async Task EntregarAsync_OsInexistente_DeveRetornarNull()
     {
         var ordens = new Mock<IOrdemDeServicoGateway>();
         ordens.Setup(o => o.ObterPorIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -198,8 +154,73 @@ public class OrdemDeServicoControllerTestes
         var controller = CriarController(ordens, new Mock<IClienteGateway>(),
             new Mock<IServicoGateway>(), new Mock<IPecaGateway>());
 
-        var resp = await controller.RegistrarDecisaoDeOrcamentoAsync(Guid.NewGuid(), true, default);
+        var resp = await controller.EntregarAsync(Guid.NewGuid(), default);
 
         resp.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CancelarAsync_OsComSaga_DelegaAoUseCaseEApresentaComoSolicitado()
+    {
+        var ordens = new Mock<IOrdemDeServicoGateway>();
+        var saga = new Mock<ISagaOrdemServicoGateway>();
+        var os = OrdemDeServico.Criar(Guid.NewGuid(), Guid.NewGuid());
+        os.MarcarCoordenadaPorSaga();
+        ordens.Setup(o => o.ObterPorIdAsync(os.Id, It.IsAny<CancellationToken>())).ReturnsAsync(os);
+        var controller = CriarController(ordens, new Mock<IClienteGateway>(),
+            new Mock<IServicoGateway>(), new Mock<IPecaGateway>(), saga);
+
+        var resp = await controller.CancelarAsync(os.Id, new CancelarOrdemRequest(" Cliente desistiu "), default);
+
+        resp.Should().NotBeNull();
+        resp!.Forma.Should().Be(FormaCancelamento.Solicitado);
+        resp.Ordem.Id.Should().Be(os.Id);
+        resp.Ordem.Status.Should().Be("Recebida");
+        saga.Verify(s => s.SolicitarCancelamentoAsync(os.Id, "Cliente desistiu", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CancelarAsync_OsLegadaSemSaga_CancelaNaHoraEApresentaComoConcluido()
+    {
+        var ordens = new Mock<IOrdemDeServicoGateway>();
+        var passos = new Mock<IPassosSagaOrdemServico>();
+        var os = OrdemDeServico.Criar(Guid.NewGuid(), Guid.NewGuid());
+        ordens.Setup(o => o.ObterPorIdAsync(os.Id, It.IsAny<CancellationToken>())).ReturnsAsync(os);
+        var controller = CriarController(ordens, new Mock<IClienteGateway>(),
+            new Mock<IServicoGateway>(), new Mock<IPecaGateway>(), passos: passos);
+
+        var resp = await controller.CancelarAsync(os.Id, new CancelarOrdemRequest("Cliente desistiu"), default);
+
+        resp!.Forma.Should().Be(FormaCancelamento.Concluido);
+        passos.Verify(p => p.CancelarAsync(os.Id, "Cliente desistiu", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CancelarAsync_Inexistente_RetornaNull()
+    {
+        var ordens = new Mock<IOrdemDeServicoGateway>();
+        ordens.Setup(o => o.ObterPorIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((OrdemDeServico?)null);
+        var controller = CriarController(ordens, new Mock<IClienteGateway>(),
+            new Mock<IServicoGateway>(), new Mock<IPecaGateway>());
+
+        var resp = await controller.CancelarAsync(Guid.NewGuid(), new CancelarOrdemRequest("x"), default);
+
+        resp.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ObterSagaAsync_DelegaAoUseCase()
+    {
+        var saga = new Mock<ISagaOrdemServicoGateway>();
+        var id = Guid.NewGuid();
+        var estado = new EstadoSagaResponse(id, 7, "AguardandoOrcamento", null, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow,
+            new[] { new PassoSagaResponse("SolicitarOrcamento", "Sucesso", false, DateTimeOffset.UtcNow, null, "AguardandoOrcamento") });
+        saga.Setup(s => s.ObterEstadoAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(estado);
+        var controller = CriarController(new Mock<IOrdemDeServicoGateway>(), new Mock<IClienteGateway>(),
+            new Mock<IServicoGateway>(), new Mock<IPecaGateway>(), saga);
+
+        (await controller.ObterSagaAsync(id, default)).Should().BeSameAs(estado);
+        (await controller.ObterSagaAsync(Guid.NewGuid(), default)).Should().BeNull();
     }
 }

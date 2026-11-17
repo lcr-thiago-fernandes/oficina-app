@@ -13,7 +13,7 @@ public sealed class Telefone : IEquatable<Telefone>
         if (string.IsNullOrWhiteSpace(entrada))
             throw new ArgumentException("Telefone não pode ser vazio.", nameof(entrada));
 
-        var digitos = Regex.Replace(entrada, @"\D", "");
+        var digitos = Regex.Replace(entrada, @"\D", "", RegexOptions.None, TimeSpan.FromSeconds(1));
         if (digitos.Length is < 10 or > 11)
             throw new ArgumentException(
                 "Telefone deve ter 10 ou 11 dígitos (com DDD).", nameof(entrada));

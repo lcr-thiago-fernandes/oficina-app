@@ -1,0 +1,12 @@
+{
+  "ordemServicoId": "3f2b8c1e-6a4d-4e7b-9c3a-1d2e3f4a5b6c",
+  "ocorridoEm": "2026-11-16T12:00:00Z",
+  "numeroOs": 1042,
+  "clienteDocumento": "52998224725",
+  "clienteNome": "Maria Silva",
+  "clienteEmail": "maria@exemplo.com",
+  "itens": [
+    { "tipo": "Servico", "referenciaId": "a1b2c3d4-0000-4000-8000-000000000001", "descricao": "Troca de oleo", "quantidade": 1, "precoUnitario": 120.00 },
+    { "tipo": "Peca", "referenciaId": "a1b2c3d4-0000-4000-8000-000000000002", "descricao": "Filtro de oleo", "quantidade": 2, "precoUnitario": 35.50 }
+  ]
+}

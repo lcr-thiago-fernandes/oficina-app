@@ -17,4 +17,4 @@ Authorization: Bearer {{tokenOutroCliente}}
 GET {{baseUrl}}/consulta/{{numeroOs}}
 
 ### >>> A aprovação/recusa do orçamento NÃO é mais feita aqui.
-### >>> Use o webhook: http/webhook-aprovacao.http
+### >>> A aprovação agora é feita pelo serviço de Billing.

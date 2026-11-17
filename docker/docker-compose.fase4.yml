@@ -1,0 +1,170 @@
+# Ambiente ponta a ponta da Fase 4: OS Service + Billing + Execucao trocando mensagens
+# reais por SNS/SQS (LocalStack). Exige os tres repositorios clonados lado a lado:
+#   oficina-app/  oficina-billing-service/  oficina-execucao-service/
+#
+# Uso (da raiz do oficina-app):
+#   cp .env.example .env
+#   docker compose -f docker/docker-compose.fase4.yml --env-file .env up -d --build --wait
+# Falha da execucao (compensacao com estorno): recriar so a Execucao com capacidade 0
+#   CAPACIDADE_EXECUCAO=0 docker compose -f docker/docker-compose.fase4.yml --env-file .env up -d --wait execucao-service
+# Roteiro: http/fase4-demo.http. Encerrar: ... down -v
+name: oficina-fase4
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: oficina
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - fase4_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d oficina"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # SNS + SQS compartilhados pelos tres servicos. Nada e criado na subida: cada
+  # servico cria (via MassTransit) as filas e os topicos local-oficina-* que usa.
+  localstack:
+    image: localstack/localstack:3.8.1
+    environment:
+      SERVICES: sns,sqs
+    ports:
+      - "4566:4566"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # DynamoDB Local compartilhado por Billing e Execucao (tabelas com nomes diferentes,
+  # criadas pelos proprios servicos com CriarTabelaSeAusente=true). Em memoria: down apaga.
+  dynamodb:
+    image: amazon/dynamodb-local:2.5.2
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    healthcheck:
+      # GET / responde 400 (sem assinatura AWS): basta a porta aceitar conexao, por isso sem -f.
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:8000"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  os-service:
+    # Reinicia se cair na subida (ex.: dependencia ainda aceitando conexoes).
+    restart: on-failure
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=oficina;Username=${DB_USER};Password=${DB_PASSWORD}"
+      Jwt__Secret: ${JWT_SECRET:?defina JWT_SECRET (copie .env.example para .env)}
+      Jwt__Issuer: oficina-auth
+      Jwt__Audience: oficina-api
+      AdminBootstrap__Password: ${ADMIN_BOOTSTRAP_PASSWORD}
+      Mensageria__Transporte: AmazonSqs
+      Mensageria__PrefixoAmbiente: local
+      Mensageria__Regiao: us-east-1
+      Mensageria__ServiceUrl: http://localstack:4566
+      NEW_RELIC_APP_NAME: oficina-api
+      # Credenciais ficticias: o LocalStack nao valida, mas o SDK AWS exige alguma.
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      start_period: 20s
+      retries: 5
+
+  billing-service:
+    # Reinicia se cair na subida (ex.: dependencia ainda aceitando conexoes).
+    restart: on-failure
+    build:
+      context: ../../oficina-billing-service
+      dockerfile: docker/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Jwt__Secret: ${JWT_SECRET:?defina JWT_SECRET (copie .env.example para .env)}
+      Jwt__Issuer: oficina-auth
+      Jwt__Audience: oficina-api
+      Mensageria__Transporte: AmazonSqs
+      Mensageria__PrefixoAmbiente: local
+      Mensageria__Regiao: us-east-1
+      Mensageria__ServiceUrl: http://localstack:4566
+      Dynamo__ServiceUrl: http://dynamodb:8000
+      Dynamo__NomeTabela: oficina-billing-local
+      Dynamo__CriarTabelaSeAusente: "true"
+      # Sem Mercado Pago: o pagamento e decidido em POST /billing/api/v1/simulador/pagamentos/{osId}.
+      Pagamento__Modo: Simulado
+      NEW_RELIC_APP_NAME: oficina-billing
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+    ports:
+      # Container 8080, PathBase /billing (8081 fica com o adminer do docker-compose.yml).
+      - "8082:8080"
+    depends_on:
+      dynamodb:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/billing/health"]
+      interval: 10s
+      timeout: 3s
+      start_period: 20s
+      retries: 5
+
+  execucao-service:
+    # Reinicia se cair na subida (ex.: dependencia ainda aceitando conexoes).
+    restart: on-failure
+    build:
+      context: ../../oficina-execucao-service
+      dockerfile: docker/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Jwt__Secret: ${JWT_SECRET:?defina JWT_SECRET (copie .env.example para .env)}
+      Jwt__Issuer: oficina-auth
+      Jwt__Audience: oficina-api
+      Mensageria__Transporte: AmazonSqs
+      Mensageria__PrefixoAmbiente: local
+      Mensageria__Regiao: us-east-1
+      Mensageria__ServiceUrl: http://localstack:4566
+      DynamoDb__ServiceUrl: http://dynamodb:8000
+      DynamoDb__NomeTabela: oficina-execucao-local
+      DynamoDb__CriarTabelaSeAusente: "true"
+      # 0 = toda IniciarExecucao e recusada (ExecucaoRecusada) -> saga estorna o pagamento.
+      Execucao__CapacidadeMaximaPorUnidade: ${CAPACIDADE_EXECUCAO:-20}
+      NEW_RELIC_APP_NAME: oficina-execucao
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+    ports:
+      # Container 8080, PathBase /execucao.
+      - "8083:8080"
+    depends_on:
+      dynamodb:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/execucao/health"]
+      interval: 10s
+      timeout: 3s
+      start_period: 20s
+      retries: 5
+
+volumes:
+  fase4_pgdata:
