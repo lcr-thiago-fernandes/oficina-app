@@ -46,3 +46,9 @@ docs/entrega/roteiro-video-fase2.md
 
 ## Reqnroll (code-behind gerado a partir dos .feature no build)
 *.feature.cs
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate*
+terraform/tfplan
+terraform/local.tfvars
