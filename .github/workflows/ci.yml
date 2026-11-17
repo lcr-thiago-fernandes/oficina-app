@@ -140,7 +140,8 @@ jobs:
             /d:sonar.token="$SONAR_TOKEN" \
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
             /d:sonar.qualitygate.wait=true \
-            /d:sonar.exclusions="$SONAR_EXCLUSIONS" \n            /d:sonar.coverage.exclusions="$SONAR_COVERAGE_EXCLUSIONS"
+            /d:sonar.exclusions="$SONAR_EXCLUSIONS" \
+            /d:sonar.coverage.exclusions="$SONAR_COVERAGE_EXCLUSIONS"
 
       - name: Build (SonarCloud)
         if: env.SONAR_TOKEN != ''
@@ -197,7 +198,8 @@ jobs:
             /d:sonar.token="$SONAR_LOCAL_TOKEN" \
             /d:sonar.cs.opencover.reportsPaths="$GITHUB_WORKSPACE/SonarTestResults/**/coverage.opencover.xml" \
             /d:sonar.cs.vstest.reportsPaths="$GITHUB_WORKSPACE/SonarTestResults/**/*.trx" \
-            /d:sonar.exclusions="$SONAR_EXCLUSIONS" \n            /d:sonar.coverage.exclusions="$SONAR_COVERAGE_EXCLUSIONS"
+            /d:sonar.exclusions="$SONAR_EXCLUSIONS" \
+            /d:sonar.coverage.exclusions="$SONAR_COVERAGE_EXCLUSIONS"
 
       - name: Build (SonarQube local)
         if: env.SONAR_TOKEN == ''
