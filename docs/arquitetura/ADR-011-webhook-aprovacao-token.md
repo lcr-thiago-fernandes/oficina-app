@@ -1,7 +1,18 @@
 # ADR-011 — Aprovação de orçamento via webhook autenticado por token
 
-**Status:** Aceita
+**Status:** Superseded por [RFC-006](../rfc/RFC-006-microsservicos-saga-orquestrada.md) (Fase 4)
 **Data:** 2026-07-06
+
+> **Nota histórica (Fase 4, 2026-11-17):** este webhook **não existe mais** no `oficina-app`.
+> Com a divisão em microsserviços, a decisão do cliente sobre o orçamento passou para o
+> **Billing Service** (`oficina-billing-service`): `POST /api/v1/orcamentos/{osId}/aprovacao` e
+> `/rejeicao`, atrás do Lambda Authorizer (perfil Cliente dono do documento ou Atendente). O
+> único webhook público da Fase 4 é o do Mercado Pago (`POST /webhooks/mercadopago` no Billing,
+> validado pela assinatura `x-signature`). O `WebhooksController`, o filtro
+> `ValidacaoTokenWebhookFilter` e a configuração `Webhook__Token`/`WEBHOOK_TOKEN` foram
+> removidos do `oficina-app`, e a rota pública saiu do API Gateway (`oficina-infra-k8s`, PR #21).
+> A OS só muda de status pela saga ([ADR-021](ADR-021-saga-orquestrada-masstransit.md)). O
+> texto abaixo é preservado como registro da decisão das Fases 2 e 3.
 
 ## Contexto
 

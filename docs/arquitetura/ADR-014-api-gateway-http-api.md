@@ -35,6 +35,12 @@ Rotas e quem as cria:
 | `POST /auth/admin` | `oficina-lambda-auth` |
 | `ANY /api/v1/{proxy+}` | `oficina-lambda-auth` |
 
+> **Fase 4:** a rota `POST /api/v1/ordens-servico/{id}/orcamento/aprovacao` foi removida (a
+> aprovação migrou para o Billing Service — [ADR-011](ADR-011-webhook-aprovacao-token.md),
+> [RFC-006](../rfc/RFC-006-microsservicos-saga-orquestrada.md)). As rotas `/billing/*` e
+> `/execucao/*` dos serviços novos estão na seção 6.4 de
+> [fase4-design-arquitetural.md](fase4-design-arquitetural.md).
+
 A rota protegida `ANY /api/v1/{proxy+}` nasce no **`oficina-lambda-auth`**, não no
 `oficina-infra-k8s` que cria o próprio API — porque o authorizer só existe depois de o
 `oficina-lambda-auth` aplicar, e ele precisa apontar o `authorizer_id` na própria criação da
