@@ -8,9 +8,9 @@ using Xunit;
 
 namespace Oficina.Aplicacao.Testes.OrdensServico;
 
-// Verifica que as transições simples (que persistem via IOrdemDeServicoGateway)
-// notificam via INotificacaoGateway após SalvarAsync, e não notificam quando a OS não existe.
-// Também verifica que cada transição publica o evento de telemetria (Task 10)
+// Verifica que a transição por HTTP que restou na Fase 4 (entrega) notifica via
+// INotificacaoGateway após SalvarAsync, e não notifica quando a OS não existe.
+// Também verifica que a transição publica o evento de telemetria (Task 10)
 // depois de SalvarAsync ter sido bem-sucedido.
 public class NotificacaoTransicaoUseCaseTestes
 {
@@ -18,95 +18,31 @@ public class NotificacaoTransicaoUseCaseTestes
     private readonly Mock<INotificacaoGateway> _notificacoes = new();
     private readonly Mock<IPublicadorEventoOs> _publicador = new();
 
-    private static OrdemDeServico OsRecebidaComItem()
-    {
-        var os = OrdemDeServico.Criar(Guid.NewGuid(), Guid.NewGuid());
-        os.AdicionarItemServico(Guid.NewGuid(), "S", 10m, 1);
-        return os;
-    }
-
-    [Fact]
-    public async Task IniciarDiagnostico_DeveNotificar()
-    {
-        var os = OsRecebidaComItem();
-        _ordens.Setup(r => r.ObterPorIdAsync(os.Id, It.IsAny<CancellationToken>())).ReturnsAsync(os);
-
-        var resp = await new IniciarDiagnosticoUseCase(_ordens.Object, _notificacoes.Object, _publicador.Object)
-            .ExecutarAsync(os.Id, default);
-
-        resp.Should().NotBeNull();
-        os.Status.Should().Be(StatusOrdemDeServico.EmDiagnostico);
-        _notificacoes.Verify(n => n.NotificarMudancaDeStatusAsync(os, It.IsAny<CancellationToken>()), Times.Once);
-        _publicador.Verify(p => p.Publicar(
-            It.Is<EventoOrdemServico>(e => e.StatusNovo == "EmDiagnostico")), Times.Once);
-    }
-
-    [Fact]
-    public async Task EnviarOrcamentoParaAprovacao_DeveNotificar()
-    {
-        var os = OsRecebidaComItem();
-        os.IniciarDiagnostico();
-        _ordens.Setup(r => r.ObterPorIdAsync(os.Id, It.IsAny<CancellationToken>())).ReturnsAsync(os);
-
-        var resp = await new EnviarOrcamentoParaAprovacaoUseCase(_ordens.Object, _notificacoes.Object, _publicador.Object)
-            .ExecutarAsync(os.Id, default);
-
-        resp.Should().NotBeNull();
-        os.Status.Should().Be(StatusOrdemDeServico.AguardandoAprovacao);
-        _notificacoes.Verify(n => n.NotificarMudancaDeStatusAsync(os, It.IsAny<CancellationToken>()), Times.Once);
-        _publicador.Verify(p => p.Publicar(
-            It.Is<EventoOrdemServico>(e => e.StatusNovo == "AguardandoAprovacao")), Times.Once);
-    }
-
-    [Fact]
-    public async Task Finalizar_DeveNotificar()
-    {
-        var os = OsRecebidaComItem();
-        os.IniciarDiagnostico();
-        os.EnviarOrcamentoParaAprovacao();
-        os.Aprovar();
-        os.IniciarExecucao();
-        _ordens.Setup(r => r.ObterPorIdAsync(os.Id, It.IsAny<CancellationToken>())).ReturnsAsync(os);
-
-        var resp = await new FinalizarOrdemUseCase(_ordens.Object, _notificacoes.Object, _publicador.Object)
-            .ExecutarAsync(os.Id, default);
-
-        resp.Should().NotBeNull();
-        os.Status.Should().Be(StatusOrdemDeServico.Finalizada);
-        _notificacoes.Verify(n => n.NotificarMudancaDeStatusAsync(os, It.IsAny<CancellationToken>()), Times.Once);
-        _publicador.Verify(p => p.Publicar(
-            It.Is<EventoOrdemServico>(e => e.StatusNovo == "Finalizada")), Times.Once);
-    }
+    private EntregarOrdemUseCase Sut => new(_ordens.Object, _notificacoes.Object, _publicador.Object);
 
     [Fact]
     public async Task Entregar_DeveNotificar()
     {
-        var os = OsRecebidaComItem();
-        os.IniciarDiagnostico();
-        os.EnviarOrcamentoParaAprovacao();
-        os.Aprovar();
-        os.IniciarExecucao();
-        os.Finalizar();
+        var os = OrdemEmStatus.Criar(StatusOrdemDeServico.Finalizada);
         _ordens.Setup(r => r.ObterPorIdAsync(os.Id, It.IsAny<CancellationToken>())).ReturnsAsync(os);
 
-        var resp = await new EntregarOrdemUseCase(_ordens.Object, _notificacoes.Object, _publicador.Object)
-            .ExecutarAsync(os.Id, default);
+        var resp = await Sut.ExecutarAsync(os.Id, default);
 
         resp.Should().NotBeNull();
         os.Status.Should().Be(StatusOrdemDeServico.Entregue);
+        _ordens.Verify(r => r.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
         _notificacoes.Verify(n => n.NotificarMudancaDeStatusAsync(os, It.IsAny<CancellationToken>()), Times.Once);
         _publicador.Verify(p => p.Publicar(
-            It.Is<EventoOrdemServico>(e => e.StatusNovo == "Entregue")), Times.Once);
+            It.Is<EventoOrdemServico>(e => e.StatusAnterior == "Finalizada" && e.StatusNovo == "Entregue")), Times.Once);
     }
 
     [Fact]
-    public async Task IniciarDiagnostico_OsInexistente_NaoNotifica()
+    public async Task Entregar_OsInexistente_NaoNotifica()
     {
         _ordens.Setup(r => r.ObterPorIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((OrdemDeServico?)null);
 
-        var resp = await new IniciarDiagnosticoUseCase(_ordens.Object, _notificacoes.Object, _publicador.Object)
-            .ExecutarAsync(Guid.NewGuid(), default);
+        var resp = await Sut.ExecutarAsync(Guid.NewGuid(), default);
 
         resp.Should().BeNull();
         _notificacoes.Verify(n => n.NotificarMudancaDeStatusAsync(It.IsAny<OrdemDeServico>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -114,15 +50,13 @@ public class NotificacaoTransicaoUseCaseTestes
     }
 
     [Fact]
-    public async Task IniciarDiagnostico_TransicaoInvalida_PropagaSemPublicarEvento()
+    public async Task Entregar_TransicaoInvalida_PropagaSemPublicarEvento()
     {
-        // OS já em EmDiagnostico — IniciarDiagnostico() lança TransicaoDeStatusInvalidaException.
-        var os = OsRecebidaComItem();
-        os.IniciarDiagnostico();
+        // OS ainda em EmReparo — Entregar() lança TransicaoDeStatusInvalidaException.
+        var os = OrdemEmStatus.Criar(StatusOrdemDeServico.EmReparo);
         _ordens.Setup(r => r.ObterPorIdAsync(os.Id, It.IsAny<CancellationToken>())).ReturnsAsync(os);
 
-        var act = async () => await new IniciarDiagnosticoUseCase(_ordens.Object, _notificacoes.Object, _publicador.Object)
-            .ExecutarAsync(os.Id, default);
+        var act = async () => await Sut.ExecutarAsync(os.Id, default);
 
         await act.Should().ThrowAsync<TransicaoDeStatusInvalidaException>();
         _ordens.Verify(r => r.SalvarAsync(It.IsAny<CancellationToken>()), Times.Never);

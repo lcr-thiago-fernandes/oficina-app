@@ -25,45 +25,11 @@ public class OrdemDeServicoControllerTestes
         var notificacoes = new Mock<INotificacaoGateway>();
         var publicador = new Mock<IPublicadorEventoOs>();
         return new(
-            new CriarOrdemUseCase(ordens.Object, clientes.Object, publicador.Object),
             new AbrirOrdemDeServicoUseCase(clientes.Object, servicos.Object, pecas.Object, ordens.Object, publicador.Object),
             new ObterOrdemPorIdUseCase(ordens.Object),
             new ListarOrdensUseCase(ordens.Object),
-            new IniciarDiagnosticoUseCase(ordens.Object, notificacoes.Object, publicador.Object),
-            new EnviarOrcamentoParaAprovacaoUseCase(ordens.Object, notificacoes.Object, publicador.Object),
-            new IniciarExecucaoUseCase(ordens.Object, pecas.Object, notificacoes.Object, publicador.Object),
-            new FinalizarOrdemUseCase(ordens.Object, notificacoes.Object, publicador.Object),
             new EntregarOrdemUseCase(ordens.Object, notificacoes.Object, publicador.Object),
-            new AdicionarItemServicoUseCase(ordens.Object, servicos.Object),
-            new RemoverItemServicoUseCase(ordens.Object),
-            new AdicionarItemPecaUseCase(ordens.Object, pecas.Object),
-            new RemoverItemPecaUseCase(ordens.Object),
-            new ObterTempoMedioExecucaoUseCase(ordens.Object),
-            new RegistrarDecisaoDeOrcamentoUseCase(ordens.Object, notificacoes.Object, publicador.Object));
-    }
-
-    [Fact]
-    public async Task CriarAsync_DeveRetornarOrdemResponseFormatada()
-    {
-        var ordens = new Mock<IOrdemDeServicoGateway>();
-        var clientes = new Mock<IClienteGateway>();
-        var servicos = new Mock<IServicoGateway>();
-        var pecas = new Mock<IPecaGateway>();
-
-        var cliente = Cliente.Criar("J", Documento.Criar("39053344705"),
-            Email.Criar("e@x.com"), Telefone.Criar("11987654321"));
-        var veiculo = Veiculo.Criar(Placa.Criar("ABC1234"), "F", "U", 2020);
-        cliente.AdicionarVeiculo(veiculo);
-        clientes.Setup(c => c.ObterPorIdAsync(cliente.Id, It.IsAny<CancellationToken>())).ReturnsAsync(cliente);
-        ordens.Setup(o => o.ObterPorIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(OrdemDeServico.Criar(cliente.Id, veiculo.Id));
-
-        var controller = CriarController(ordens, clientes, servicos, pecas);
-        var resp = await controller.CriarAsync(new CriarOrdemRequest(cliente.Id, veiculo.Id, null), default);
-
-        resp.Should().BeOfType<OrdemResponse>();
-        resp.Status.Should().Be("Recebida");
-        ordens.Verify(o => o.AdicionarAsync(It.IsAny<OrdemDeServico>(), It.IsAny<CancellationToken>()), Times.Once);
+            new ObterTempoMedioExecucaoUseCase(ordens.Object));
     }
 
     [Fact]
@@ -94,26 +60,6 @@ public class OrdemDeServicoControllerTestes
 
         pagina.Total.Should().Be(1);
         pagina.Itens.Should().ContainSingle(o => o.Status == "Recebida");
-    }
-
-    [Fact]
-    public async Task AdicionarItemServicoAsync_DeveRetornarItemServicoResponse()
-    {
-        var ordens = new Mock<IOrdemDeServicoGateway>();
-        var servicos = new Mock<IServicoGateway>();
-        var ordem = OrdemDeServico.Criar(Guid.NewGuid(), Guid.NewGuid());
-        var serv = Servico.Criar("Troca de óleo", "x", 150m, 30);
-        ordens.Setup(o => o.ObterPorIdAsync(ordem.Id, It.IsAny<CancellationToken>())).ReturnsAsync(ordem);
-        servicos.Setup(s => s.ObterPorIdAsync(serv.Id, It.IsAny<CancellationToken>())).ReturnsAsync(serv);
-        var controller = CriarController(ordens, new Mock<IClienteGateway>(), servicos, new Mock<IPecaGateway>());
-
-        var resp = await controller.AdicionarItemServicoAsync(
-            ordem.Id, new AdicionarItemServicoRequest(serv.Id, 2), default);
-
-        resp.Should().NotBeNull();
-        resp!.Nome.Should().Be("Troca de óleo");
-        resp.Subtotal.Should().Be(300m);
-        ordens.Verify(o => o.MarcarItemServicoComoNovo(It.IsAny<ItemServico>()), Times.Once);
     }
 
     [Fact]
@@ -170,27 +116,25 @@ public class OrdemDeServicoControllerTestes
     }
 
     [Fact]
-    public async Task RegistrarDecisaoDeOrcamentoAsync_Aprovado_DeveRetornarOrdemResponse()
+    public async Task EntregarAsync_OrdemFinalizada_DeveRetornarOrdemEntregue()
     {
         var ordens = new Mock<IOrdemDeServicoGateway>();
-        var os = OrdemDeServico.Criar(Guid.NewGuid(), Guid.NewGuid());
-        os.AdicionarItemServico(Guid.NewGuid(), "S", 10m, 1);
-        os.IniciarDiagnostico();
-        os.EnviarOrcamentoParaAprovacao();
+        var os = OrdemEmStatus.Criar(StatusOrdemDeServico.Finalizada);
         ordens.Setup(o => o.ObterPorIdAsync(os.Id, It.IsAny<CancellationToken>())).ReturnsAsync(os);
 
         var controller = CriarController(ordens, new Mock<IClienteGateway>(),
             new Mock<IServicoGateway>(), new Mock<IPecaGateway>());
 
-        var resp = await controller.RegistrarDecisaoDeOrcamentoAsync(os.Id, true, default);
+        var resp = await controller.EntregarAsync(os.Id, default);
 
         resp.Should().NotBeNull();
-        resp!.OrcamentoAprovadoEm.Should().NotBeNull();
+        resp!.Status.Should().Be("Entregue");
+        resp.EntregueEm.Should().NotBeNull();
         ordens.Verify(o => o.SalvarAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task RegistrarDecisaoDeOrcamentoAsync_OsInexistente_DeveRetornarNull()
+    public async Task EntregarAsync_OsInexistente_DeveRetornarNull()
     {
         var ordens = new Mock<IOrdemDeServicoGateway>();
         ordens.Setup(o => o.ObterPorIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -198,7 +142,7 @@ public class OrdemDeServicoControllerTestes
         var controller = CriarController(ordens, new Mock<IClienteGateway>(),
             new Mock<IServicoGateway>(), new Mock<IPecaGateway>());
 
-        var resp = await controller.RegistrarDecisaoDeOrcamentoAsync(Guid.NewGuid(), true, default);
+        var resp = await controller.EntregarAsync(Guid.NewGuid(), default);
 
         resp.Should().BeNull();
     }

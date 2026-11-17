@@ -3,6 +3,7 @@ using Moq;
 using Oficina.Aplicacao.Autoatendimento;
 using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Aplicacao.OrdensServico.Gateways;
+using Oficina.Aplicacao.Testes.OrdensServico;
 using Oficina.Dominio.Clientes;
 using Oficina.Dominio.OrdensServico;
 using Xunit;
@@ -43,7 +44,8 @@ public class ListarOrdensDoClienteUseCaseTestes
     {
         var cliente = ClienteValido();
         var os = OrdemDeServico.Criar(cliente.Id, Guid.NewGuid(), null, "filial-sp");
-        os.IniciarDiagnostico();
+        os.AdicionarItemServico(Guid.NewGuid(), "S", 10m, 1);
+        OrdemEmStatus.Avancar(os, StatusOrdemDeServico.EmDiagnostico);
 
         _clientes.Setup(c => c.ObterPorDocumentoAsync(It.IsAny<Documento>(), It.IsAny<CancellationToken>()))
                  .ReturnsAsync(cliente);

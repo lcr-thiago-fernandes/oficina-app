@@ -57,7 +57,6 @@ builder.Services.AdicionarAplicacao();
 builder.Services.AdicionarAdaptadores();
 builder.Services.AdicionarJwtBearer(builder.Configuration);
 builder.Services.AdicionarPoliticas();
-builder.Services.AdicionarWebhook(builder.Configuration);
 
 // Observabilidade minima: OpenTelemetry expondo /metrics (Prometheus).
 // Instrumenta requests do ASP.NET Core + runtime .NET; Serilog segue para stdout.

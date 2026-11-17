@@ -2,6 +2,8 @@ namespace Oficina.Dominio.OrdensServico;
 
 public sealed class OrdemDeServico
 {
+    public const string MotivoRejeicaoPadrao = "Orçamento rejeitado pelo cliente";
+
     private readonly List<ItemServico> _itensServico = new();
     private readonly List<ItemPeca> _itensPeca = new();
     private readonly List<HistoricoStatus> _historico = new();
@@ -24,6 +26,8 @@ public sealed class OrdemDeServico
     public DateTimeOffset? IniciadaEm { get; private set; }
     public DateTimeOffset? FinalizadaEm { get; private set; }
     public DateTimeOffset? EntregueEm { get; private set; }
+    public DateTimeOffset? CanceladaEm { get; private set; }
+    public string? MotivoCancelamento { get; private set; }
 
     public IReadOnlyCollection<ItemServico> ItensServico => _itensServico.AsReadOnly();
     public IReadOnlyCollection<ItemPeca> ItensPeca => _itensPeca.AsReadOnly();
@@ -36,6 +40,12 @@ public sealed class OrdemDeServico
         IniciadaEm.HasValue && FinalizadaEm.HasValue
             ? FinalizadaEm.Value - IniciadaEm.Value
             : null;
+
+    /// <summary>O atendente só cancela antes de a execução entrar na fila.</summary>
+    public bool PodeSerCanceladaPeloAtendente =>
+        Status is StatusOrdemDeServico.Recebida
+               or StatusOrdemDeServico.AguardandoAprovacao
+               or StatusOrdemDeServico.AguardandoPagamento;
 
     private OrdemDeServico() { }
 
@@ -63,29 +73,12 @@ public sealed class OrdemDeServico
         return os;
     }
 
-    public void IniciarDiagnostico()
-    {
-        if (Status != StatusOrdemDeServico.Recebida)
-            throw new TransicaoDeStatusInvalidaException(Status, "iniciar diagnóstico");
-        Status = StatusOrdemDeServico.EmDiagnostico;
-        DiagnosticadaEm = DateTimeOffset.UtcNow;
-        RegistrarTransicao(StatusOrdemDeServico.Recebida, StatusOrdemDeServico.EmDiagnostico);
-    }
-
     public ItemServico AdicionarItemServico(Guid servicoId, string servicoNome, decimal precoSnapshot, int quantidade)
     {
         GarantirEditavel();
         var item = ItemServico.Criar(servicoId, servicoNome, precoSnapshot, quantidade);
         _itensServico.Add(item);
         return item;
-    }
-
-    public void RemoverItemServico(Guid itemId)
-    {
-        GarantirEditavel();
-        var item = _itensServico.FirstOrDefault(i => i.Id == itemId)
-            ?? throw new ItemNaoEncontradoException("serviço", itemId);
-        _itensServico.Remove(item);
     }
 
     public ItemPeca AdicionarItemPeca(Guid pecaId, string pecaNome, decimal precoSnapshot, int quantidade)
@@ -96,77 +89,101 @@ public sealed class OrdemDeServico
         return item;
     }
 
-    public void RemoverItemPeca(Guid itemId)
+    public void AguardarAprovacao()
     {
-        GarantirEditavel();
-        var item = _itensPeca.FirstOrDefault(i => i.Id == itemId)
-            ?? throw new ItemNaoEncontradoException("peça", itemId);
-        _itensPeca.Remove(item);
-    }
-
-    public void EnviarOrcamentoParaAprovacao()
-    {
-        if (Status != StatusOrdemDeServico.EmDiagnostico)
-            throw new TransicaoDeStatusInvalidaException(Status, "enviar para aprovação");
+        GarantirOrigem("enviar para aprovação", StatusOrdemDeServico.Recebida);
         if (_itensServico.Count == 0 && _itensPeca.Count == 0)
             throw new OrdemSemItensException();
-        Status = StatusOrdemDeServico.AguardandoAprovacao;
         EnviadaAprovacaoEm = DateTimeOffset.UtcNow;
-        RegistrarTransicao(StatusOrdemDeServico.EmDiagnostico, StatusOrdemDeServico.AguardandoAprovacao);
+        MudarStatus(StatusOrdemDeServico.AguardandoAprovacao);
     }
 
-    public void Aprovar()
+    public void AguardarPagamento()
     {
-        if (Status != StatusOrdemDeServico.AguardandoAprovacao)
-            throw new TransicaoDeStatusInvalidaException(Status, "aprovar orçamento");
+        GarantirOrigem("aprovar orçamento", StatusOrdemDeServico.AguardandoAprovacao);
         OrcamentoAprovadoEm = DateTimeOffset.UtcNow;
+        MudarStatus(StatusOrdemDeServico.AguardandoPagamento);
     }
 
-    public void Rejeitar()
+    public void Rejeitar(string? motivo = null)
     {
-        if (Status != StatusOrdemDeServico.AguardandoAprovacao)
-            throw new TransicaoDeStatusInvalidaException(Status, "rejeitar orçamento");
+        GarantirOrigem("rejeitar orçamento", StatusOrdemDeServico.AguardandoAprovacao);
         OrcamentoRejeitadoEm = DateTimeOffset.UtcNow;
-        Status = StatusOrdemDeServico.Cancelada;
-        RegistrarTransicao(StatusOrdemDeServico.AguardandoAprovacao, StatusOrdemDeServico.Cancelada);
+        MarcarCancelada(string.IsNullOrWhiteSpace(motivo) ? MotivoRejeicaoPadrao : motivo.Trim());
     }
 
-    public void IniciarExecucao()
+    public void EnfileirarExecucao()
     {
-        if (Status != StatusOrdemDeServico.AguardandoAprovacao)
-            throw new TransicaoDeStatusInvalidaException(Status, "iniciar execução");
-        if (OrcamentoAprovadoEm is null)
-            throw new OrcamentoNaoAprovadoException();
+        GarantirOrigem("enfileirar execução", StatusOrdemDeServico.AguardandoPagamento);
+        MudarStatus(StatusOrdemDeServico.EmFilaExecucao);
+    }
 
-        Status = StatusOrdemDeServico.EmExecucao;
+    public void IniciarDiagnostico()
+    {
+        GarantirOrigem("iniciar diagnóstico", StatusOrdemDeServico.EmFilaExecucao);
+        DiagnosticadaEm = DateTimeOffset.UtcNow;
+        MudarStatus(StatusOrdemDeServico.EmDiagnostico);
+    }
+
+    public void IniciarReparo()
+    {
+        GarantirOrigem("iniciar reparo",
+            StatusOrdemDeServico.EmFilaExecucao,
+            StatusOrdemDeServico.EmDiagnostico);
         IniciadaEm = DateTimeOffset.UtcNow;
-        RegistrarTransicao(StatusOrdemDeServico.AguardandoAprovacao, StatusOrdemDeServico.EmExecucao);
+        MudarStatus(StatusOrdemDeServico.EmReparo);
     }
 
     public void Finalizar()
     {
-        if (Status != StatusOrdemDeServico.EmExecucao)
-            throw new TransicaoDeStatusInvalidaException(Status, "finalizar");
-        Status = StatusOrdemDeServico.Finalizada;
+        GarantirOrigem("finalizar",
+            StatusOrdemDeServico.EmFilaExecucao,
+            StatusOrdemDeServico.EmDiagnostico,
+            StatusOrdemDeServico.EmReparo);
         FinalizadaEm = DateTimeOffset.UtcNow;
-        RegistrarTransicao(StatusOrdemDeServico.EmExecucao, StatusOrdemDeServico.Finalizada);
+        MudarStatus(StatusOrdemDeServico.Finalizada);
     }
 
     public void Entregar()
     {
-        if (Status != StatusOrdemDeServico.Finalizada)
-            throw new TransicaoDeStatusInvalidaException(Status, "entregar");
-        Status = StatusOrdemDeServico.Entregue;
+        GarantirOrigem("entregar", StatusOrdemDeServico.Finalizada);
         EntregueEm = DateTimeOffset.UtcNow;
-        RegistrarTransicao(StatusOrdemDeServico.Finalizada, StatusOrdemDeServico.Entregue);
+        MudarStatus(StatusOrdemDeServico.Entregue);
     }
 
+    public void Cancelar(string motivo)
+    {
+        if (string.IsNullOrWhiteSpace(motivo))
+            throw new ArgumentException("Motivo do cancelamento obrigatório.", nameof(motivo));
+        if (!PodeSerCanceladaPeloAtendente)
+            throw new TransicaoDeStatusInvalidaException(Status, "cancelar");
+        MarcarCancelada(motivo.Trim());
+    }
+
+    private void MarcarCancelada(string motivo)
+    {
+        MotivoCancelamento = motivo;
+        CanceladaEm = DateTimeOffset.UtcNow;
+        MudarStatus(StatusOrdemDeServico.Cancelada);
+    }
+
+    private void GarantirOrigem(string acao, params StatusOrdemDeServico[] permitidos)
+    {
+        if (!permitidos.Contains(Status))
+            throw new TransicaoDeStatusInvalidaException(Status, acao);
+    }
+
+    private void MudarStatus(StatusOrdemDeServico novo)
+    {
+        var anterior = Status;
+        Status = novo;
+        RegistrarTransicao(anterior, novo);
+    }
+
+    /// <summary>Itens só podem ser incluídos na abertura da OS (status Recebida).</summary>
     private void GarantirEditavel()
     {
-        if (Status is StatusOrdemDeServico.EmExecucao
-                   or StatusOrdemDeServico.Finalizada
-                   or StatusOrdemDeServico.Entregue
-                   or StatusOrdemDeServico.Cancelada)
+        if (Status != StatusOrdemDeServico.Recebida)
             throw new OrdemImutavelException();
     }
 

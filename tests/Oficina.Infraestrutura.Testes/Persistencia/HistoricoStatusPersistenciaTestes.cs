@@ -30,7 +30,8 @@ public class HistoricoStatusPersistenciaTestes : IAsyncLifetime
     public async Task Historico_e_persistido_e_recarregado_com_a_ordem()
     {
         var os = OrdemDeServico.Criar(Guid.NewGuid(), Guid.NewGuid(), null, "filial-sp");
-        os.IniciarDiagnostico();
+        os.AdicionarItemServico(Guid.NewGuid(), "S", 10m, 1);
+        os.AguardarAprovacao();
 
         _db.OrdensServico.Add(os);
         await _db.SaveChangesAsync();
@@ -46,7 +47,7 @@ public class HistoricoStatusPersistenciaTestes : IAsyncLifetime
 
         recarregada.Unidade.Should().Be("filial-sp");
         recarregada.Historico.Should().HaveCount(2);
-        recarregada.Historico.Last().StatusNovo.Should().Be(StatusOrdemDeServico.EmDiagnostico);
+        recarregada.Historico.Last().StatusNovo.Should().Be(StatusOrdemDeServico.AguardandoAprovacao);
         recarregada.Historico.Last().StatusAnterior.Should().Be(StatusOrdemDeServico.Recebida);
     }
 
@@ -87,6 +88,7 @@ public class HistoricoStatusPersistenciaTestes : IAsyncLifetime
     {
         var dataSource = new OrdemDeServicoDataSource(_db);
         var os = OrdemDeServico.Criar(Guid.NewGuid(), Guid.NewGuid());
+        os.AdicionarItemServico(Guid.NewGuid(), "S", 10m, 1);
 
         await dataSource.AdicionarAsync(os, CancellationToken.None);
         await dataSource.SalvarAsync(CancellationToken.None);
@@ -97,13 +99,13 @@ public class HistoricoStatusPersistenciaTestes : IAsyncLifetime
         var carregada = await dataSource.ObterPorIdAsync(os.Id, CancellationToken.None);
         carregada!.Historico.Should().HaveCount(1);
 
-        carregada.IniciarDiagnostico();
+        carregada.AguardarAprovacao();
         await dataSource.SalvarAsync(CancellationToken.None); // nao pode lancar DbUpdateConcurrencyException
         _db.ChangeTracker.Clear();
 
         var recarregada = await dataSource.ObterPorIdAsync(os.Id, CancellationToken.None);
         recarregada!.Historico.Should().HaveCount(2);
-        recarregada.Historico.Last().StatusNovo.Should().Be(StatusOrdemDeServico.EmDiagnostico);
+        recarregada.Historico.Last().StatusNovo.Should().Be(StatusOrdemDeServico.AguardandoAprovacao);
     }
 
     public async Task DisposeAsync()

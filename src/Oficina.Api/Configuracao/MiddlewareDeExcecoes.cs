@@ -59,16 +59,11 @@ public class MiddlewareDeExcecoes
 
         TransicaoDeStatusInvalidaException or
         OrdemSemItensException or
-        OrcamentoNaoAprovadoException or
         ItemInvalidoException or
         OrdemImutavelException or
         Oficina.Aplicacao.OrdensServico.OrdemInvalidaException
             => (StatusCodes.Status422UnprocessableEntity,
                 new ProblemDetails { Title = "Operação inválida", Detail = ex.Message, Status = 422 }),
-
-        ItemNaoEncontradoException
-            => (StatusCodes.Status404NotFound,
-                new ProblemDetails { Title = "Não encontrado", Detail = ex.Message, Status = 404 }),
 
         DocumentoJaCadastradoException or
         PlacaJaCadastradaException

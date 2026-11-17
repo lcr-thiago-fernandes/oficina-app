@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Oficina.Dominio.OrdensServico;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -30,7 +31,6 @@ public class AuthFixture : IAsyncLifetime
         Environment.SetEnvironmentVariable("Jwt__Issuer", GeradorTokenDeTeste.Issuer);
         Environment.SetEnvironmentVariable("Jwt__Audience", GeradorTokenDeTeste.Audience);
         Environment.SetEnvironmentVariable("AdminBootstrap__Password", "AlteraMe@123");
-        Environment.SetEnvironmentVariable("Webhook__Token", "token-teste-webhook");
 
         Factory = new WebApplicationFactory<Program>();
 
@@ -55,12 +55,44 @@ public class AuthFixture : IAsyncLifetime
         await Postgres.DisposeAsync();
     }
 
-    public async Task AprovarOrcamentoDiretoNoBancoAsync(Guid ordemId)
+    /// <summary>
+    /// Leva a OS até <paramref name="alvo"/> aplicando a cadeia de transições do domínio
+    /// direto no banco — na Fase 4 essas transições chegam pela saga (Billing/Execução), não
+    /// por HTTP. Cadeia: Recebida → AguardandoAprovacao → AguardandoPagamento → EmFilaExecucao
+    /// → EmDiagnostico → EmReparo → Finalizada → Entregue; Cancelada via rejeição do orçamento.
+    /// </summary>
+    public async Task LevarOrdemAteStatusNoBancoAsync(Guid ordemId, StatusOrdemDeServico alvo)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<Oficina.Infraestrutura.Persistencia.OficinaDbContext>();
-        var ordem = await db.OrdensServico.FirstAsync(o => o.Id == ordemId);
-        ordem.Aprovar();
+        var ordem = await db.OrdensServico
+            .Include(o => o.ItensServico)
+            .Include(o => o.ItensPeca)
+            .Include(o => o.Historico.OrderBy(h => h.OcorridoEm))
+            .FirstAsync(o => o.Id == ordemId);
+
+        if (alvo == StatusOrdemDeServico.Cancelada)
+        {
+            if (ordem.Status == StatusOrdemDeServico.Recebida) ordem.AguardarAprovacao();
+            ordem.Rejeitar();
+        }
+
+        while (ordem.Status != alvo)
+        {
+            switch (ordem.Status)
+            {
+                case StatusOrdemDeServico.Recebida: ordem.AguardarAprovacao(); break;
+                case StatusOrdemDeServico.AguardandoAprovacao: ordem.AguardarPagamento(); break;
+                case StatusOrdemDeServico.AguardandoPagamento: ordem.EnfileirarExecucao(); break;
+                case StatusOrdemDeServico.EmFilaExecucao: ordem.IniciarDiagnostico(); break;
+                case StatusOrdemDeServico.EmDiagnostico: ordem.IniciarReparo(); break;
+                case StatusOrdemDeServico.EmReparo: ordem.Finalizar(); break;
+                case StatusOrdemDeServico.Finalizada: ordem.Entregar(); break;
+                default:
+                    throw new InvalidOperationException($"Não há como levar a OS de {ordem.Status} até {alvo}.");
+            }
+        }
+
         await db.SaveChangesAsync();
     }
 }

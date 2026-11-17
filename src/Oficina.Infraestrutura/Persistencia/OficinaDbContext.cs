@@ -31,8 +31,9 @@ public class OficinaDbContext : DbContext
 
     /// <summary>
     /// O histórico de status (<see cref="HistoricoStatus"/>) é um efeito colateral interno
-    /// do domínio: cada transição (IniciarDiagnostico, EnviarOrcamentoParaAprovacao, Rejeitar,
-    /// IniciarExecucao, Finalizar, Entregar, Criar) acrescenta uma entrada nova à coleção
+    /// do domínio: cada transição (Criar, AguardarAprovacao, AguardarPagamento, Rejeitar,
+    /// EnfileirarExecucao, IniciarDiagnostico, IniciarReparo, Finalizar, Entregar, Cancelar)
+    /// acrescenta uma entrada nova à coleção
     /// <see cref="OrdemDeServico.Historico"/> sem passar por Add() explícito — de propósito,
     /// para não vazar esse invariante do agregado para a camada de Aplicação (ao contrário de
     /// ItemServico/ItemPeca, que têm MarcarItemXComoNovo chamado explicitamente em cada Use

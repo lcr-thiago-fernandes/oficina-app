@@ -55,12 +55,23 @@ public class OrdemDeServicoConfiguration : IEntityTypeConfiguration<OrdemDeServi
         b.Property(x => x.IniciadaEm).HasColumnName("iniciada_em");
         b.Property(x => x.FinalizadaEm).HasColumnName("finalizada_em");
         b.Property(x => x.EntregueEm).HasColumnName("entregue_em");
+        b.Property(x => x.CanceladaEm).HasColumnName("cancelada_em");
+        b.Property(x => x.MotivoCancelamento).HasColumnName("motivo_cancelamento").HasColumnType("text");
+
+        // Concorrência otimista: a saga e o atendente podem alterar a mesma OS ao mesmo tempo.
+        // `xmin` é a coluna de sistema do PostgreSQL (muda a cada UPDATE) — não é criada pela migration.
+        b.Property<uint>("Versao")
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
 
         // Totais e duração — campos calculados, não persistidos
         b.Ignore(x => x.TotalServicos);
         b.Ignore(x => x.TotalPecas);
         b.Ignore(x => x.TotalGeral);
         b.Ignore(x => x.DuracaoExecucao);
+        b.Ignore(x => x.PodeSerCanceladaPeloAtendente);
 
         b.HasMany(x => x.ItensServico)
             .WithOne()

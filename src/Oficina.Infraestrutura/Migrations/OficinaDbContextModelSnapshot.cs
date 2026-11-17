@@ -385,6 +385,10 @@ namespace Oficina.Infraestrutura.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset?>("CanceladaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelada_em");
+
                     b.Property<Guid>("ClienteId")
                         .HasColumnType("uuid")
                         .HasColumnName("cliente_id");
@@ -412,6 +416,10 @@ namespace Oficina.Infraestrutura.Migrations
                     b.Property<DateTimeOffset?>("IniciadaEm")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("iniciada_em");
+
+                    b.Property<string>("MotivoCancelamento")
+                        .HasColumnType("text")
+                        .HasColumnName("motivo_cancelamento");
 
                     b.Property<long>("Numero")
                         .ValueGeneratedOnAdd()
@@ -449,6 +457,12 @@ namespace Oficina.Infraestrutura.Migrations
                     b.Property<Guid>("VeiculoId")
                         .HasColumnType("uuid")
                         .HasColumnName("veiculo_id");
+
+                    b.Property<uint>("Versao")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 

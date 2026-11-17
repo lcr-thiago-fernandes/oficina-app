@@ -6,65 +6,14 @@ namespace Oficina.Adaptadores.Testes.OrdensServico;
 
 public class OrdemDeServicoQueryTestes
 {
-    // Fábricas que dirigem a OS até cada status usando apenas o domínio.
-    private static OrdemDeServico Recebida()
-    {
-        var os = OrdemDeServico.Criar(Guid.NewGuid(), Guid.NewGuid());
-        os.AdicionarItemServico(Guid.NewGuid(), "S", 10m, 1);
-        return os;
-    }
+    private static OrdemDeServico Em(StatusOrdemDeServico status) => OrdemEmStatus.Criar(status);
 
-    private static OrdemDeServico EmDiagnostico()
-    {
-        var os = Recebida();
-        os.IniciarDiagnostico();
-        return os;
-    }
-
-    private static OrdemDeServico AguardandoAprovacao()
-    {
-        var os = EmDiagnostico();
-        os.EnviarOrcamentoParaAprovacao();
-        return os;
-    }
-
-    private static OrdemDeServico EmExecucao()
-    {
-        var os = AguardandoAprovacao();
-        os.Aprovar();
-        os.IniciarExecucao();
-        return os;
-    }
-
-    private static OrdemDeServico Finalizada()
-    {
-        var os = EmExecucao();
-        os.Finalizar();
-        return os;
-    }
-
-    private static OrdemDeServico Entregue()
-    {
-        var os = Finalizada();
-        os.Entregar();
-        return os;
-    }
-
-    private static OrdemDeServico Cancelada()
-    {
-        var os = AguardandoAprovacao();
-        os.Rejeitar();
-        return os;
-    }
+    private static readonly StatusOrdemDeServico[] TodosOsStatus = Enum.GetValues<StatusOrdemDeServico>();
 
     [Fact]
     public void AplicarFiltro_SemFiltro_ExcluiTerminais()
     {
-        var fonte = new[]
-        {
-            Recebida(), EmDiagnostico(), AguardandoAprovacao(), EmExecucao(),
-            Finalizada(), Entregue(), Cancelada()
-        }.AsQueryable();
+        var fonte = TodosOsStatus.Select(Em).AsQueryable();
 
         var resultado = OrdemDeServicoQuery.AplicarFiltro(fonte, null).ToList();
 
@@ -72,13 +21,16 @@ public class OrdemDeServicoQueryTestes
             o.Status != StatusOrdemDeServico.Finalizada &&
             o.Status != StatusOrdemDeServico.Entregue &&
             o.Status != StatusOrdemDeServico.Cancelada);
-        resultado.Should().HaveCount(4);
+        resultado.Should().HaveCount(6);
     }
 
     [Fact]
     public void AplicarFiltro_ComStatusTerminal_IncluiApenasEle()
     {
-        var fonte = new[] { Recebida(), Entregue(), Cancelada() }.AsQueryable();
+        var fonte = new[]
+        {
+            Em(StatusOrdemDeServico.Recebida), Em(StatusOrdemDeServico.Entregue), Em(StatusOrdemDeServico.Cancelada)
+        }.AsQueryable();
 
         var resultado = OrdemDeServicoQuery
             .AplicarFiltro(fonte, StatusOrdemDeServico.Entregue).ToList();
@@ -93,17 +45,26 @@ public class OrdemDeServicoQueryTestes
         // fonte propositalmente fora de ordem
         var fonte = new[]
         {
-            Recebida(), EmExecucao(), EmDiagnostico(), AguardandoAprovacao()
+            Em(StatusOrdemDeServico.Recebida),
+            Em(StatusOrdemDeServico.Finalizada),
+            Em(StatusOrdemDeServico.AguardandoAprovacao),
+            Em(StatusOrdemDeServico.EmFilaExecucao),
+            Em(StatusOrdemDeServico.EmReparo),
+            Em(StatusOrdemDeServico.AguardandoPagamento),
+            Em(StatusOrdemDeServico.EmDiagnostico),
         }.AsQueryable();
 
         var ordenado = OrdemDeServicoQuery.AplicarOrdenacao(fonte)
             .Select(o => o.Status).ToList();
 
         ordenado.Should().Equal(
-            StatusOrdemDeServico.EmExecucao,
-            StatusOrdemDeServico.AguardandoAprovacao,
+            StatusOrdemDeServico.EmReparo,
             StatusOrdemDeServico.EmDiagnostico,
-            StatusOrdemDeServico.Recebida);
+            StatusOrdemDeServico.EmFilaExecucao,
+            StatusOrdemDeServico.AguardandoPagamento,
+            StatusOrdemDeServico.AguardandoAprovacao,
+            StatusOrdemDeServico.Recebida,
+            StatusOrdemDeServico.Finalizada);
     }
 
     [Fact]
@@ -111,8 +72,11 @@ public class OrdemDeServicoQueryTestes
     {
         var fonte = new[]
         {
-            Entregue(), Recebida(), Cancelada(), EmExecucao(),
-            Finalizada(), EmDiagnostico(), AguardandoAprovacao()
+            Em(StatusOrdemDeServico.Entregue), Em(StatusOrdemDeServico.Recebida),
+            Em(StatusOrdemDeServico.Cancelada), Em(StatusOrdemDeServico.EmReparo),
+            Em(StatusOrdemDeServico.Finalizada), Em(StatusOrdemDeServico.EmDiagnostico),
+            Em(StatusOrdemDeServico.AguardandoAprovacao), Em(StatusOrdemDeServico.AguardandoPagamento),
+            Em(StatusOrdemDeServico.EmFilaExecucao)
         }.AsQueryable();
 
         var filtrado = OrdemDeServicoQuery.AplicarFiltro(fonte, null);
@@ -120,9 +84,11 @@ public class OrdemDeServicoQueryTestes
             .Select(o => o.Status).ToList();
 
         resultado.Should().Equal(
-            StatusOrdemDeServico.EmExecucao,
-            StatusOrdemDeServico.AguardandoAprovacao,
+            StatusOrdemDeServico.EmReparo,
             StatusOrdemDeServico.EmDiagnostico,
+            StatusOrdemDeServico.EmFilaExecucao,
+            StatusOrdemDeServico.AguardandoPagamento,
+            StatusOrdemDeServico.AguardandoAprovacao,
             StatusOrdemDeServico.Recebida);
     }
 }
