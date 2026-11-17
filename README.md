@@ -586,10 +586,13 @@ O agente APM do New Relic está na imagem, mas fica inerte sem `NEW_RELIC_LICENS
 
 ### Ponta a ponta (os três serviços)
 
-Com `oficina-app`, `oficina-billing-service` e `oficina-execucao-service` clonados lado a lado:
+Com `oficina-app`, `oficina-billing-service` e `oficina-execucao-service` clonados lado a lado.
+Se o compose de cima (só o OS Service) estiver no ar, derrube-o antes — os dois publicam as
+portas 5432, 8080 e 4566:
 
 ```bash
-docker compose -f docker/docker-compose.fase4.yml --env-file .env up -d --build
+docker compose -f docker/docker-compose.yml --env-file .env down
+docker compose -f docker/docker-compose.fase4.yml --env-file .env up -d --build --wait
 ```
 
 Sobe PostgreSQL, DynamoDB Local, LocalStack e os três serviços (OS em `:8080`, Billing em

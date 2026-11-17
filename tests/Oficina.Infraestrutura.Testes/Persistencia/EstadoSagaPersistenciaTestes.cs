@@ -29,9 +29,9 @@ public class EstadoSagaPersistenciaTestes : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Salvar_PagamentoIdDe100Caracteres_PersisteERecarrega()
+    public async Task Salvar_PagamentoIdDe128Caracteres_PersisteERecarrega()
     {
-        var pagamentoId = "sim-a-" + new string('9', 94);
+        var pagamentoId = "sim-a-" + new string('9', 122);
         var saga = new EstadoSagaOrdemServico
         {
             CorrelationId = Guid.NewGuid(),
@@ -47,7 +47,7 @@ public class EstadoSagaPersistenciaTestes : IAsyncLifetime
         _db.ChangeTracker.Clear();
 
         var recarregada = await _db.Set<EstadoSagaOrdemServico>().SingleAsync(s => s.CorrelationId == saga.CorrelationId);
-        pagamentoId.Should().HaveLength(100);
+        pagamentoId.Should().HaveLength(128);
         recarregada.PagamentoId.Should().Be(pagamentoId);
     }
 

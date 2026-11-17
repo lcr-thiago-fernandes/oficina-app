@@ -19,11 +19,14 @@
 ###      cp .env.example .env
 ###      docker compose -f docker/docker-compose.fase4.yml --env-file .env up -d --build --wait
 ###    OS em :8080, Billing em :8082/billing, Execução em :8083/execucao.
+###    Se o docker-compose.yml (só o OS Service) estiver no ar, derrube-o antes: as portas
+###    5432, 8080 e 4566 são as mesmas.
 ### 3. TOKENS (a Lambda oficina-auth-api não roda localmente). Mesmo JWT_SECRET do .env
 ###    para os três serviços (iss=oficina-auth, aud=oficina-api):
 ###      ./scripts/gerar-token-dev.sh Admin                    -> "token" em .vscode/settings.json
 ###      ./scripts/gerar-token-dev.sh Cliente 39053344705      -> "tokenCliente"
 ###    O Cliente é o dono das OS abertas abaixo (mesmo documento): aprova/rejeita no Billing.
+###    Os tokens expiram em 1 h (exp do script): passado isso, as chamadas dão 401 — gere de novo.
 ### 4. VS Code + REST Client, ambiente "local". Execute EM ORDEM: os ids são capturados
 ###    das respostas (# @name), não precisa copiar nada à mão.
 ###
@@ -94,7 +97,7 @@ Content-Type: application/json
 
 ### [A.1] Abrir a OS (201, status Recebida). Reserva 2 unidades da peça e inicia a saga,
 ### que manda GerarOrcamento para a fila local-oficina-billing-comandos.
-# @name osA
+# @name abrirOsA
 POST {{os}}/ordens-servico
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -107,7 +110,7 @@ Content-Type: application/json
   "observacoes": "Ruído no motor."
 }
 
-@osA = {{osA.response.body.id}}
+@osA = {{abrirOsA.response.body.id}}
 
 ### [A.2] Saga: AguardandoAprovacao (trilha SolicitarOrcamento → GerarOrcamento)
 GET {{os}}/ordens-servico/{{osA}}/saga
@@ -187,7 +190,7 @@ Authorization: Bearer {{token}}
 ### ============================================================
 
 ### [B.1] Abrir OS (reserva 1 unidade)
-# @name osB
+# @name abrirOsB
 POST {{os}}/ordens-servico
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -199,7 +202,7 @@ Content-Type: application/json
   "pecas": [ { "pecaId": "{{pecaId}}", "quantidade": 1 } ]
 }
 
-@osB = {{osB.response.body.id}}
+@osB = {{abrirOsB.response.body.id}}
 
 ### [B.2] Estoque com 1 unidade reservada
 GET {{os}}/pecas/{{pecaId}}
@@ -228,7 +231,7 @@ Authorization: Bearer {{token}}
 ### ============================================================
 
 ### [C.1] Abrir OS
-# @name osC
+# @name abrirOsC
 POST {{os}}/ordens-servico
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -240,7 +243,7 @@ Content-Type: application/json
   "pecas": [ { "pecaId": "{{pecaId}}", "quantidade": 1 } ]
 }
 
-@osC = {{osC.response.body.id}}
+@osC = {{abrirOsC.response.body.id}}
 
 ### [C.2] Billing: aprovar
 POST {{billing}}/orcamentos/{{osC}}/aprovacao
@@ -272,7 +275,7 @@ Authorization: Bearer {{token}}
 ### Ao final, volte ao normal com o mesmo comando sem CAPACIDADE_EXECUCAO.
 
 ### [D.1] Abrir OS (reserva 2 unidades)
-# @name osD
+# @name abrirOsD
 POST {{os}}/ordens-servico
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -284,7 +287,7 @@ Content-Type: application/json
   "pecas": [ { "pecaId": "{{pecaId}}", "quantidade": 2 } ]
 }
 
-@osD = {{osD.response.body.id}}
+@osD = {{abrirOsD.response.body.id}}
 
 ### [D.2] Billing: aprovar
 POST {{billing}}/orcamentos/{{osD}}/aprovacao
