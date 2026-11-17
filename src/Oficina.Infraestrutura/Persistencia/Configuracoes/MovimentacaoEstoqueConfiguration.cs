@@ -6,6 +6,29 @@ namespace Oficina.Infraestrutura.Persistencia.Configuracoes;
 
 public class MovimentacaoEstoqueConfiguration : IEntityTypeConfiguration<MovimentacaoEstoque>
 {
+    private static readonly IReadOnlyDictionary<TipoMovimentacao, string> CodigoPorTipo =
+        new Dictionary<TipoMovimentacao, string>
+        {
+            [TipoMovimentacao.Entrada] = "E",
+            [TipoMovimentacao.Saida] = "S",
+            [TipoMovimentacao.Reserva] = "R",
+            [TipoMovimentacao.LiberacaoReserva] = "L",
+            [TipoMovimentacao.Reposicao] = "P"
+        };
+
+    private static readonly IReadOnlyDictionary<string, TipoMovimentacao> TipoPorCodigo =
+        CodigoPorTipo.ToDictionary(kv => kv.Value, kv => kv.Key);
+
+    private static string ParaCodigo(TipoMovimentacao tipo) =>
+        CodigoPorTipo.TryGetValue(tipo, out var codigo)
+            ? codigo
+            : throw new InvalidOperationException($"Tipo de movimentação sem código persistido: {tipo}.");
+
+    private static TipoMovimentacao ParaTipo(string codigo) =>
+        TipoPorCodigo.TryGetValue(codigo, out var tipo)
+            ? tipo
+            : throw new InvalidOperationException($"Código de movimentação desconhecido: '{codigo}'.");
+
     public void Configure(EntityTypeBuilder<MovimentacaoEstoque> b)
     {
         b.ToTable("movimentacao", "estoque");
@@ -14,8 +37,8 @@ public class MovimentacaoEstoqueConfiguration : IEntityTypeConfiguration<Movimen
         b.Property(x => x.Id).HasColumnName("id");
         b.Property(x => x.Tipo)
             .HasConversion(
-                v => v == TipoMovimentacao.Entrada ? "E" : "S",
-                v => v == "E" ? TipoMovimentacao.Entrada : TipoMovimentacao.Saida)
+                v => ParaCodigo(v),
+                v => ParaTipo(v))
             .HasColumnName("tipo").HasColumnType("char(1)").IsRequired();
         b.Property(x => x.Quantidade).HasColumnName("quantidade").IsRequired();
         b.Property(x => x.Motivo).HasColumnName("motivo").HasMaxLength(100).IsRequired();

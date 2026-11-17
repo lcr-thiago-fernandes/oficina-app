@@ -27,3 +27,8 @@ public class SkuJaCadastradoException : ExcecaoDeDominio
     public SkuJaCadastradoException(string sku)
         : base($"Já existe peça com SKU '{sku}'.") { }
 }
+
+public class ReservaInvalidaException : ExcecaoDeDominio
+{
+    public ReservaInvalidaException(string mensagem) : base(mensagem) { }
+}

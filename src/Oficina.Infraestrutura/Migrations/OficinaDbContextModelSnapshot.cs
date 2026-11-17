@@ -249,9 +249,24 @@ namespace Oficina.Infraestrutura.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("saldo_atual");
 
+                    b.Property<int>("SaldoReservado")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("saldo_reservado");
+
+                    b.Property<uint>("Versao")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
-                    b.ToTable("peca", "estoque");
+                    b.ToTable("peca", "estoque", t =>
+                        {
+                            t.HasCheckConstraint("ck_peca_saldo_reservado_valido", "saldo_reservado >= 0 AND saldo_reservado <= saldo_atual");
+                        });
                 });
 
             modelBuilder.Entity("Oficina.Dominio.OrdensServico.HistoricoStatus", b =>
