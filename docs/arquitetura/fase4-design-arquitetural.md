@@ -285,6 +285,7 @@ porque os dois namespaces compartilham a conta AWS):
 | Fila de comandos da Execução | `{prefixo}-oficina-execucao-comandos` |
 | Fila de eventos da saga (OS Service) | `{prefixo}-oficina-os-saga` |
 | Tópico SNS de cada mensagem | `{prefixo}-oficina-saga-{Nome}` |
+| Fila padrão do bus (respostas/controle) | `{prefixo}-oficina-<os\|billing\|execucao>-bus` (via `OverrideDefaultBusEndpointQueueName`; o nome aleatório padrão ficaria fora da política IAM `*-oficina-*`) |
 
 **O nome do tópico não pode depender do namespace .NET** (que difere entre repositórios — o
 padrão do MassTransit usaria o nome completo do tipo e os tópicos nunca se encontrariam). Por
