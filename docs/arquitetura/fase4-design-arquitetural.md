@@ -297,8 +297,11 @@ configuração do bus: `cfg.Message<T>(m => m.SetEntityName($"{prefixo}-oficina-
 para todo tipo que publica ou assina, com teste provando o nome final. Os testes de contrato
 verificam os dois atributos de cada tipo, além do JSON.
 
-**Versão fixada nos três repositórios:** `MassTransit` e `MassTransit.AmazonSQS` **8.5.12**
-(dependem de AWSSDK 4.x).
+**Versões fixadas:** Billing e Execução usam `MassTransit`/`MassTransit.AmazonSQS` **8.5.12**
+(AWSSDK 4.x). O OS Service usa **8.4.1**, porque a partir da 8.5.0 o
+`MassTransit.EntityFrameworkCore` exige EF Core 9 e o serviço está em EF Core 8/Npgsql 8. O
+formato do envelope é o mesmo nas duas versões; a interoperabilidade é coberta pelos testes de
+contrato e pelo fluxo ponta a ponta local. Nenhum repositório usa a v9 (licença comercial).
 
 Exemplos JSON: [`docs/contratos/mensagens/`](../contratos/mensagens/).
 
