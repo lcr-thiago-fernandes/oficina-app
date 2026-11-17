@@ -82,6 +82,7 @@ jobs:
         run: dotnet format Oficina.sln --verify-no-changes --no-restore --verbosity diagnostic
 
   sonar:
+    # S2068 ignorado em appsettings.json: so a connection string de dev local (localhost); segredos reais vem de env/SSM.
     # Validacao de qualidade (SonarQube) em dois modos:
     #  - SONAR_TOKEN configurado -> SonarCloud (organizacao em vars.SONAR_ORGANIZATION).
     #  - SONAR_TOKEN ausente     -> SonarQube Community efemero (service container), sem conta externa:
@@ -140,7 +141,7 @@ jobs:
             /d:sonar.token="$SONAR_TOKEN" \
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
             /d:sonar.qualitygate.wait=true \
-            /d:sonar.exclusions="$SONAR_EXCLUSIONS" \
+            /d:sonar.issue.ignore.multicriteria=e1             /d:sonar.issue.ignore.multicriteria.e1.ruleKey="csharpsquid:S2068"             /d:sonar.issue.ignore.multicriteria.e1.resourceKey="**/appsettings.json"             /d:sonar.exclusions="$SONAR_EXCLUSIONS" \
             /d:sonar.coverage.exclusions="$SONAR_COVERAGE_EXCLUSIONS"
 
       - name: Build (SonarCloud)
@@ -198,7 +199,7 @@ jobs:
             /d:sonar.token="$SONAR_LOCAL_TOKEN" \
             /d:sonar.cs.opencover.reportsPaths="$GITHUB_WORKSPACE/SonarTestResults/**/coverage.opencover.xml" \
             /d:sonar.cs.vstest.reportsPaths="$GITHUB_WORKSPACE/SonarTestResults/**/*.trx" \
-            /d:sonar.exclusions="$SONAR_EXCLUSIONS" \
+            /d:sonar.issue.ignore.multicriteria=e1             /d:sonar.issue.ignore.multicriteria.e1.ruleKey="csharpsquid:S2068"             /d:sonar.issue.ignore.multicriteria.e1.resourceKey="**/appsettings.json"             /d:sonar.exclusions="$SONAR_EXCLUSIONS" \
             /d:sonar.coverage.exclusions="$SONAR_COVERAGE_EXCLUSIONS"
 
       - name: Build (SonarQube local)

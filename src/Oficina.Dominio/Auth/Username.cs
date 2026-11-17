@@ -4,7 +4,7 @@ namespace Oficina.Dominio.Auth;
 
 public sealed class Username : IEquatable<Username>
 {
-    private static readonly Regex Padrao = new("^[a-z0-9._]+$", RegexOptions.Compiled);
+    private static readonly Regex Padrao = new("^[a-z0-9._]+$", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
 
     public string Valor { get; }
 

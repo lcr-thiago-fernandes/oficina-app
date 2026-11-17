@@ -36,7 +36,7 @@ public class MiddlewareDeExcecoes
 
             context.Response.StatusCode = status;
             context.Response.ContentType = "application/problem+json";
-            await context.Response.WriteAsJsonAsync(problema);
+            await context.Response.WriteAsJsonAsync(problema, context.RequestAborted);
         }
     }
 
