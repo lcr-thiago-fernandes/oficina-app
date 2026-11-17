@@ -4,6 +4,7 @@ using Oficina.Aplicacao.OrdensServico;
 using Oficina.Aplicacao.OrdensServico.Gateways;
 using Oficina.Aplicacao.OrdensServico.Telemetria;
 using Oficina.Dominio.OrdensServico;
+using Oficina.Testes.Compartilhado;
 using Xunit;
 
 namespace Oficina.Aplicacao.Testes.OrdensServico;

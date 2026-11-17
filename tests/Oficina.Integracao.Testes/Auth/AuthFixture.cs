@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Oficina.Dominio.OrdensServico;
+using Oficina.Testes.Compartilhado;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -71,27 +72,7 @@ public class AuthFixture : IAsyncLifetime
             .Include(o => o.Historico.OrderBy(h => h.OcorridoEm))
             .FirstAsync(o => o.Id == ordemId);
 
-        if (alvo == StatusOrdemDeServico.Cancelada)
-        {
-            if (ordem.Status == StatusOrdemDeServico.Recebida) ordem.AguardarAprovacao();
-            ordem.Rejeitar();
-        }
-
-        while (ordem.Status != alvo)
-        {
-            switch (ordem.Status)
-            {
-                case StatusOrdemDeServico.Recebida: ordem.AguardarAprovacao(); break;
-                case StatusOrdemDeServico.AguardandoAprovacao: ordem.AguardarPagamento(); break;
-                case StatusOrdemDeServico.AguardandoPagamento: ordem.EnfileirarExecucao(); break;
-                case StatusOrdemDeServico.EmFilaExecucao: ordem.IniciarDiagnostico(); break;
-                case StatusOrdemDeServico.EmDiagnostico: ordem.IniciarReparo(); break;
-                case StatusOrdemDeServico.EmReparo: ordem.Finalizar(); break;
-                case StatusOrdemDeServico.Finalizada: ordem.Entregar(); break;
-                default:
-                    throw new InvalidOperationException($"Não há como levar a OS de {ordem.Status} até {alvo}.");
-            }
-        }
+        OrdemEmStatus.Avancar(ordem, alvo);
 
         await db.SaveChangesAsync();
     }

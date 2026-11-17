@@ -11,6 +11,7 @@ using Oficina.Aplicacao.OrdensServico.Telemetria;
 using Oficina.Dominio.Catalogo;
 using Oficina.Dominio.Clientes;
 using Oficina.Dominio.OrdensServico;
+using Oficina.Testes.Compartilhado;
 
 namespace Oficina.Adaptadores.Testes.OrdensServico;
 

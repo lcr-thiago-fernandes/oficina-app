@@ -33,4 +33,8 @@
     <ProjectReference Include="..\..\src\Oficina.Infraestrutura\Oficina.Infraestrutura.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Fonte única do helper que leva a OS até um status (compartilhada entre projetos de teste). -->
+    <Compile Include="../Compartilhado/OrdemEmStatus.cs" Link="Compartilhado/OrdemEmStatus.cs" />
+  </ItemGroup>
 </Project>

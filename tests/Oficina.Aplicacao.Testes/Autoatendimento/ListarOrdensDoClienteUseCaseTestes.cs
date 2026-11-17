@@ -3,7 +3,7 @@ using Moq;
 using Oficina.Aplicacao.Autoatendimento;
 using Oficina.Aplicacao.Clientes.Gateways;
 using Oficina.Aplicacao.OrdensServico.Gateways;
-using Oficina.Aplicacao.Testes.OrdensServico;
+using Oficina.Testes.Compartilhado;
 using Oficina.Dominio.Clientes;
 using Oficina.Dominio.OrdensServico;
 using Xunit;

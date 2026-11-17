@@ -1,8 +1,9 @@
 using Oficina.Dominio.OrdensServico;
 
-namespace Oficina.Adaptadores.Testes.OrdensServico;
+namespace Oficina.Testes.Compartilhado;
 
 /// <summary>
+/// Fonte única, incluída por link (Compile Include) em cada projeto de teste que precisa dela.
 /// Leva uma OS até o status desejado pela cadeia de transições do domínio (Fase 4):
 /// Recebida → AguardandoAprovacao → AguardandoPagamento → EmFilaExecucao → EmDiagnostico
 /// → EmReparo → Finalizada → Entregue. Cancelada é alcançada rejeitando o orçamento.

@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Oficina.Adaptadores.OrdensServico.DataSources;
 using Oficina.Dominio.OrdensServico;
+using Oficina.Testes.Compartilhado;
 
 namespace Oficina.Adaptadores.Testes.OrdensServico;
 
