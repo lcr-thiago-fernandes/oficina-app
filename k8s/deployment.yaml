@@ -15,8 +15,15 @@ spec:
       labels:
         app: oficina-api
     spec:
+      # IRSA: o ServiceAccount carrega a role IAM (SQS/SNS do bus de mensageria).
+      serviceAccountName: oficina-api
       securityContext:
         runAsNonRoot: true
+        # UID/GID numericos do usuario `app` da imagem aspnet (APP_UID=1654): sem
+        # runAsUser o kubelet recusa o pod (CreateContainerConfigError) porque nao
+        # consegue provar que o usuario nomeado nao e root.
+        runAsUser: 1654
+        runAsGroup: 1654
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -41,6 +48,16 @@ spec:
           # é "oficina-prd"/"oficina-hml". Os dois NÃO são intercambiáveis aqui:
           # "oficina-api-${NAMESPACE}" rendia "oficina-api-oficina-prd".
           env:
+            # Nome do pod: NomesMensageria usa HOSTNAME para a fila de bus por instancia.
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            # SDK da AWS (IRSA) precisa da regiao; a mesma do bus (Mensageria__Regiao).
+            - name: AWS_REGION
+              value: "${AWS_REGION}"
+            - name: AWS_DEFAULT_REGION
+              value: "${AWS_REGION}"
             - name: CORECLR_ENABLE_PROFILING
               value: "1"
             # Nome fixo, sem a lista "oficina-api;oficina-api-${AMBIENTE}" (recurso de

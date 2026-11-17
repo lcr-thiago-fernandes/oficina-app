@@ -18,7 +18,7 @@ public sealed class Documento : IEquatable<Documento>
         if (string.IsNullOrWhiteSpace(entrada))
             throw new DocumentoInvalidoException("Documento não pode ser vazio.");
 
-        var digitos = Regex.Replace(entrada, @"\D", "");
+        var digitos = Regex.Replace(entrada, @"\D", "", RegexOptions.None, TimeSpan.FromSeconds(1));
 
         return digitos.Length switch
         {

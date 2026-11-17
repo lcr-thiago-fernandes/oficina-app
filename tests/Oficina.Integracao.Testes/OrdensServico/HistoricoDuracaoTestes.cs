@@ -17,8 +17,9 @@ namespace Oficina.Integracao.Testes.OrdensServico;
 /// NULL em produção porque ObterPorIdAsync não incluía Historico, então RegistrarTransicao
 /// nunca encontrava uma entrada anterior para calcular a diferença. Isso esvaziava o
 /// propósito da tabela historico_status, que existe para alimentar o dashboard "tempo médio
-/// por status". Este teste exercita a transição via API (o mesmo caminho de produção) e
-/// confirma, direto no banco, que a segunda entrada do histórico tem duração não-nula.
+/// por status". Este teste leva a OS até Finalizada no banco (na Fase 4 essas transições
+/// chegam pela saga), exercita a entrega via API (o mesmo caminho de produção) e
+/// confirma, direto no banco, que a última entrada do histórico tem duração não-nula.
 /// </summary>
 [Collection(nameof(AuthCollection))]
 public class HistoricoDuracaoTestes
@@ -27,7 +28,7 @@ public class HistoricoDuracaoTestes
     public HistoricoDuracaoTestes(AuthFixture fx) => _fx = fx;
 
     [Fact]
-    public async Task Segunda_transicao_de_status_via_api_grava_duracao_nao_nula()
+    public async Task Entrega_via_api_grava_duracao_nao_nula_na_ultima_entrada()
     {
         var http = _fx.Factory.CreateClient();
         var token = await _fx.ObterTokenAdminAsync();
@@ -61,9 +62,12 @@ public class HistoricoDuracaoTestes
         osResp.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
         var os = await osResp.Content.ReadFromJsonAsync<OrdemResponse>();
 
-        // Segunda transição via API — Recebida -> EmDiagnostico (2ª entrada de histórico)
-        var diag = await http.PatchAsync($"/api/v1/ordens-servico/{os!.Id}/diagnostico", null);
-        diag.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+        // Orçamento, pagamento e execução chegam pela saga — aqui, direto no banco.
+        await _fx.LevarOrdemAteStatusNoBancoAsync(os!.Id, StatusOrdemDeServico.Finalizada);
+
+        // Última transição via API — Finalizada -> Entregue
+        var ent = await http.PostAsync($"/api/v1/ordens-servico/{os.Id}/entregar", null);
+        ent.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 
         using var scope = _fx.Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<OficinaDbContext>();
@@ -72,13 +76,17 @@ public class HistoricoDuracaoTestes
             .OrderBy(h => h.OcorridoEm)
             .ToListAsync();
 
-        historico.Should().HaveCount(2);
+        // Recebida, AguardandoAprovacao, AguardandoPagamento, EmFilaExecucao, EmDiagnostico,
+        // EmReparo, Finalizada, Entregue
+        historico.Should().HaveCount(8);
         historico[0].StatusNovo.Should().Be(StatusOrdemDeServico.Recebida);
         historico[0].DuracaoSegundos.Should().BeNull("é a primeira entrada, não há transição anterior para medir");
 
-        historico[1].StatusNovo.Should().Be(StatusOrdemDeServico.EmDiagnostico);
-        historico[1].DuracaoSegundos.Should().NotBeNull(
-            "ObterPorIdAsync agora inclui Historico, entao RegistrarTransicao encontra a entrada anterior");
-        historico[1].DuracaoSegundos!.Value.Should().BeGreaterThanOrEqualTo(0);
+        var ultima = historico[^1];
+        ultima.StatusAnterior.Should().Be(StatusOrdemDeServico.Finalizada);
+        ultima.StatusNovo.Should().Be(StatusOrdemDeServico.Entregue);
+        ultima.DuracaoSegundos.Should().NotBeNull(
+            "ObterPorIdAsync inclui Historico, entao RegistrarTransicao encontra a entrada anterior");
+        ultima.DuracaoSegundos!.Value.Should().BeGreaterThanOrEqualTo(0);
     }
 }

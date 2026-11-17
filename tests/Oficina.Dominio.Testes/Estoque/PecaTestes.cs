@@ -18,6 +18,8 @@ public class PecaTestes
         p.Nome.Should().Be("Filtro de óleo");
         p.PrecoUnitario.Should().Be(50m);
         p.SaldoAtual.Should().Be(0);
+        p.SaldoReservado.Should().Be(0);
+        p.SaldoDisponivel.Should().Be(0);
         p.Ativo.Should().BeTrue();
         p.Movimentacoes.Should().BeEmpty();
     }

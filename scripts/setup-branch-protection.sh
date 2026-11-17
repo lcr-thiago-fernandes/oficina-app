@@ -28,7 +28,7 @@ for BRANCH in main develop; do
 {
   "required_status_checks": {
     "strict": true,
-    "contexts": ["build-test", "docker-build", "codeql"]
+    "contexts": ["build-test", "docker-build", "codeql", "sonar", "terraform-validate"]
   },
   "enforce_admins": false,
   "required_pull_request_reviews": {
@@ -45,5 +45,6 @@ done
 
 echo
 echo "OK. Checks obrigatorios aplicados: build-test (inclui o gate de 80% de"
-echo "cobertura), docker-build e codeql. Conferir com:"
+echo "cobertura), docker-build, codeql, sonar (quality gate) e terraform-validate"
+echo "(fmt/validate). Conferir com:"
 echo "  gh api repos/${REPO}/branches/main/protection/required_status_checks"

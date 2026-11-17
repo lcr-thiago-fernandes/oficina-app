@@ -1,0 +1,317 @@
+### ============================================================
+### DEMO TECH CHALLENGE — FIAP 15SOAT Fase 4 — OS Service + Billing + Execução
+###
+### A OS não muda mais de status por chamada direta: ela avança pela SAGA orquestrada
+### do OS Service, que troca mensagens reais por SNS/SQS (LocalStack) com o Billing
+### (orçamento e pagamento) e a Execução (fila da oficina). Este roteiro mostra:
+###   (A) caminho feliz — abertura → orçamento → aprovação → pagamento → execução → entrega;
+###   (B) orçamento rejeitado          → OS Cancelada, reserva de estoque liberada;
+###   (C) pagamento recusado           → OS Cancelada, reserva liberada;
+###   (D) execução recusada (capacidade 0) → EstornarPagamento → PagamentoEstornado
+###       → OS Cancelada, estoque reposto.
+###
+### ------------------------------------------------------------
+### PRÉ-REQUISITOS
+### ------------------------------------------------------------
+### 1. oficina-app, oficina-billing-service e oficina-execucao-service clonados LADO A LADO
+###    (o compose builda os outros dois a partir de ../../oficina-*-service).
+### 2. Na raiz do oficina-app:
+###      cp .env.example .env
+###      docker compose -f docker/docker-compose.fase4.yml --env-file .env up -d --build --wait
+###    OS em :8080, Billing em :8082/billing, Execução em :8083/execucao.
+###    Se o docker-compose.yml (só o OS Service) estiver no ar, derrube-o antes: as portas
+###    5432, 8080 e 4566 são as mesmas.
+### 3. TOKENS (a Lambda oficina-auth-api não roda localmente). Mesmo JWT_SECRET do .env
+###    para os três serviços (iss=oficina-auth, aud=oficina-api):
+###      ./scripts/gerar-token-dev.sh Admin                    -> "token" em .vscode/settings.json
+###      ./scripts/gerar-token-dev.sh Cliente 39053344705      -> "tokenCliente"
+###    O Cliente é o dono das OS abertas abaixo (mesmo documento): aprova/rejeita no Billing.
+###    Os tokens expiram em 1 h (exp do script): passado isso, as chamadas dão 401 — gere de novo.
+### 4. VS Code + REST Client, ambiente "local". Execute EM ORDEM: os ids são capturados
+###    das respostas (# @name), não precisa copiar nada à mão.
+###
+### A saga é assíncrona: entre um passo e outro espere ~1 s antes do GET .../saga.
+### ============================================================
+
+@os = http://localhost:8080/api/v1
+@billing = http://localhost:8082/billing/api/v1
+@execucao = http://localhost:8083/execucao/api/v1
+
+
+### ============================================================
+### PARTE 0 — PREPARO (catálogo e estoque no OS Service)
+### ============================================================
+
+### [0.1] Health dos três serviços (anônimos)
+GET http://localhost:8080/health
+
+###
+GET http://localhost:8082/billing/health
+
+###
+GET http://localhost:8083/execucao/health
+
+### [0.2] Serviço do catálogo
+# @name servico
+POST {{os}}/servicos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Troca de óleo",
+  "descricao": "Troca completa com filtro",
+  "precoBase": 150.00,
+  "tempoEstimadoMinutos": 30
+}
+
+### [0.3] Peça
+# @name peca
+POST {{os}}/pecas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sku": "FILT-F4",
+  "nome": "Filtro de óleo",
+  "precoUnitario": 25.00
+}
+
+@servicoId = {{servico.response.body.id}}
+@pecaId = {{peca.response.body.id}}
+
+### [0.4] Entrada de 10 unidades no estoque
+POST {{os}}/pecas/{{pecaId}}/movimentacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tipo": "Entrada",
+  "quantidade": 10,
+  "motivo": "Compra de fornecedor"
+}
+
+
+### ============================================================
+### PARTE A — CAMINHO FELIZ
+### ============================================================
+
+### [A.1] Abrir a OS (201, status Recebida). Reserva 2 unidades da peça e inicia a saga,
+### que manda GerarOrcamento para a fila local-oficina-billing-comandos.
+# @name abrirOsA
+POST {{os}}/ordens-servico
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteDados": { "documento": "39053344705", "nome": "João da Silva", "email": "joao.silva@example.com", "telefone": "11987654321" },
+  "veiculoDados": { "placa": "ABC1A23", "marca": "Fiat", "modelo": "Uno", "ano": 2020 },
+  "servicos": [ { "servicoId": "{{servicoId}}", "quantidade": 1 } ],
+  "pecas": [ { "pecaId": "{{pecaId}}", "quantidade": 2 } ],
+  "observacoes": "Ruído no motor."
+}
+
+@osA = {{abrirOsA.response.body.id}}
+
+### [A.2] Saga: AguardandoAprovacao (trilha SolicitarOrcamento → GerarOrcamento)
+GET {{os}}/ordens-servico/{{osA}}/saga
+Authorization: Bearer {{token}}
+
+### [A.3] Billing: orçamento Gerado, com os itens vindos da OS (consulta do cliente dono)
+GET {{billing}}/orcamentos/{{osA}}
+Authorization: Bearer {{tokenCliente}}
+
+### [A.4] Billing: cliente aprova → orçamento Aprovado + linkPagamento (simulado)
+POST {{billing}}/orcamentos/{{osA}}/aprovacao
+Authorization: Bearer {{tokenCliente}}
+
+### [A.5] Billing: simulador de pagamento (Admin; exige orçamento Aprovado) → aprovado
+POST {{billing}}/simulador/pagamentos/{{osA}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "resultado": "aprovado"
+}
+
+### [A.6] Saga: EmExecucao (… ConfirmarPagamento → EnfileirarExecucao); pagamentoId preenchido
+GET {{os}}/ordens-servico/{{osA}}/saga
+Authorization: Bearer {{token}}
+
+### [A.7] Execução: OS na fila (NaFila)
+GET {{execucao}}/execucoes/{{osA}}
+Authorization: Bearer {{token}}
+
+### [A.8] Execução: diagnóstico
+POST {{execucao}}/execucoes/{{osA}}/diagnostico
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "observacao": "Correia desgastada"
+}
+
+### [A.9] Execução: reparo
+POST {{execucao}}/execucoes/{{osA}}/reparo
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "observacao": "Troca do filtro e do óleo"
+}
+
+### [A.10] Execução: finalização (publica ExecucaoFinalizada)
+POST {{execucao}}/execucoes/{{osA}}/finalizacao
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "observacao": "Teste de rodagem ok"
+}
+
+### [A.11] OS Finalizada (o status acompanhou a Execução: EmDiagnostico → EmReparo → Finalizada)
+GET {{os}}/ordens-servico/{{osA}}
+Authorization: Bearer {{token}}
+
+### [A.12] Saga Concluida com a trilha completa (Execucao EmDiagnostico/EmReparo, FinalizarExecucao)
+GET {{os}}/ordens-servico/{{osA}}/saga
+Authorization: Bearer {{token}}
+
+### [A.13] Entregar (Finalizada → Entregue)
+POST {{os}}/ordens-servico/{{osA}}/entregar
+Authorization: Bearer {{token}}
+
+### [A.14] Estoque: saldo 8 (as 2 unidades reservadas foram baixadas no pagamento)
+GET {{os}}/pecas/{{pecaId}}
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### PARTE B — ORÇAMENTO REJEITADO
+### ============================================================
+
+### [B.1] Abrir OS (reserva 1 unidade)
+# @name abrirOsB
+POST {{os}}/ordens-servico
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteDados": { "documento": "39053344705", "nome": "João da Silva", "email": "joao.silva@example.com", "telefone": "11987654321" },
+  "veiculoDados": { "placa": "BBB1B22", "marca": "Fiat", "modelo": "Uno", "ano": 2020 },
+  "servicos": [ { "servicoId": "{{servicoId}}", "quantidade": 1 } ],
+  "pecas": [ { "pecaId": "{{pecaId}}", "quantidade": 1 } ]
+}
+
+@osB = {{abrirOsB.response.body.id}}
+
+### [B.2] Estoque com 1 unidade reservada
+GET {{os}}/pecas/{{pecaId}}
+Authorization: Bearer {{token}}
+
+### [B.3] Billing: cliente rejeita
+POST {{billing}}/orcamentos/{{osB}}/rejeicao
+Authorization: Bearer {{tokenCliente}}
+Content-Type: application/json
+
+{
+  "motivo": "Cliente achou caro"
+}
+
+### [B.4] Saga Cancelada (AprovarOrcamento Falha, compensacao=true; motivo "Orçamento rejeitado: …")
+GET {{os}}/ordens-servico/{{osB}}/saga
+Authorization: Bearer {{token}}
+
+### [B.5] Reserva liberada (saldoReservado volta a 0)
+GET {{os}}/pecas/{{pecaId}}
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### PARTE C — PAGAMENTO RECUSADO
+### ============================================================
+
+### [C.1] Abrir OS
+# @name abrirOsC
+POST {{os}}/ordens-servico
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteDados": { "documento": "39053344705", "nome": "João da Silva", "email": "joao.silva@example.com", "telefone": "11987654321" },
+  "veiculoDados": { "placa": "CCC1C33", "marca": "Fiat", "modelo": "Uno", "ano": 2020 },
+  "servicos": [ { "servicoId": "{{servicoId}}", "quantidade": 1 } ],
+  "pecas": [ { "pecaId": "{{pecaId}}", "quantidade": 1 } ]
+}
+
+@osC = {{abrirOsC.response.body.id}}
+
+### [C.2] Billing: aprovar
+POST {{billing}}/orcamentos/{{osC}}/aprovacao
+Authorization: Bearer {{tokenCliente}}
+
+### [C.3] Billing: simulador → recusado
+POST {{billing}}/simulador/pagamentos/{{osC}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "resultado": "recusado"
+}
+
+### [C.4] Saga Cancelada (ConfirmarPagamento Falha, compensacao=true; motivo cc_rejected_simulado)
+GET {{os}}/ordens-servico/{{osC}}/saga
+Authorization: Bearer {{token}}
+
+### [C.5] Reserva liberada
+GET {{os}}/pecas/{{pecaId}}
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### PARTE D — EXECUÇÃO RECUSADA → ESTORNO DO PAGAMENTO
+### ============================================================
+### ANTES de D.1, recrie só a Execução com capacidade 0 (a fila recusa toda OS):
+###   CAPACIDADE_EXECUCAO=0 docker compose -f docker/docker-compose.fase4.yml --env-file .env up -d --wait execucao-service
+### Ao final, volte ao normal com o mesmo comando sem CAPACIDADE_EXECUCAO.
+
+### [D.1] Abrir OS (reserva 2 unidades)
+# @name abrirOsD
+POST {{os}}/ordens-servico
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteDados": { "documento": "39053344705", "nome": "João da Silva", "email": "joao.silva@example.com", "telefone": "11987654321" },
+  "veiculoDados": { "placa": "DDD1D44", "marca": "Fiat", "modelo": "Uno", "ano": 2020 },
+  "servicos": [ { "servicoId": "{{servicoId}}", "quantidade": 1 } ],
+  "pecas": [ { "pecaId": "{{pecaId}}", "quantidade": 2 } ]
+}
+
+@osD = {{abrirOsD.response.body.id}}
+
+### [D.2] Billing: aprovar
+POST {{billing}}/orcamentos/{{osD}}/aprovacao
+Authorization: Bearer {{tokenCliente}}
+
+### [D.3] Billing: simulador → aprovado (a saga baixa o estoque e manda IniciarExecucao)
+POST {{billing}}/simulador/pagamentos/{{osD}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "resultado": "aprovado"
+}
+
+### [D.4] Saga Cancelada, motivo "Capacidade da unidade matriz esgotada (0/0)". Trilha:
+### EnfileirarExecucao Falha (compensacao) → EstornarPagamento Compensado (após PagamentoEstornado)
+GET {{os}}/ordens-servico/{{osD}}/saga
+Authorization: Bearer {{token}}
+
+### [D.5] Billing: pagamento Estornado
+GET {{billing}}/pagamentos/{{osD}}
+Authorization: Bearer {{token}}
+
+### [D.6] Estoque reposto: as 2 unidades baixadas no pagamento voltam ao saldo (reservado 0)
+### Opcional: a Execução mostra a OS Recusada → GET {{execucao}}/execucoes/{{osD}}
+GET {{os}}/pecas/{{pecaId}}
+Authorization: Bearer {{token}}

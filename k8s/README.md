@@ -11,8 +11,9 @@ dois ambientes, em namespaces separados: `oficina-hml` (branch `develop`) e `ofi
 |---|---|---|
 | `namespace-hml.yaml` | Namespace (`v1`) | Namespace `oficina-hml` (homologação). |
 | `namespace-prd.yaml` | Namespace (`v1`) | Namespace `oficina-prd` (produção). |
-| `configmap.yaml` | ConfigMap (`v1`) | `oficina-api-config`: config não-sensível (`ASPNETCORE_ENVIRONMENT`, `Jwt__Issuer`, `Jwt__Audience`, `Bootstrap__ExecutarNoStartup=false`). |
-| `secret.yaml` | Secret (`v1`) | `oficina-api-secret`: **TEMPLATE** com placeholders (`Jwt__Secret`, `ConnectionStrings__Default`, `AdminBootstrap__Password`, `Webhook__Token`, `NewRelic__LicenseKey`). No deploy real é criado pelo CI a partir de GitHub Secrets + outputs do Terraform. |
+| `configmap.yaml` | ConfigMap (`v1`) | `oficina-api-config`: config não-sensível (`ASPNETCORE_ENVIRONMENT`, `Jwt__Issuer`, `Jwt__Audience`, `Bootstrap__ExecutarNoStartup=false`, `Mensageria__Transporte=AmazonSqs`, `Mensageria__PrefixoAmbiente`, `Mensageria__Regiao`). |
+| `secret.yaml` | Secret (`v1`) | `oficina-api-secret`: **TEMPLATE** com placeholders (`Jwt__Secret`, `ConnectionStrings__Default`, `AdminBootstrap__Password`, `NewRelic__LicenseKey`). No deploy real é criado pelo CI a partir de GitHub Secrets + outputs do Terraform. |
+| `serviceaccount.yaml` | ServiceAccount (`v1`) | `oficina-api` com a annotation IRSA `eks.amazonaws.com/role-arn` (role IAM por ambiente, lida do SSM `/oficina/os-service/<amb>/irsa_role_arn`); usado pelo Deployment. O Job de migração não usa (modo `migrate` não inicia o bus). |
 | `migration-job.yaml` | Job (`batch/v1`) | `oficina-migrate`: roda `dotnet Oficina.Api.dll migrate` (migração + bootstrap) e encerra. |
 | `deployment.yaml` | Deployment (`apps/v1`) | `oficina-api`: 2 réplicas, probes em `/health:8080`, resources requests/limits, securityContext restritivo, rootfs read-only + `emptyDir` em `/tmp`, agente do New Relic ligado via `CORECLR_ENABLE_PROFILING=1`. |
 | `service.yaml` | Service (`v1`) | `oficina-api`: `NodePort` `80 → 8080`. |

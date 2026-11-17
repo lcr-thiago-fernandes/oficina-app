@@ -12,8 +12,7 @@
       "servicoId": "",
       "pecaId": "",
       "ordemServicoId": "",
-      "numeroOs": "",
-      "webhookToken": ""
+      "numeroOs": ""
     },
     "local": {
       "host": "http://localhost:8080",

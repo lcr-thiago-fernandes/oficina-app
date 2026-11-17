@@ -28,7 +28,7 @@ Content-Type: application/json
 }
 
 ### >>> COPIE o "id" da OS da resposta para .vscode/settings.json em "ordemServicoId"
-### >>> e o "numero" (BIGSERIAL) para "numeroOs" (usado na consulta pública e no webhook)
+### >>> e o "numero" (BIGSERIAL) para "numeroOs" (usado na consulta do cliente)
 
 ### Obter OS por id
 GET {{baseUrl}}/ordens-servico/{{ordemServicoId}}
@@ -42,43 +42,23 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/ordens-servico?status=Recebida
 Authorization: Bearer {{token}}
 
-### Iniciar diagnóstico (Recebida -> EmDiagnostico)
-PATCH {{baseUrl}}/ordens-servico/{{ordemServicoId}}/diagnostico
+### >>> Fase 4: orçamento, aprovação, pagamento, diagnóstico, reparo e finalização NÃO são
+### >>> mais rotas desta API. A OS avança pela saga (OS Service <-> Billing/Execução via SNS/SQS).
+### >>> Itens só na abertura. Fluxo ponta a ponta: http/fase4-demo.http.
+
+### Estado e trilha da saga da OS (estado atual, motivo, PagamentoId e cada passo)
+GET {{baseUrl}}/ordens-servico/{{ordemServicoId}}/saga
 Authorization: Bearer {{token}}
 
-### Adicionar serviço avulso à OS
-POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/servicos
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "servicoId": "{{servicoId}}",
-  "quantidade": 1
-}
-
-### Adicionar peça avulsa à OS
-POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/pecas
+### Cancelar (só antes do pagamento: Recebida, AguardandoAprovacao, AguardandoPagamento)
+### OS com saga -> 202 (a saga cancela, libera a reserva e envia CancelarOrcamento ao Billing).
+POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/cancelar
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "pecaId": "{{pecaId}}",
-  "quantidade": 2
+  "motivo": "Cliente desistiu do serviço"
 }
-
-### Enviar orçamento para aprovação (EmDiagnostico -> AguardandoAprovacao)
-POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/orcamento/enviar
-Authorization: Bearer {{token}}
-
-### >>> Aprovação do cliente é feita pelo webhook — ver http/webhook-aprovacao.http
-
-### Iniciar execução (AguardandoAprovacao -> EmExecucao; baixa estoque transacional)
-POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/execucao/iniciar
-Authorization: Bearer {{token}}
-
-### Finalizar (EmExecucao -> Finalizada)
-POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/finalizar
-Authorization: Bearer {{token}}
 
 ### Entregar (Finalizada -> Entregue)
 POST {{baseUrl}}/ordens-servico/{{ordemServicoId}}/entregar

@@ -30,6 +30,19 @@ public class PecaPresenterTestes
     }
 
     [Fact]
+    public void Apresentar_ComReserva_MapeiaSaldoReservadoEDisponivel()
+    {
+        var peca = CriarPecaComMovimentacao();
+        peca.Reservar(4, Guid.NewGuid());
+
+        var resp = PecaPresenter.Apresentar(peca);
+
+        resp.SaldoAtual.Should().Be(10);
+        resp.SaldoReservado.Should().Be(4);
+        resp.SaldoDisponivel.Should().Be(6);
+    }
+
+    [Fact]
     public void ApresentarMovimentacao_DeveMapearCampos()
     {
         var peca = CriarPecaComMovimentacao();

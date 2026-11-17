@@ -6,6 +6,7 @@ using Oficina.Aplicacao.Catalogo.Dtos;
 using Oficina.Aplicacao.Clientes.Dtos;
 using Oficina.Aplicacao.Estoque.Dtos;
 using Oficina.Aplicacao.OrdensServico.Dtos;
+using Oficina.Dominio.OrdensServico;
 using Oficina.Integracao.Testes.Auth;
 using Xunit;
 
@@ -25,30 +26,25 @@ public class OrdensServicoFluxoTestes
         return http;
     }
 
-    private static string DocumentoUnico() => "11144477735"; // CPF válido fixo
-    // (em testes reais, gerar dinâmico com algoritmo de geração — para MVP basta fixar)
+    /// <summary>Abre uma OS (Recebida) com um serviço, via API.</summary>
+    private static async Task<OrdemResponse> AbrirOrdemAsync(HttpClient http)
+    {
+        var s = await (await http.PostAsJsonAsync("/api/v1/servicos",
+            new CriarServicoRequest("X", "y", 10m, 10))).Content.ReadFromJsonAsync<ServicoResponse>();
+        var resp = await http.PostAsJsonAsync("/api/v1/ordens-servico",
+            new AbrirOrdemRequest(
+                new ClienteDadosDto("11144477735", "Cli Fluxo", $"f{Guid.NewGuid():N}@x.com", "11987654321"),
+                new VeiculoDadosDto($"FLX{new Random().Next(1000, 9999)}", "F", "U", 2020),
+                new[] { new ItemServicoDto(s!.Id, 1) },
+                Array.Empty<ItemPecaDto>()));
+        resp.StatusCode.Should().Be(HttpStatusCode.Created);
+        return (await resp.Content.ReadFromJsonAsync<OrdemResponse>())!;
+    }
 
     [Fact]
-    public async Task FluxoCompleto_DeveAvancarPelosEstadosEBaixarEstoque()
+    public async Task FluxoCompleto_AbrirLevarAteFinalizadaEEntregar_DeveTerminarEntregue()
     {
         var http = await AutenticadoAsync();
-
-        // Cliente
-        var clienteResp = await http.PostAsJsonAsync("/api/v1/clientes",
-            new CriarClienteRequest("Cliente OS", "11144477735",
-                $"c{Guid.NewGuid():N}@x.com", "11987654321"));
-        var cliente = await clienteResp.Content.ReadFromJsonAsync<ClienteResponse>();
-        clienteResp.StatusCode.Should().BeOneOf(HttpStatusCode.Created, HttpStatusCode.Conflict);
-        if (clienteResp.StatusCode == HttpStatusCode.Conflict)
-        {
-            var get = await http.GetAsync("/api/v1/clientes?documento=11144477735");
-            cliente = await get.Content.ReadFromJsonAsync<ClienteResponse>();
-        }
-
-        // Veículo
-        var veicResp = await http.PostAsJsonAsync($"/api/v1/clientes/{cliente!.Id}/veiculos",
-            new AdicionarVeiculoRequest($"OSA{new Random().Next(1000, 9999)}", "Fiat", "Uno", 2020));
-        var veiculo = await veicResp.Content.ReadFromJsonAsync<VeiculoResponse>();
 
         // Serviço
         var servResp = await http.PostAsJsonAsync("/api/v1/servicos",
@@ -66,42 +62,27 @@ public class OrdensServicoFluxoTestes
         var osResp = await http.PostAsJsonAsync("/api/v1/ordens-servico",
             new AbrirOrdemRequest(
                 new ClienteDadosDto("11144477735", "Cliente OS", $"c{Guid.NewGuid():N}@x.com", "11987654321"),
-                new VeiculoDadosDto(veiculo!.Placa, "Fiat", "Uno", 2020),
+                new VeiculoDadosDto($"OSA{new Random().Next(1000, 9999)}", "Fiat", "Uno", 2020),
                 new[] { new ItemServicoDto(servico!.Id, 1) },
                 new[] { new ItemPecaDto(peca.Id, 3) },
                 "obs"));
         osResp.StatusCode.Should().Be(HttpStatusCode.Created);
         var os = await osResp.Content.ReadFromJsonAsync<OrdemResponse>();
+        os!.Status.Should().Be("Recebida");
 
-        // Diagnóstico
-        var diag = await http.PatchAsync($"/api/v1/ordens-servico/{os!.Id}/diagnostico", null);
-        diag.StatusCode.Should().Be(HttpStatusCode.OK);
+        // Orçamento, pagamento e execução chegam pela saga (Billing/Execução) — aqui, direto no banco.
+        await _fx.LevarOrdemAteStatusNoBancoAsync(os.Id, StatusOrdemDeServico.Finalizada);
 
-        // Enviar para aprovação
-        var enviar = await http.PostAsync($"/api/v1/ordens-servico/{os.Id}/orcamento/enviar", null);
-        enviar.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        // Aprovar (helper direto no banco — Plano 7 implementa rota pública)
-        await _fx.AprovarOrcamentoDiretoNoBancoAsync(os.Id);
-
-        // Iniciar execução — deve baixar estoque
-        var exec = await http.PostAsync($"/api/v1/ordens-servico/{os.Id}/execucao/iniciar", null);
-        exec.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var pecaAtualResp = await http.GetAsync($"/api/v1/pecas/{peca.Id}");
-        var pecaAtual = await pecaAtualResp.Content.ReadFromJsonAsync<PecaResponse>();
-        pecaAtual!.SaldoAtual.Should().Be(7);
-
-        // Finalizar e entregar
-        var fin = await http.PostAsync($"/api/v1/ordens-servico/{os.Id}/finalizar", null);
-        fin.StatusCode.Should().Be(HttpStatusCode.OK);
         var ent = await http.PostAsync($"/api/v1/ordens-servico/{os.Id}/entregar", null);
         ent.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Estado final
         var final = await http.GetAsync($"/api/v1/ordens-servico/{os.Id}");
-        var final_os = await final.Content.ReadFromJsonAsync<OrdemResponse>();
-        final_os!.Status.Should().Be("Entregue");
+        var finalOs = await final.Content.ReadFromJsonAsync<OrdemResponse>();
+        finalOs!.Status.Should().Be("Entregue");
+        finalOs.EntregueEm.Should().NotBeNull();
+        finalOs.MotivoCancelamento.Should().BeNull();
+        finalOs.CanceladaEm.Should().BeNull();
     }
 
     [Fact]
@@ -137,36 +118,31 @@ public class OrdensServicoFluxoTestes
     }
 
     [Fact]
-    public async Task IniciarExecucao_SemAprovacao_DeveRetornar422()
+    public async Task Entregar_ForaDeFinalizada_DeveRetornar422()
     {
         var http = await AutenticadoAsync();
+        var os = await AbrirOrdemAsync(http);
+        await _fx.LevarOrdemAteStatusNoBancoAsync(os.Id, StatusOrdemDeServico.EmReparo);
 
-        // OS já com itens e enviada para aprovação (sem aprovar)
-        var cliResp = await http.GetAsync("/api/v1/clientes?documento=11144477735");
-        ClienteResponse? cli;
-        if (cliResp.StatusCode == HttpStatusCode.OK)
-            cli = await cliResp.Content.ReadFromJsonAsync<ClienteResponse>();
-        else
-        {
-            var criar = await http.PostAsJsonAsync("/api/v1/clientes",
-                new CriarClienteRequest("Cli IE", "11144477735", $"ie{Guid.NewGuid():N}@x.com", "11987654321"));
-            cli = await criar.Content.ReadFromJsonAsync<ClienteResponse>();
-        }
-        var v = await (await http.PostAsJsonAsync($"/api/v1/clientes/{cli!.Id}/veiculos",
-            new AdicionarVeiculoRequest($"WAI{new Random().Next(1000,9999)}", "F", "U", 2020)))
-            .Content.ReadFromJsonAsync<VeiculoResponse>();
-        var s = await (await http.PostAsJsonAsync("/api/v1/servicos",
-            new CriarServicoRequest("X", "y", 10m, 10))).Content.ReadFromJsonAsync<ServicoResponse>();
-        var os = await (await http.PostAsJsonAsync("/api/v1/ordens-servico",
-            new AbrirOrdemRequest(
-                new ClienteDadosDto("11144477735", "Cli IE", $"ie{Guid.NewGuid():N}@x.com", "11987654321"),
-                new VeiculoDadosDto(v!.Placa, "F", "U", 2020),
-                new[] { new ItemServicoDto(s!.Id, 1) },
-                Array.Empty<ItemPecaDto>()))).Content.ReadFromJsonAsync<OrdemResponse>();
-        await http.PatchAsync($"/api/v1/ordens-servico/{os!.Id}/diagnostico", null);
-        await http.PostAsync($"/api/v1/ordens-servico/{os.Id}/orcamento/enviar", null);
+        var resp = await http.PostAsync($"/api/v1/ordens-servico/{os.Id}/entregar", null);
 
-        var resp = await http.PostAsync($"/api/v1/ordens-servico/{os.Id}/execucao/iniciar", null);
         resp.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    [Theory]
+    [InlineData("PATCH", "diagnostico")] [InlineData("POST", "orcamento/enviar")] [InlineData("POST", "execucao/iniciar")]
+    [InlineData("POST", "finalizar")]    [InlineData("POST", "orcamento/aprovacao")] [InlineData("POST", "servicos")]
+    public async Task RotasMigradasParaOutrosServicos_NaoExistemMais(string metodo, string sufixo)
+    {
+        var http = await AutenticadoAsync();
+        var os = await AbrirOrdemAsync(http);
+
+        var req = new HttpRequestMessage(new HttpMethod(metodo), $"/api/v1/ordens-servico/{os.Id}/{sufixo}")
+        {
+            Content = JsonContent.Create(new { })
+        };
+        var resp = await http.SendAsync(req);
+
+        resp.StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed);
     }
 }

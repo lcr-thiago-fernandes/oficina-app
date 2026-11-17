@@ -1,0 +1,192 @@
+Summary
+  Generated on: 17/11/2026 - 09:33:55
+  Coverage date: 17/11/2026 - 09:32:30 - 17/11/2026 - 09:33:52
+  Parser: MultiReport (7x Cobertura)
+  Assemblies: 5
+  Classes: 162
+  Files: 140
+  Line coverage: 93.6%
+  Covered lines: 2640
+  Uncovered lines: 178
+  Coverable lines: 2818
+  Total lines: 6501
+  Branch coverage: 80.5% (598 of 742)
+  Covered branches: 598
+  Total branches: 742
+  Method coverage: 90.1% (506 of 561)
+  Full method coverage: 84.8% (476 of 561)
+  Covered methods: 506
+  Fully covered methods: 476
+  Total methods: 561
+
+Oficina.Adaptadores                                                                                                                                         94.8%
+  Oficina.Adaptadores.Auth.Gateways.UsuarioGateway                                                                                                           100%
+  Oficina.Adaptadores.Catalogo.Controllers.ServicoController                                                                                                 100%
+  Oficina.Adaptadores.Catalogo.Gateways.ServicoGateway                                                                                                       100%
+  Oficina.Adaptadores.Catalogo.Presenters.ServicoPresenter                                                                                                   100%
+  Oficina.Adaptadores.Clientes.Controllers.ClienteController                                                                                                89.1%
+  Oficina.Adaptadores.Clientes.Gateways.ClienteGateway                                                                                                        80%
+  Oficina.Adaptadores.Clientes.Presenters.ClientePresenter                                                                                                   100%
+  Oficina.Adaptadores.DependencyInjectionAdaptadores                                                                                                         100%
+  Oficina.Adaptadores.Estoque.Controllers.PecaController                                                                                                    85.1%
+  Oficina.Adaptadores.Estoque.Gateways.PecaGateway                                                                                                            90%
+  Oficina.Adaptadores.Estoque.Presenters.PecaPresenter                                                                                                       100%
+  Oficina.Adaptadores.OrdensServico.Controllers.OrdemDeServicoController                                                                                     100%
+  Oficina.Adaptadores.OrdensServico.DataSources.OrdemDeServicoQuery                                                                                          100%
+  Oficina.Adaptadores.OrdensServico.Gateways.OrdemDeServicoGateway                                                                                           100%
+  Oficina.Adaptadores.OrdensServico.Presenters.OrdemDeServicoPresenter                                                                                       100%
+
+Oficina.Api                                                                                                                                                 90.5%
+  Oficina.Api.Configuracao.AcessorCorrelacaoHttp                                                                                                             100%
+  Oficina.Api.Configuracao.ConfiguracaoJwt                                                                                                                  96.5%
+  Oficina.Api.Configuracao.ExtensoesClaims                                                                                                                  66.6%
+  Oficina.Api.Configuracao.MiddlewareDeCorrelacao                                                                                                           93.3%
+  Oficina.Api.Configuracao.MiddlewareDeExcecoes                                                                                                             97.5%
+  Oficina.Api.Configuracao.PoliticasDeAutorizacao                                                                                                            100%
+  Oficina.Api.Controllers.ClientesController                                                                                                                  75%
+  Oficina.Api.Controllers.ConsultaController                                                                                                                93.7%
+  Oficina.Api.Controllers.HealthController                                                                                                                   100%
+  Oficina.Api.Controllers.MeController                                                                                                                       100%
+  Oficina.Api.Controllers.OrdensServicoController                                                                                                             80%
+  Oficina.Api.Controllers.PecasController                                                                                                                   71.4%
+  Oficina.Api.Controllers.ServicosController                                                                                                                 100%
+
+Oficina.Aplicacao                                                                                                                                           93.3%
+  Oficina.Aplicacao.Auth.BootstrapAdminUseCase                                                                                                               100%
+  Oficina.Aplicacao.Autoatendimento.ListarOrdensDoClienteUseCase                                                                                             100%
+  Oficina.Aplicacao.Autoatendimento.ListarVeiculosDoClienteUseCase                                                                                           100%
+  Oficina.Aplicacao.Catalogo.AtualizarServicoUseCase                                                                                                         100%
+  Oficina.Aplicacao.Catalogo.CriarServicoUseCase                                                                                                             100%
+  Oficina.Aplicacao.Catalogo.ListarServicosUseCase                                                                                                           100%
+  Oficina.Aplicacao.Catalogo.ObterServicoPorIdUseCase                                                                                                        100%
+  Oficina.Aplicacao.Catalogo.RemoverServicoUseCase                                                                                                           100%
+  Oficina.Aplicacao.Catalogo.Validacoes.AtualizarServicoValidator                                                                                            100%
+  Oficina.Aplicacao.Catalogo.Validacoes.CriarServicoValidator                                                                                                100%
+  Oficina.Aplicacao.Clientes.AdicionarVeiculoUseCase                                                                                                         100%
+  Oficina.Aplicacao.Clientes.AtualizarClienteUseCase                                                                                                          10%
+  Oficina.Aplicacao.Clientes.AtualizarVeiculoUseCase                                                                                                         100%
+  Oficina.Aplicacao.Clientes.BuscarClientePorDocumentoUseCase                                                                                                100%
+  Oficina.Aplicacao.Clientes.CriarClienteUseCase                                                                                                             100%
+  Oficina.Aplicacao.Clientes.ListarClientesUseCase                                                                                                           100%
+  Oficina.Aplicacao.Clientes.ListarVeiculosUseCase                                                                                                           100%
+  Oficina.Aplicacao.Clientes.ObterClientePorIdUseCase                                                                                                        100%
+  Oficina.Aplicacao.Clientes.RemoverClienteUseCase                                                                                                          14.2%
+  Oficina.Aplicacao.Clientes.RemoverVeiculoUseCase                                                                                                           100%
+  Oficina.Aplicacao.Clientes.Validacoes.AdicionarVeiculoValidator                                                                                            100%
+  Oficina.Aplicacao.Clientes.Validacoes.AtualizarClienteValidator                                                                                              0%
+  Oficina.Aplicacao.Clientes.Validacoes.AtualizarVeiculoValidator                                                                                            100%
+  Oficina.Aplicacao.Clientes.Validacoes.CriarClienteValidator                                                                                                100%
+  Oficina.Aplicacao.Consulta.ConsultarOrdemPorNumeroUseCase                                                                                                  100%
+  Oficina.Aplicacao.Consulta.Dtos.ResultadoConsulta                                                                                                          100%
+  Oficina.Aplicacao.DependencyInjectionAplicacao                                                                                                             100%
+  Oficina.Aplicacao.Estoque.AtualizarPecaUseCase                                                                                                            14.2%
+  Oficina.Aplicacao.Estoque.CriarPecaUseCase                                                                                                                 100%
+  Oficina.Aplicacao.Estoque.ListarMovimentacoesUseCase                                                                                                       100%
+  Oficina.Aplicacao.Estoque.ListarPecasUseCase                                                                                                               100%
+  Oficina.Aplicacao.Estoque.ObterPecaPorIdUseCase                                                                                                            100%
+  Oficina.Aplicacao.Estoque.RegistrarMovimentacaoUseCase                                                                                                     100%
+  Oficina.Aplicacao.Estoque.RemoverPecaUseCase                                                                                                              14.2%
+  Oficina.Aplicacao.Estoque.Validacoes.AtualizarPecaValidator                                                                                                  0%
+  Oficina.Aplicacao.Estoque.Validacoes.CriarPecaValidator                                                                                                    100%
+  Oficina.Aplicacao.Estoque.Validacoes.RegistrarMovimentacaoValidator                                                                                        100%
+  Oficina.Aplicacao.OrdensServico.AbrirOrdemDeServicoUseCase                                                                                                  99%
+  Oficina.Aplicacao.OrdensServico.CancelarOrdemUseCase                                                                                                       100%
+  Oficina.Aplicacao.OrdensServico.EntregarOrdemUseCase                                                                                                       100%
+  Oficina.Aplicacao.OrdensServico.ListarOrdensUseCase                                                                                                         70%
+  Oficina.Aplicacao.OrdensServico.ObterOrdemPorIdUseCase                                                                                                     100%
+  Oficina.Aplicacao.OrdensServico.ObterSagaDaOrdemUseCase                                                                                                    100%
+  Oficina.Aplicacao.OrdensServico.ObterTempoMedioExecucaoUseCase                                                                                             100%
+  Oficina.Aplicacao.OrdensServico.OrdemInvalidaException                                                                                                     100%
+  Oficina.Aplicacao.OrdensServico.Saga.PassosSagaOrdemServico                                                                                               98.1%
+  Oficina.Aplicacao.OrdensServico.Telemetria.EventoOrdemServico                                                                                              100%
+  Oficina.Aplicacao.OrdensServico.Telemetria.PublicadorEventoOsExtensions                                                                                    100%
+  Oficina.Aplicacao.OrdensServico.Validacoes.AbrirOrdemValidator                                                                                             100%
+  Oficina.Aplicacao.OrdensServico.Validacoes.CancelarOrdemValidator                                                                                          100%
+  Oficina.Aplicacao.OrdensServico.Validacoes.ClienteDadosValidator                                                                                           100%
+  Oficina.Aplicacao.OrdensServico.Validacoes.ItemPecaDtoValidator                                                                                            100%
+  Oficina.Aplicacao.OrdensServico.Validacoes.ItemServicoDtoValidator                                                                                         100%
+  Oficina.Aplicacao.OrdensServico.Validacoes.VeiculoDadosValidator                                                                                           100%
+
+Oficina.Dominio                                                                                                                                             92.3%
+  Oficina.Dominio.Auth.CredenciaisInvalidasException                                                                                                           0%
+  Oficina.Dominio.Auth.Senha                                                                                                                                85.7%
+  Oficina.Dominio.Auth.SenhaInvalidaException                                                                                                                100%
+  Oficina.Dominio.Auth.Username                                                                                                                             81.2%
+  Oficina.Dominio.Auth.Usuario                                                                                                                              95.2%
+  Oficina.Dominio.Auth.UsuarioInativoException                                                                                                               100%
+  Oficina.Dominio.Catalogo.Servico                                                                                                                           100%
+  Oficina.Dominio.Catalogo.ServicoInvalidoException                                                                                                          100%
+  Oficina.Dominio.Clientes.Cliente                                                                                                                          91.1%
+  Oficina.Dominio.Clientes.ClienteInvalidoException                                                                                                          100%
+  Oficina.Dominio.Clientes.Documento                                                                                                                        91.4%
+  Oficina.Dominio.Clientes.DocumentoInvalidoException                                                                                                        100%
+  Oficina.Dominio.Clientes.DocumentoJaCadastradoException                                                                                                    100%
+  Oficina.Dominio.Clientes.Email                                                                                                                            69.2%
+  Oficina.Dominio.Clientes.EmailInvalidoException                                                                                                            100%
+  Oficina.Dominio.Clientes.Placa                                                                                                                            76.9%
+  Oficina.Dominio.Clientes.PlacaInvalidaException                                                                                                            100%
+  Oficina.Dominio.Clientes.PlacaJaCadastradaException                                                                                                        100%
+  Oficina.Dominio.Clientes.Telefone                                                                                                                         63.6%
+  Oficina.Dominio.Clientes.Veiculo                                                                                                                           100%
+  Oficina.Dominio.Clientes.VeiculoNaoEncontradoException                                                                                                     100%
+  Oficina.Dominio.Estoque.MovimentacaoEstoque                                                                                                               92.8%
+  Oficina.Dominio.Estoque.MovimentacaoInvalidaException                                                                                                      100%
+  Oficina.Dominio.Estoque.Peca                                                                                                                              96.1%
+  Oficina.Dominio.Estoque.PecaInvalidaException                                                                                                              100%
+  Oficina.Dominio.Estoque.ReservaInvalidaException                                                                                                           100%
+  Oficina.Dominio.Estoque.SaldoInsuficienteException                                                                                                         100%
+  Oficina.Dominio.Estoque.Sku                                                                                                                                 60%
+  Oficina.Dominio.Estoque.SkuInvalidoException                                                                                                               100%
+  Oficina.Dominio.Estoque.SkuJaCadastradoException                                                                                                           100%
+  Oficina.Dominio.ExcecaoDeDominio                                                                                                                           100%
+  Oficina.Dominio.OrdensServico.HistoricoStatus                                                                                                              100%
+  Oficina.Dominio.OrdensServico.ItemInvalidoException                                                                                                        100%
+  Oficina.Dominio.OrdensServico.ItemPeca                                                                                                                    81.2%
+  Oficina.Dominio.OrdensServico.ItemServico                                                                                                                  100%
+  Oficina.Dominio.OrdensServico.OrdemDeServico                                                                                                              97.2%
+  Oficina.Dominio.OrdensServico.OrdemImutavelException                                                                                                       100%
+  Oficina.Dominio.OrdensServico.OrdemSemItensException                                                                                                       100%
+  Oficina.Dominio.OrdensServico.StatusOrdemDeServicoExtensions                                                                                              93.7%
+  Oficina.Dominio.OrdensServico.TransicaoDeStatusInvalidaException                                                                                           100%
+
+Oficina.Infraestrutura                                                                                                                                      94.9%
+  Oficina.Infraestrutura.Auth.BootstrapAdminHostedService                                                                                                    100%
+  Oficina.Infraestrutura.Auth.DependencyInjectionAuth                                                                                                        100%
+  Oficina.Infraestrutura.DependencyInjection                                                                                                                 100%
+  Oficina.Infraestrutura.DependencyInjectionRepositorios                                                                                                     100%
+  Oficina.Infraestrutura.Mensageria.Contratos.OpcoesJsonContrato                                                                                             100%
+  Oficina.Infraestrutura.Mensageria.DependencyInjectionMensageria                                                                                           97.7%
+  Oficina.Infraestrutura.Mensageria.NomesMensageria                                                                                                         95.4%
+  Oficina.Infraestrutura.Mensageria.Observabilidade.AcessorCorrelacaoNulo                                                                                      0%
+  Oficina.Infraestrutura.Mensageria.Observabilidade.FiltroCorrelacaoConsumo<T>                                                                                75%
+  Oficina.Infraestrutura.Mensageria.OpcoesMensageria                                                                                                         100%
+  Oficina.Infraestrutura.Mensageria.Saga.OrdemServicoSaga                                                                                                    100%
+  Oficina.Infraestrutura.Mensageria.Saga.RegistradorPassoSaga                                                                                                100%
+  Oficina.Infraestrutura.Mensageria.Saga.SagaOrdemServicoGateway                                                                                             100%
+  Oficina.Infraestrutura.Mensageria.TopologiaSaga                                                                                                            100%
+  Oficina.Infraestrutura.Notificacoes.DependencyInjectionNotificacoes                                                                                        100%
+  Oficina.Infraestrutura.Notificacoes.NotificacaoEmailMock                                                                                                   100%
+  Oficina.Infraestrutura.Persistencia.Configuracoes.ClienteConfiguration                                                                                     100%
+  Oficina.Infraestrutura.Persistencia.Configuracoes.EstadoSagaOrdemServicoConfiguration                                                                      100%
+  Oficina.Infraestrutura.Persistencia.Configuracoes.HistoricoStatusConfiguration                                                                             100%
+  Oficina.Infraestrutura.Persistencia.Configuracoes.ItemPecaConfiguration                                                                                    100%
+  Oficina.Infraestrutura.Persistencia.Configuracoes.ItemServicoConfiguration                                                                                 100%
+  Oficina.Infraestrutura.Persistencia.Configuracoes.MovimentacaoEstoqueConfiguration                                                                         100%
+  Oficina.Infraestrutura.Persistencia.Configuracoes.OrdemDeServicoConfiguration                                                                              100%
+  Oficina.Infraestrutura.Persistencia.Configuracoes.PassoSagaConfiguration                                                                                   100%
+  Oficina.Infraestrutura.Persistencia.Configuracoes.PecaConfiguration                                                                                        100%
+  Oficina.Infraestrutura.Persistencia.Configuracoes.ServicoConfiguration                                                                                     100%
+  Oficina.Infraestrutura.Persistencia.Configuracoes.UsuarioConfiguration                                                                                     100%
+  Oficina.Infraestrutura.Persistencia.Configuracoes.VeiculoConfiguration                                                                                     100%
+  Oficina.Infraestrutura.Persistencia.DataSources.ClienteDataSource                                                                                         45.4%
+  Oficina.Infraestrutura.Persistencia.DataSources.OrdemDeServicoDataSource                                                                                  77.4%
+  Oficina.Infraestrutura.Persistencia.DataSources.PecaDataSource                                                                                            91.8%
+  Oficina.Infraestrutura.Persistencia.DataSources.ServicoDataSource                                                                                          100%
+  Oficina.Infraestrutura.Persistencia.DataSources.UsuarioDataSource                                                                                         83.3%
+  Oficina.Infraestrutura.Persistencia.InicializadorBanco                                                                                                    87.5%
+  Oficina.Infraestrutura.Persistencia.OficinaDbContext                                                                                                      91.6%
+  Oficina.Infraestrutura.Telemetria.PublicadorEventoOsNewRelic                                                                                              73.6%
+  Oficina.Infraestrutura.Telemetria.PublicadorEventoSagaNewRelic                                                                                            79.1%
+  System.Text.RegularExpressions.Generated                                                                                                                  98.4%
+  System.Text.RegularExpressions.Generated.<RegexGenerator_g>F9A1F8FC2496D6D42571E21C505DED86B6C46F8BB79611DA428B026F793FA3D85__CaractereInvalidoNaFila_1    100%
+  System.Text.RegularExpressions.Generated.<RegexGenerator_g>F9A1F8FC2496D6D42571E21C505DED86B6C46F8BB79611DA428B026F793FA3D85__PrefixoValido_0             97.2%

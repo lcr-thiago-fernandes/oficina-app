@@ -1,6 +1,6 @@
 # RFCs
 
-Decisões amplas da Fase 3, com alternativas consideradas e como cada uma está implementada.
+Decisões amplas da Fase 3 e da Fase 4, com alternativas consideradas e como cada uma está implementada.
 Decisões pontuais ficam nos [ADRs](../arquitetura/README.md).
 
 | # | Assunto | Status |
@@ -10,3 +10,4 @@ Decisões pontuais ficam nos [ADRs](../arquitetura/README.md).
 | [RFC-003](RFC-003-autenticacao-cpf-jwt.md) | Autenticação por CPF com JWT emitido por Lambda | Aceita |
 | [RFC-004](RFC-004-topologia-quatro-repositorios.md) | Topologia de quatro repositórios e contrato via SSM | Aceita |
 | [RFC-005](RFC-005-observabilidade-new-relic.md) | Plataforma de observabilidade: New Relic | Aceita |
+| [RFC-006](RFC-006-microsservicos-saga-orquestrada.md) | Microsserviços (OS, Billing, Execução) e Saga orquestrada (Fase 4) | Aceita |

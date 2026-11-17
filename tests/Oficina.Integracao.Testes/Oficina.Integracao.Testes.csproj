@@ -33,4 +33,10 @@
     <ProjectReference Include="..\..\src\Oficina.Infraestrutura\Oficina.Infraestrutura.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Fonte única do helper que leva a OS até um status (compartilhada entre projetos de teste). -->
+    <Compile Include="../Compartilhado/OrdemEmStatus.cs" Link="Compartilhado/OrdemEmStatus.cs" />
+    <!-- Troca o bus de produção pelo test harness (compartilhado com o BDD). -->
+    <Compile Include="../Compartilhado/HarnessMensageria.cs" Link="Compartilhado/HarnessMensageria.cs" />
+  </ItemGroup>
 </Project>

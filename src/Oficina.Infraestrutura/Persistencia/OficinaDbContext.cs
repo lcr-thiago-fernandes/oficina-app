@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Oficina.Dominio.Auth;
@@ -26,13 +27,20 @@ public class OficinaDbContext : DbContext
     {
         modelBuilder.HasDefaultSchema("public");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(OficinaDbContext).Assembly);
+
+        // Inbox/outbox do MassTransit (consumo da saga e bus outbox da Api) no schema da saga.
+        modelBuilder.AddInboxStateEntity(b => b.ToTable("inbox_state", "saga"));
+        modelBuilder.AddOutboxMessageEntity(b => b.ToTable("outbox_message", "saga"));
+        modelBuilder.AddOutboxStateEntity(b => b.ToTable("outbox_state", "saga"));
+
         base.OnModelCreating(modelBuilder);
     }
 
     /// <summary>
     /// O histórico de status (<see cref="HistoricoStatus"/>) é um efeito colateral interno
-    /// do domínio: cada transição (IniciarDiagnostico, EnviarOrcamentoParaAprovacao, Rejeitar,
-    /// IniciarExecucao, Finalizar, Entregar, Criar) acrescenta uma entrada nova à coleção
+    /// do domínio: cada transição (Criar, AguardarAprovacao, AguardarPagamento, Rejeitar,
+    /// EnfileirarExecucao, IniciarDiagnostico, IniciarReparo, Finalizar, Entregar, Cancelar)
+    /// acrescenta uma entrada nova à coleção
     /// <see cref="OrdemDeServico.Historico"/> sem passar por Add() explícito — de propósito,
     /// para não vazar esse invariante do agregado para a camada de Aplicação (ao contrário de
     /// ItemServico/ItemPeca, que têm MarcarItemXComoNovo chamado explicitamente em cada Use

@@ -7,6 +7,17 @@ Cada item aqui é um acoplamento que **falha em silêncio** se divergir: o deplo
 funciona, os healthchecks passam, e o sintoma aparece longe da causa. Por isso
 estão escritos, e não apenas subentendidos.
 
+> **Fase 4:** a rota pública `POST /api/v1/ordens-servico/{id}/orcamento/aprovacao`, citada
+> abaixo, foi **removida** (a aprovação do orçamento migrou para o `oficina-billing-service`;
+> ver [ADR-011](arquitetura/ADR-011-webhook-aprovacao-token.md) e
+> [RFC-006](rfc/RFC-006-microsservicos-saga-orquestrada.md)); o `oficina-infra-k8s` a retirou
+> do API Gateway no PR #21. Os contratos novos da Fase 4 são as mensagens da saga
+> ([docs/contratos/mensagens/](contratos/mensagens/README.md)), o parâmetro
+> `/oficina/os-service/<amb>/irsa_role_arn` (escrito por `terraform/ssm.tf` deste repositório,
+> lido pelo `cd.yml`) e os parâmetros `/oficina/eks/oidc_provider_arn` e
+> `/oficina/eks/oidc_provider_url` (escritos pelo `oficina-infra-k8s`, lidos por
+> `terraform/data.tf`). As menções à rota de aprovação abaixo descrevem a Fase 3.
+
 | Repositório | Responsabilidade |
 |---|---|
 | `oficina-app` (este) | API .NET 8 em Kubernetes |

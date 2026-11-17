@@ -1,0 +1,106 @@
+name: Infra
+
+# Terraform do OS Service (terraform/): role IRSA (SNS/SQS) e parametro SSM.
+#   pull_request        -> fmt + validate, SEM credenciais AWS.
+#   push main/develop   -> plan.
+#   workflow_dispatch   -> plan (padrao) ou apply, so em main/develop.
+# Credenciais: role compartilhada oficina-gha-infra (secret AWS_TERRAFORM_ROLE_ARN),
+# criada pelo scripts/bootstrap.sh do oficina-infra-k8s (oficina-app em REPOS_INFRA).
+on:
+  pull_request:
+    paths:
+      - "terraform/**"
+      - ".github/workflows/infra.yml"
+  push:
+    branches: [main, develop]
+    paths:
+      - "terraform/**"
+      - ".github/workflows/infra.yml"
+  workflow_dispatch:
+    inputs:
+      acao:
+        description: "plan ou apply (apply so em main/develop)"
+        type: choice
+        options: [plan, apply]
+        default: plan
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-os-service
+  cancel-in-progress: false
+
+env:
+  TERRAFORM_VERSION: 1.10.5
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform fmt
+        run: terraform -chdir=terraform fmt -check -recursive
+
+      - name: Terraform init (sem backend)
+        run: terraform -chdir=terraform init -backend=false -input=false
+
+      - name: Terraform validate
+        run: terraform -chdir=terraform validate
+
+  terraform:
+    needs: validar
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # So main e develop rodam o Terraform; REF_NAME e ACAO_PEDIDA entram por env.
+      - name: Definir acao
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          ACAO_PEDIDA: ${{ github.event_name == 'workflow_dispatch' && inputs.acao || 'plan' }}
+        run: |
+          set -euo pipefail
+          if [ "$REF_NAME" != "main" ] && [ "$REF_NAME" != "develop" ]; then
+            echo "ERRO: ref '$REF_NAME' nao pode rodar o Terraform (apenas main e develop)." >&2
+            exit 1
+          fi
+          case "$ACAO_PEDIDA" in
+            plan|apply) echo "ACAO=$ACAO_PEDIDA" >> "$GITHUB_ENV" ;;
+            *) echo "ERRO: acao '$ACAO_PEDIDA' invalida (plan|apply)." >&2; exit 1 ;;
+          esac
+
+      - name: Configurar credenciais AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform init
+        run: terraform -chdir=terraform init -input=false
+
+      - name: Terraform plan
+        run: terraform -chdir=terraform plan -input=false -out=tfplan
+
+      - name: Terraform apply
+        if: ${{ env.ACAO == 'apply' }}
+        run: terraform -chdir=terraform apply -input=false -auto-approve tfplan
+
+      - name: Outputs
+        if: ${{ env.ACAO == 'apply' }}
+        run: terraform -chdir=terraform output irsa_role_arns

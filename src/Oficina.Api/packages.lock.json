@@ -172,6 +172,35 @@
           "Swashbuckle.AspNetCore.SwaggerUI": "6.8.1"
         }
       },
+      "AWSSDK.Core": {
+        "type": "Transitive",
+        "resolved": "3.7.402.47",
+        "contentHash": "hOUUidv5tmxRb6S4Vgt/Vr17Gix+g1VOIRU14AkzxRixBPHyIXxfKlVQ3jRyItO+4yB24RdTkRor8VkteMlyuA=="
+      },
+      "AWSSDK.SecurityToken": {
+        "type": "Transitive",
+        "resolved": "3.7.401",
+        "contentHash": "I/o0UWNCZumf23JKnEqQlr4j4VXuwdEZ1y+1gG4/RrG0xzF85VIA8lLbJFV/bHguSKVKp5bPdI8ahVft9q98aQ==",
+        "dependencies": {
+          "AWSSDK.Core": "[3.7.400.51, 4.0.0)"
+        }
+      },
+      "AWSSDK.SimpleNotificationService": {
+        "type": "Transitive",
+        "resolved": "3.7.400.141",
+        "contentHash": "pnq2mddmzCZ/lVynfa4Qrgmbj5rYnJOCezzxb9p6Ip39QRf0p/I3n5eMGQ2wT+YaVFMh1znqIU1j4P+Hr5mEyg==",
+        "dependencies": {
+          "AWSSDK.Core": "[3.7.402.47, 4.0.0)"
+        }
+      },
+      "AWSSDK.SQS": {
+        "type": "Transitive",
+        "resolved": "3.7.400.141",
+        "contentHash": "n4yFLtqo5tWAems/KhCzDBnGNy2guOuYKvz/2whaGoYyu16GAGH0NlbbjJbBD8X1RgSsrnb1MwJmwfnw5S1bPg==",
+        "dependencies": {
+          "AWSSDK.Core": "[3.7.402.47, 4.0.0)"
+        }
+      },
       "BCrypt.Net-Next": {
         "type": "Transitive",
         "resolved": "4.0.3",
@@ -186,6 +215,44 @@
         "type": "Transitive",
         "resolved": "2.14.1",
         "contentHash": "lQKvtaTDOXnoVJ20ibTuSIOf2i0uO0MPbDhd1jm238I+U/2ZnRENj0cktKZhtchBMtCUSRQ5v4xBCUbKNmyVMw=="
+      },
+      "MassTransit": {
+        "type": "Transitive",
+        "resolved": "8.4.1",
+        "contentHash": "UtbpB34CdFKVxJuxlfXPDUyiqF8BT1c0gkYOIZlT3BYaHz9Z9hknGT0O0K/5cKOLHV8+h9Yu++wn6iAps2kLYg==",
+        "dependencies": {
+          "MassTransit.Abstractions": "8.4.1",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.0",
+          "Microsoft.Extensions.Diagnostics.HealthChecks": "8.0.0",
+          "Microsoft.Extensions.Hosting.Abstractions": "8.0.0",
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.0",
+          "Microsoft.Extensions.Options": "8.0.0"
+        }
+      },
+      "MassTransit.Abstractions": {
+        "type": "Transitive",
+        "resolved": "8.4.1",
+        "contentHash": "sf0f0Mj3B8lJFt5As2rSFiszOx4YhMDdQmV0CIzQG6PcWGO1ozped+YMJRdBqqTgvtHTjjWJOEMfgYtfXrPu2A=="
+      },
+      "MassTransit.AmazonSQS": {
+        "type": "Transitive",
+        "resolved": "8.4.1",
+        "contentHash": "PFOemF2gYkCisUU7rl3W/2rp/8zP1eIOIByFfFZ2atLdfexvC2zumhOguHN8Y9crsfQadtW9YQC8ZnUkU3zU/w==",
+        "dependencies": {
+          "AWSSDK.SQS": "3.7.400.141",
+          "AWSSDK.SimpleNotificationService": "3.7.400.141",
+          "MassTransit": "8.4.1"
+        }
+      },
+      "MassTransit.EntityFrameworkCore": {
+        "type": "Transitive",
+        "resolved": "8.4.1",
+        "contentHash": "RthOj/c0Dj6yvEcy4aKUm8PuqUQZMgV2fopdjHK/FA2BcHWiH3pLTgbFm9ss+9+9XmywV0ooPvNShNsORdXzRQ==",
+        "dependencies": {
+          "MassTransit": "8.4.1",
+          "Microsoft.EntityFrameworkCore.Relational": "8.0.0",
+          "Microsoft.Extensions.Caching.Memory": "8.0.1"
+        }
       },
       "Microsoft.Bcl.AsyncInterfaces": {
         "type": "Transitive",
@@ -347,6 +414,22 @@
           "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2",
           "Microsoft.Extensions.Options": "8.0.2"
         }
+      },
+      "Microsoft.Extensions.Diagnostics.HealthChecks": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "P9SoBuVZhJPpALZmSq72aQEb9ryP67EdquaCZGXGrrcASTNHYdrUhnpgSwIipgM5oVC+dKpRXg5zxobmF9xr5g==",
+        "dependencies": {
+          "Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions": "8.0.0",
+          "Microsoft.Extensions.Hosting.Abstractions": "8.0.0",
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.0",
+          "Microsoft.Extensions.Options": "8.0.0"
+        }
+      },
+      "Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "AT2qqos3IgI09ok36Qag9T8bb6kHJ3uT9Q5ki6CySybFsK6/9JbvQAgAHf1pVEjST0/N4JaFaCbm40R5edffwg=="
       },
       "Microsoft.Extensions.FileProviders.Abstractions": {
         "type": "Transitive",
@@ -718,6 +801,10 @@
       "oficina.infraestrutura": {
         "type": "Project",
         "dependencies": {
+          "AWSSDK.SecurityToken": "[3.7.401, )",
+          "MassTransit": "[8.4.1, )",
+          "MassTransit.AmazonSQS": "[8.4.1, )",
+          "MassTransit.EntityFrameworkCore": "[8.4.1, )",
           "Microsoft.EntityFrameworkCore": "[8.0.10, )",
           "Microsoft.Extensions.Configuration.Abstractions": "[8.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[8.0.2, )",

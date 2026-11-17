@@ -7,7 +7,7 @@ namespace Oficina.Adaptadores.Estoque.Presenters;
 public static class PecaPresenter
 {
     public static PecaResponse Apresentar(Peca p) =>
-        new(p.Id, p.Sku.Valor, p.Nome, p.PrecoUnitario, p.SaldoAtual, p.Ativo, p.CriadoEm);
+        new(p.Id, p.Sku.Valor, p.Nome, p.PrecoUnitario, p.SaldoAtual, p.SaldoReservado, p.SaldoDisponivel, p.Ativo, p.CriadoEm);
 
     public static MovimentacaoResponse ApresentarMovimentacao(MovimentacaoEstoque m) =>
         new(m.Id, m.Tipo.ToString(), m.Quantidade, m.Motivo, m.OrdemServicoId, m.CriadoEm);

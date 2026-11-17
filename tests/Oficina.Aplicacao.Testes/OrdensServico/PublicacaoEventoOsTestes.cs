@@ -14,12 +14,13 @@ public class PublicacaoEventoOsTestes
     public void DeUltimaTransicao_projeta_a_entrada_mais_recente_do_historico()
     {
         var os = OrdemDeServico.Criar(Guid.NewGuid(), Guid.NewGuid(), null, "filial-sp");
-        os.IniciarDiagnostico();
+        os.AdicionarItemServico(Guid.NewGuid(), "S", 10m, 1);
+        os.AguardarAprovacao();
 
         var evento = EventoOrdemServico.DeUltimaTransicao(os);
 
         evento.StatusAnterior.Should().Be("Recebida");
-        evento.StatusNovo.Should().Be("EmDiagnostico");
+        evento.StatusNovo.Should().Be("AguardandoAprovacao");
         evento.Unidade.Should().Be("filial-sp");
         evento.Resultado.Should().Be("Sucesso");
         evento.DuracaoNoStatusSegundos.Should().NotBeNull();
@@ -28,10 +29,10 @@ public class PublicacaoEventoOsTestes
     [Fact]
     public void DeFalha_marca_o_resultado_como_Falha()
     {
-        var evento = EventoOrdemServico.DeFalha(42, "EmExecucao", "matriz");
+        var evento = EventoOrdemServico.DeFalha(42, "EmReparo", "matriz");
 
         evento.NumeroOs.Should().Be(42);
-        evento.StatusAnterior.Should().Be("EmExecucao");
+        evento.StatusAnterior.Should().Be("EmReparo");
         evento.Resultado.Should().Be("Falha");
     }
 
@@ -40,12 +41,13 @@ public class PublicacaoEventoOsTestes
     {
         var publicador = new Mock<IPublicadorEventoOs>();
         var os = OrdemDeServico.Criar(Guid.NewGuid(), Guid.NewGuid());
-        os.IniciarDiagnostico();
+        os.AdicionarItemServico(Guid.NewGuid(), "S", 10m, 1);
+        os.AguardarAprovacao();
 
         publicador.Object.Publicar(EventoOrdemServico.DeUltimaTransicao(os));
 
         publicador.Verify(p => p.Publicar(
-            It.Is<EventoOrdemServico>(e => e.StatusNovo == "EmDiagnostico")), Times.Once);
+            It.Is<EventoOrdemServico>(e => e.StatusNovo == "AguardandoAprovacao")), Times.Once);
     }
 
     [Fact]
@@ -78,9 +80,8 @@ public class PublicacaoEventoOsTestes
 
     public static TheoryData<Exception> ExcecoesDeNegocio() => new()
     {
-        new TransicaoDeStatusInvalidaException(StatusOrdemDeServico.Recebida, "iniciar execução"),
+        new TransicaoDeStatusInvalidaException(StatusOrdemDeServico.Recebida, "iniciar reparo"),
         new OrdemSemItensException(),
-        new OrcamentoNaoAprovadoException(),
         new OrdemInvalidaException("cliente inativo"),
         new SaldoInsuficienteException("ABC-123", 1, 5),
         new OperationCanceledException()

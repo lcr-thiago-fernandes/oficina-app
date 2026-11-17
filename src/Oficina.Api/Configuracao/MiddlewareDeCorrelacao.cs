@@ -9,7 +9,7 @@ namespace Oficina.Api.Configuracao;
 /// </summary>
 public class MiddlewareDeCorrelacao
 {
-    public const string Header = "X-Correlation-Id";
+    public const string Header = Oficina.Infraestrutura.Mensageria.Saga.SagaOrdemServicoGateway.HeaderCorrelacao;
 
     private readonly RequestDelegate _proximo;
 

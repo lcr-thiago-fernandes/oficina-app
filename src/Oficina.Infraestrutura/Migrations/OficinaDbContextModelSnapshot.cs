@@ -23,6 +23,174 @@ namespace Oficina.Infraestrutura.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.InboxState", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("Consumed")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ConsumerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("Delivered")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ExpirationTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("LastSequenceNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("LockId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ReceiveCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Received")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Delivered");
+
+                    b.ToTable("inbox_state", "saga");
+                });
+
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
+                {
+                    b.Property<long>("SequenceNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("SequenceNumber"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid?>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DestinationAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime?>("EnqueueTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ExpirationTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FaultAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Headers")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("InboxConsumerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("InboxMessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("InitiatorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("OutboxId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Properties")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ResponseAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime>("SentTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SourceAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("SequenceNumber");
+
+                    b.HasIndex("EnqueueTime");
+
+                    b.HasIndex("ExpirationTime");
+
+                    b.HasIndex("OutboxId", "SequenceNumber")
+                        .IsUnique();
+
+                    b.HasIndex("InboxMessageId", "InboxConsumerId", "SequenceNumber")
+                        .IsUnique();
+
+                    b.ToTable("outbox_message", "saga");
+                });
+
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxState", b =>
+                {
+                    b.Property<Guid>("OutboxId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("Delivered")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("LastSequenceNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("LockId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("OutboxId");
+
+                    b.HasIndex("Created");
+
+                    b.ToTable("outbox_state", "saga");
+                });
+
             modelBuilder.Entity("Oficina.Dominio.Auth.Usuario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -249,9 +417,24 @@ namespace Oficina.Infraestrutura.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("saldo_atual");
 
+                    b.Property<int>("SaldoReservado")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("saldo_reservado");
+
+                    b.Property<uint>("Versao")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
-                    b.ToTable("peca", "estoque");
+                    b.ToTable("peca", "estoque", t =>
+                        {
+                            t.HasCheckConstraint("ck_peca_saldo_reservado_valido", "saldo_reservado >= 0 AND saldo_reservado <= saldo_atual");
+                        });
                 });
 
             modelBuilder.Entity("Oficina.Dominio.OrdensServico.HistoricoStatus", b =>
@@ -385,9 +568,17 @@ namespace Oficina.Infraestrutura.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset?>("CanceladaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelada_em");
+
                     b.Property<Guid>("ClienteId")
                         .HasColumnType("uuid")
                         .HasColumnName("cliente_id");
+
+                    b.Property<bool>("CoordenadaPorSaga")
+                        .HasColumnType("boolean")
+                        .HasColumnName("coordenada_por_saga");
 
                     b.Property<DateTimeOffset>("CriadaEm")
                         .HasColumnType("timestamp with time zone")
@@ -412,6 +603,10 @@ namespace Oficina.Infraestrutura.Migrations
                     b.Property<DateTimeOffset?>("IniciadaEm")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("iniciada_em");
+
+                    b.Property<string>("MotivoCancelamento")
+                        .HasColumnType("text")
+                        .HasColumnName("motivo_cancelamento");
 
                     b.Property<long>("Numero")
                         .ValueGeneratedOnAdd()
@@ -450,6 +645,12 @@ namespace Oficina.Infraestrutura.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("veiculo_id");
 
+                    b.Property<uint>("Versao")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ClienteId");
@@ -464,6 +665,109 @@ namespace Oficina.Infraestrutura.Migrations
                         .HasDatabaseName("ix_ordem_servico_status_data");
 
                     b.ToTable("ordem_servico", "os");
+                });
+
+            modelBuilder.Entity("Oficina.Infraestrutura.Mensageria.Saga.EstadoSagaOrdemServico", b =>
+                {
+                    b.Property<Guid>("CorrelationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ordem_servico_id");
+
+                    b.Property<DateTime>("AtualizadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("atualizada_em");
+
+                    b.Property<DateTime>("CriadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criada_em");
+
+                    b.Property<string>("EstadoAtual")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("estado");
+
+                    b.Property<string>("Motivo")
+                        .HasColumnType("text")
+                        .HasColumnName("motivo");
+
+                    b.Property<long>("NumeroOs")
+                        .HasColumnType("bigint")
+                        .HasColumnName("numero_os");
+
+                    b.Property<string>("PagamentoId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("pagamento_id");
+
+                    b.Property<uint>("Versao")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("CorrelationId");
+
+                    b.ToTable("ordem_servico_saga", "saga");
+                });
+
+            modelBuilder.Entity("Oficina.Infraestrutura.Mensageria.Saga.PassoSaga", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Compensacao")
+                        .HasColumnType("boolean")
+                        .HasColumnName("compensacao");
+
+                    b.Property<string>("Detalhe")
+                        .HasColumnType("text")
+                        .HasColumnName("detalhe");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTime>("OcorridoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ocorrido_em");
+
+                    b.Property<Guid>("OrdemServicoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ordem_servico_id");
+
+                    b.Property<string>("Passo")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("passo");
+
+                    b.Property<string>("Resultado")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("resultado");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrdemServicoId", "OcorridoEm")
+                        .HasDatabaseName("ix_saga_passo_os");
+
+                    b.ToTable("ordem_servico_saga_passo", "saga");
+                });
+
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
+                {
+                    b.HasOne("MassTransit.EntityFrameworkCoreIntegration.OutboxState", null)
+                        .WithMany()
+                        .HasForeignKey("OutboxId");
+
+                    b.HasOne("MassTransit.EntityFrameworkCoreIntegration.InboxState", null)
+                        .WithMany()
+                        .HasForeignKey("InboxMessageId", "InboxConsumerId")
+                        .HasPrincipalKey("MessageId", "ConsumerId");
                 });
 
             modelBuilder.Entity("Oficina.Dominio.Clientes.Cliente", b =>

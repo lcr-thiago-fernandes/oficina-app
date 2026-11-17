@@ -13,6 +13,11 @@ histórico. Onde a implementação divergiu, valem os ADRs e RFCs — as diverg�
 [RFC-004](../rfc/RFC-004-topologia-quatro-repositorios.md) e
 [RFC-005](../rfc/RFC-005-observabilidade-new-relic.md).
 
+**Fase 4:** a arquitetura atual (três microsserviços + Saga orquestrada) está em
+[fase4-design-arquitetural.md](fase4-design-arquitetural.md) e na
+[RFC-006](../rfc/RFC-006-microsservicos-saga-orquestrada.md). Onde este documento fala do
+ciclo da OS, do webhook de aprovação ou da baixa de estoque na execução, ele descreve a Fase 3.
+
 ---
 
 ## 1. Contexto e objetivo
@@ -129,6 +134,13 @@ o authorizer é invocado em toda requisição protegida. Cache habilitado
 | `GET /swagger/{proxy+}` | VPC Link → NLB → EKS | — |
 | `POST /api/v1/ordens-servico/{id}/orcamento/aprovacao` | VPC Link → NLB → EKS | — (rota mais específica; segue protegida por `X-Webhook-Token`) |
 | `ANY /api/v1/{proxy+}` | VPC Link → NLB → EKS | Lambda Authorizer |
+
+> **Nota histórica (Fase 4):** a rota `POST /api/v1/ordens-servico/{id}/orcamento/aprovacao`
+> (webhook com `X-Webhook-Token`, [ADR-011](ADR-011-webhook-aprovacao-token.md)) foi removida do
+> `oficina-app` e do API Gateway. A aprovação do orçamento passou para o Billing Service e o
+> único webhook público é o do Mercado Pago — ver
+> [fase4-design-arquitetural.md](fase4-design-arquitetural.md), seção 6.4, e
+> [RFC-006](../rfc/RFC-006-microsservicos-saga-orquestrada.md).
 
 ### Contrato do JWT
 
