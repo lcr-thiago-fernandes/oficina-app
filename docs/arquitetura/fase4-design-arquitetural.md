@@ -275,10 +275,25 @@ Todas carregam `OrdemServicoId` (Guid, correlação), `OcorridoEm` (UTC). Valore
 | `oficina:saga:StatusExecucaoAlterado` | evento | Execução → OS | `StatusExecucao: EmDiagnostico\|EmReparo`, `Observacao?` |
 | `oficina:saga:ExecucaoFinalizada` | evento | Execução → OS | `Observacao?`, `DuracaoMinutos` |
 
-Comandos usam *send* para a fila do serviço destino (`oficina-billing-comandos`,
-`oficina-execucao-comandos`); eventos usam *publish* (tópico SNS por tipo; o OS Service assina
-com a fila `oficina-os-saga`). Nomes de filas/tópicos com prefixo do ambiente
-(`hml-`/`prd-`), porque os dois namespaces compartilham a conta.
+Comandos usam *send* para a fila do serviço destino; eventos usam *publish* (um tópico SNS por
+tipo). Nomes fixados (o prefixo vem de `Mensageria__PrefixoAmbiente` = `local` | `hml` | `prd`,
+porque os dois namespaces compartilham a conta AWS):
+
+| Recurso | Nome |
+|---|---|
+| Fila de comandos do Billing | `{prefixo}-oficina-billing-comandos` (endpoint `queue:{prefixo}-oficina-billing-comandos`) |
+| Fila de comandos da Execução | `{prefixo}-oficina-execucao-comandos` |
+| Fila de eventos da saga (OS Service) | `{prefixo}-oficina-os-saga` |
+| Tópico SNS de cada mensagem | `{prefixo}-oficina-saga-{Nome}` |
+
+**O nome do tópico não pode depender do namespace .NET** (que difere entre repositórios — o
+padrão do MassTransit usaria o nome completo do tipo e os tópicos nunca se encontrariam). Por
+isso toda classe de mensagem leva `[EntityName("oficina-saga-<Nome>")]` além de
+`[MessageUrn("oficina:saga:<Nome>")]`, e o bus usa
+`PrefixEntityNameFormatter(<formatter padrão>, "{prefixo}-")`. Os testes de contrato verificam
+os dois atributos de cada tipo, além do JSON.
+
+Exemplos JSON: [`docs/contratos/mensagens/`](../contratos/mensagens/).
 
 ---
 
