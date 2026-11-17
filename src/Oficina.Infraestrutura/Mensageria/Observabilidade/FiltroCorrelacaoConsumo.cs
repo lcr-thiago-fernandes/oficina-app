@@ -1,6 +1,7 @@
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using Oficina.Infraestrutura.Mensageria.Contratos;
+using Oficina.Infraestrutura.Mensageria.Saga;
 
 namespace Oficina.Infraestrutura.Mensageria.Observabilidade;
 
@@ -11,8 +12,6 @@ namespace Oficina.Infraestrutura.Mensageria.Observabilidade;
 /// </summary>
 public sealed class FiltroCorrelacaoConsumo<T> : IFilter<ConsumeContext<T>> where T : class
 {
-    public const string HeaderCorrelacao = "X-Correlation-Id";
-
     private readonly ILogger<FiltroCorrelacaoConsumo<T>> _log;
 
     public FiltroCorrelacaoConsumo(ILogger<FiltroCorrelacaoConsumo<T>> log) => _log = log;
@@ -26,7 +25,7 @@ public sealed class FiltroCorrelacaoConsumo<T> : IFilter<ConsumeContext<T>> wher
         }
 
         var id = mensagem.OrdemServicoId;
-        var correlationId = context.Headers.TryGetHeader(HeaderCorrelacao, out var valor) && valor is not null
+        var correlationId = context.Headers.TryGetHeader(SagaOrdemServicoGateway.HeaderCorrelacao, out var valor) && valor is not null
             ? valor.ToString()!
             : context.ConversationId?.ToString() ?? string.Empty;
 
@@ -50,7 +49,7 @@ public sealed class FiltroCorrelacaoConsumo<T> : IFilter<ConsumeContext<T>> wher
         }
         catch (Exception ex)
         {
-            _log.LogDebug(ex, "Agente do New Relic indisponível ao marcar a transação da OS {OrdemServicoId}.", id);
+            _log.LogWarning(ex, "Agente do New Relic indisponível ao marcar a transação da OS {OrdemServicoId}.", id);
         }
     }
 

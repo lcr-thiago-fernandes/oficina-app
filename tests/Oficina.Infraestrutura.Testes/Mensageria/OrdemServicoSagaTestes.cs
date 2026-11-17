@@ -178,6 +178,7 @@ public sealed class OrdemServicoSagaTestes : IAsyncLifetime
         _passos.Verify(p => p.CancelarAsync(_id, "Orcamento sem itens", It.IsAny<CancellationToken>()), Times.Once);
         Saga().Motivo.Should().Be("Orcamento sem itens");
         _registrador.Passos.Should().Equal((PassosSaga.GerarOrcamento, PassosSaga.Falha, true));
+        _registrador.Motivos.Should().Equal("Orcamento sem itens");
     }
 
     [Fact]
@@ -208,6 +209,7 @@ public sealed class OrdemServicoSagaTestes : IAsyncLifetime
         _passos.VerifyNoOtherCalls();
         Saga().Motivo.Should().Be("Orçamento rejeitado: Cliente achou caro");
         _registrador.Passos.Should().Equal((PassosSaga.AprovarOrcamento, PassosSaga.Falha, true));
+        _registrador.Motivos.Should().Equal("Orçamento rejeitado: Cliente achou caro");
     }
 
     [Fact]
@@ -313,6 +315,7 @@ public sealed class OrdemServicoSagaTestes : IAsyncLifetime
         Saga().PagamentoId.Should().Be(PagamentoId);
         Saga().Motivo.Should().Be(estorno.Context.Message.Motivo);
         _registrador.Passos.Should().Equal((PassosSaga.ConfirmarPagamento, PassosSaga.Falha, true));
+        _registrador.Motivos.Should().Equal(OrdemServicoSaga.MotivoPagamentoNaoHonrado);
     }
 
     [Fact]
@@ -327,7 +330,7 @@ public sealed class OrdemServicoSagaTestes : IAsyncLifetime
         _passos.VerifyNoOtherCalls();
         _harness.Sent.Select<EstornarPagamento>().Should().BeEmpty();
         _harness.Sent.Select<CancelarOrcamento>().Should().BeEmpty();
-        _registrador.Passos.Should().Equal((PassosSaga.ConfirmarPagamento, PassosSaga.Falha, true));
+        _registrador.Passos.Should().Equal((PassosSaga.ConfirmarPagamento, PassosSaga.Falha, true));        _registrador.Motivos.Should().Equal("cartao_recusado");
     }
 
     [Theory]
@@ -452,6 +455,7 @@ public sealed class OrdemServicoSagaTestes : IAsyncLifetime
         Saga().Motivo.Should().Be("Oficina sem capacidade");
         _passos.VerifyNoOtherCalls();
         _registrador.Passos.Should().Equal((PassosSaga.EnfileirarExecucao, PassosSaga.Falha, true));
+        _registrador.Motivos.Should().Equal("Oficina sem capacidade");
     }
 
     [Fact]
@@ -498,6 +502,7 @@ public sealed class OrdemServicoSagaTestes : IAsyncLifetime
         _passos.VerifyNoOtherCalls();
         Saga().Motivo.Should().Be("Cliente desistiu");
         _registrador.Passos.Should().Equal((PassosSaga.Cancelamento, PassosSaga.Compensado, true));
+        _registrador.Motivos.Should().Equal("Cliente desistiu");
     }
 
     [Fact]

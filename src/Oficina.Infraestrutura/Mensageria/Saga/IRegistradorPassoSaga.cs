@@ -6,5 +6,5 @@ namespace Oficina.Infraestrutura.Mensageria.Saga;
 /// </summary>
 public interface IRegistradorPassoSaga
 {
-    void Registrar(EstadoSagaOrdemServico saga, string passo, string resultado, bool compensacao, string? detalhe = null);
+    void Registrar(EstadoSagaOrdemServico saga, string passo, string resultado, bool compensacao, string? detalhe = null, string? motivo = null);
 }

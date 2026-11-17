@@ -44,6 +44,8 @@ public class PublicadorEventoSagaNewRelic : IPublicadorEventoSaga
 
         if (evento.Motivo is not null)
             atributos["motivo"] = evento.Motivo;
+        if (evento.Detalhe is not null)
+            atributos["detalhe"] = evento.Detalhe;
 
         return atributos;
     }

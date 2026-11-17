@@ -75,7 +75,8 @@ public class RegistradorPassoSagaTestes
         var publicador = new Mock<IPublicadorEventoSaga>();
         var saga = new EstadoSagaOrdemServico
         {
-            CorrelationId = Guid.NewGuid(), EstadoAtual = "Compensando", AtualizadaEm = DateTime.UtcNow.AddSeconds(-1),
+            CorrelationId = Guid.NewGuid(), EstadoAtual = "Compensando", Motivo = "Estorno falhou: gateway fora",
+            AtualizadaEm = DateTime.UtcNow.AddSeconds(-1),
         };
 
         new RegistradorPassoSaga(db, publicador.Object)
@@ -83,6 +84,42 @@ public class RegistradorPassoSagaTestes
 
         publicador.Verify(p => p.Publicar(It.Is<EventoSagaOrdemServico>(e =>
             e.Passo == PassosSaga.EstornarPagamento && e.Resultado == "CompensacaoFalhou" && e.Compensacao
-            && e.Estado == "Compensando" && e.Motivo == "gateway fora")), Times.Once);
+            && e.Estado == "Compensando" && e.Motivo == "Estorno falhou: gateway fora" && e.Detalhe == "gateway fora")), Times.Once);
+    }
+
+    [Fact]
+    public void Registrar_CompensacaoSemDetalhe_PublicaMotivoDaSaga_ESucessoNaoTemMotivo()
+    {
+        using var db = NovoContexto();
+        var publicador = new Mock<IPublicadorEventoSaga>();
+        var saga = new EstadoSagaOrdemServico
+        {
+            CorrelationId = Guid.NewGuid(), EstadoAtual = "Cancelada", Motivo = "cartao_recusado", AtualizadaEm = DateTime.UtcNow,
+        };
+        var registrador = new RegistradorPassoSaga(db, publicador.Object);
+
+        registrador.Registrar(saga, PassosSaga.ConfirmarPagamento, PassosSaga.Falha, true);
+        registrador.Registrar(saga, PassosSaga.Execucao, PassosSaga.Sucesso, false, "EmReparo");
+
+        publicador.Verify(p => p.Publicar(It.Is<EventoSagaOrdemServico>(e =>
+            e.Passo == PassosSaga.ConfirmarPagamento && e.Motivo == "cartao_recusado" && e.Detalhe == null)), Times.Once);
+        publicador.Verify(p => p.Publicar(It.Is<EventoSagaOrdemServico>(e =>
+            e.Passo == PassosSaga.Execucao && e.Motivo == null && e.Detalhe == "EmReparo")), Times.Once);
+    }
+
+    [Fact]
+    public void Registrar_MotivoExplicito_PrevaleceSobreOMotivoDaSaga_ComDetalheSeparado()
+    {
+        using var db = NovoContexto();
+        var publicador = new Mock<IPublicadorEventoSaga>();
+        var saga = new EstadoSagaOrdemServico
+        {
+            CorrelationId = Guid.NewGuid(), EstadoAtual = "Compensando", Motivo = "antigo", AtualizadaEm = DateTime.UtcNow,
+        };
+
+        new RegistradorPassoSaga(db, publicador.Object)
+            .Registrar(saga, PassosSaga.EstornarPagamento, PassosSaga.Falha, true, "pg-1", "Pagamento tardio");
+
+        publicador.Verify(p => p.Publicar(It.Is<EventoSagaOrdemServico>(e => e.Motivo == "Pagamento tardio" && e.Detalhe == "pg-1")), Times.Once);
     }
 }

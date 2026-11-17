@@ -64,8 +64,6 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
             [nameof(Cancelada)] = TodosOsEventos().Where(e => e != nameof(PagamentoConfirmado)).ToArray(),
         };
 
-    private const string HeaderCorrelacao = "X-Correlation-Id";
-
     private readonly NomesMensageria _nomes;
 
     public State AguardandoOrcamento { get; private set; } = null!;
@@ -218,7 +216,7 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
                 .If(ctx => ctx.Message.PagamentoId != ctx.Saga.PagamentoId,
                     outro => outro
                         .ThenAsync(ctx => EnviarComCorrelacaoAsync(ctx, _nomes.EnderecoComandosBilling, CriarEstornarPagamento(ctx.Saga, MotivoPagamentoAposCancelamento)))
-                        .Then(ctx => Registrar(ctx, PassosSaga.EstornarPagamento, PassosSaga.Falha, true, ctx.Message.PagamentoId))));
+                        .Then(ctx => Registrar(ctx, PassosSaga.EstornarPagamento, PassosSaga.Falha, true, ctx.Message.PagamentoId, MotivoPagamentoAposCancelamento))));
 
         // Pagamento chegou depois do cancelamento (corrida com CancelamentoSolicitado, Review Focus 2):
         // estorna em vez de perder o dinheiro. PagamentoId igual ao já registrado = pagamento que já foi
@@ -230,7 +228,7 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
                         .Then(ctx => ctx.Saga.PagamentoId = ctx.Message.PagamentoId)
                         .ThenAsync(ctx => EnviarComCorrelacaoAsync(ctx, _nomes.EnderecoComandosBilling, CriarEstornarPagamento(ctx.Saga, MotivoPagamentoAposCancelamento)))
                         .TransitionTo(Compensando)
-                        .Then(ctx => Registrar(ctx, PassosSaga.EstornarPagamento, PassosSaga.Falha, true, ctx.Message.PagamentoId))));
+                        .Then(ctx => Registrar(ctx, PassosSaga.EstornarPagamento, PassosSaga.Falha, true, ctx.Message.PagamentoId, MotivoPagamentoAposCancelamento))));
 
         foreach (var (estado, eventos) in EventosIgnoradosPorEstado)
             During(GetState(estado), eventos.Select(e => Ignore(((StateMachine)this).GetEvent(e))).ToArray());
@@ -310,8 +308,8 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
         where T : class =>
         ctx.Send(destino, mensagem, s =>
         {
-            if (ctx.Headers.TryGetHeader(HeaderCorrelacao, out var valor) && valor is not null)
-                s.Headers.Set(HeaderCorrelacao, valor);
+            if (ctx.Headers.TryGetHeader(SagaOrdemServicoGateway.HeaderCorrelacao, out var valor) && valor is not null)
+                s.Headers.Set(SagaOrdemServicoGateway.HeaderCorrelacao, valor);
         });
 
     private static IPassosSagaOrdemServico Passos(ConsumeContext ctx) =>
@@ -322,8 +320,8 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
     /// registrador lê <see cref="EstadoSagaOrdemServico.EstadoAtual"/>, que deve ser o estado novo.
     /// </summary>
     private static void Registrar(
-        BehaviorContext<EstadoSagaOrdemServico> ctx, string passo, string resultado, bool compensacao, string? detalhe = null) =>
-        ctx.GetServiceOrCreateInstance<IRegistradorPassoSaga>().Registrar(ctx.Saga, passo, resultado, compensacao, detalhe);
+        BehaviorContext<EstadoSagaOrdemServico> ctx, string passo, string resultado, bool compensacao, string? detalhe = null, string? motivo = null) =>
+        ctx.GetServiceOrCreateInstance<IRegistradorPassoSaga>().Registrar(ctx.Saga, passo, resultado, compensacao, detalhe, motivo);
 
     /// <summary>
     /// Resultado de um passo guardado no contexto do consumo para as atividades seguintes do mesmo
