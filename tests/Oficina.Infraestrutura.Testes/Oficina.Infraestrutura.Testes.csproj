@@ -29,6 +29,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\docs\contratos\mensagens\*.json" LinkBase="Contratos" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Oficina.Infraestrutura\Oficina.Infraestrutura.csproj" />
   </ItemGroup>
 
