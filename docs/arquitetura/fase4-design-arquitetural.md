@@ -289,9 +289,16 @@ porque os dois namespaces compartilham a conta AWS):
 **O nome do tópico não pode depender do namespace .NET** (que difere entre repositórios — o
 padrão do MassTransit usaria o nome completo do tipo e os tópicos nunca se encontrariam). Por
 isso toda classe de mensagem leva `[EntityName("oficina-saga-<Nome>")]` além de
-`[MessageUrn("oficina:saga:<Nome>")]`, e o bus usa
-`PrefixEntityNameFormatter(<formatter padrão>, "{prefixo}-")`. Os testes de contrato verificam
-os dois atributos de cada tipo, além do JSON.
+`[MessageUrn("oficina:saga:<Nome>")]`. **O prefixo de ambiente não pode vir de
+`PrefixEntityNameFormatter`**: no MassTransit 8.5.12 um tipo com `[EntityName]` usa o valor do
+atributo literalmente e ignora o formatter global (verificado em `MessageEntityNameFormatter.cs`,
+tag v8.5.12). Por isso cada repositório aplica o prefixo explicitamente, por tipo, na
+configuração do bus: `cfg.Message<T>(m => m.SetEntityName($"{prefixo}-oficina-saga-{Nome}"))`
+para todo tipo que publica ou assina, com teste provando o nome final. Os testes de contrato
+verificam os dois atributos de cada tipo, além do JSON.
+
+**Versão fixada nos três repositórios:** `MassTransit` e `MassTransit.AmazonSQS` **8.5.12**
+(dependem de AWSSDK 4.x).
 
 Exemplos JSON: [`docs/contratos/mensagens/`](../contratos/mensagens/).
 
@@ -353,7 +360,31 @@ revalida). Rotas:
 | `ANY /execucao/api/v1/{proxy+}` | Execução | Authorizer |
 
 Os serviços novos usam `PathBase` (`/billing`, `/execucao`) para que o Swagger funcione atrás
-do gateway.
+do gateway. Como na Fase 3, só `prd` é ligado ao API Gateway; `hml` fica acessível apenas
+dentro da VPC. Rotas públicas extras: `GET /billing/health`, `GET /billing/swagger/{proxy+}`,
+`GET /execucao/health`, `GET /execucao/swagger/{proxy+}`.
+
+**Portas fixadas (NodePort / listener do NLB compartilhado):**
+
+| Serviço | prd | hml |
+|---|---|---|
+| OS Service (`oficina-app`, Fase 3) | 30080 / 80 | 30081 / 81 |
+| Billing | 30082 / 8081 | 30083 / 8082 |
+| Execução | 30084 / 8083 | 30085 / 8084 |
+
+**Papéis IAM de CI/CD (decisão):** o `scripts/bootstrap.sh` do `oficina-infra-k8s` passa a
+incluir `oficina-billing-service` e `oficina-execucao-service` em `REPOS_INFRA` (podem assumir
+`oficina-gha-infra` para aplicar o próprio `terraform/`). O `terraform/` de cada serviço cria a
+**própria** role de deploy (`oficina-gha-deploy-billing`, `oficina-gha-deploy-execucao`) com
+EKS access entry restrita aos namespaces `oficina-prd`/`oficina-hml` e publica seus valores em
+`/oficina/<servico>/*` no SSM. Segredos chegam aos pods pelo Secret do K8s criado no CD (mesmo
+padrão do `oficina-app`); a role IRSA não lê Secrets Manager.
+
+**Parâmetros SSM novos publicados pelo `oficina-infra-k8s`:** `/oficina/eks/oidc_provider_arn`,
+`/oficina/eks/oidc_provider_url` (sem `https://`), `/oficina/nlb/arn`,
+`/oficina/nlb/security_group_id`, `/oficina/apigw/vpc_link_security_group_id`,
+`/oficina/eks/node_asg_names` (StringList). O ID do authorizer já existe em
+`/oficina/auth/lambda_authorizer_id` (`oficina-lambda-auth`).
 
 ---
 
