@@ -115,9 +115,9 @@
       },
       "NewRelic.Agent.Api": {
         "type": "Direct",
-        "requested": "[10.54.0, )",
-        "resolved": "10.54.0",
-        "contentHash": "o4/NOxTU4c8YizdcJ7TaHP61z9UjQNmtLPd8+cR1VBqPJf46uFQYxIJiF/sQkgUBy+U3gz1/0lclXNpGNSHP9w=="
+        "requested": "[10.57.0, )",
+        "resolved": "10.57.0",
+        "contentHash": "cZ8yIdJouEgnOt+O876vqU5JAfvRC3m2XaqNMuDdrj61/1WwsWJFaEmExXCCNeYVXIiZm4w4ikCFGTvq7vVMMw=="
       },
       "Npgsql.EntityFrameworkCore.PostgreSQL": {
         "type": "Direct",
