@@ -145,7 +145,7 @@ services:
       DynamoDb__ServiceUrl: http://dynamodb:8000
       DynamoDb__NomeTabela: oficina-execucao-local
       DynamoDb__CriarTabelaSeAusente: "true"
-      # 0 = toda IniciarExecucao e recusada (ExecucaoFalhou) -> saga estorna o pagamento.
+      # 0 = toda IniciarExecucao e recusada (ExecucaoRecusada) -> saga estorna o pagamento.
       Execucao__CapacidadeMaximaPorUnidade: ${CAPACIDADE_EXECUCAO:-20}
       NEW_RELIC_APP_NAME: oficina-execucao
       AWS_ACCESS_KEY_ID: test

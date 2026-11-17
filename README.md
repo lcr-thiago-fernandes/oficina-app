@@ -322,6 +322,7 @@ stateDiagram-v2
     Compensando --> Cancelada: PagamentoEstornado
     Compensando --> Compensando: EstornoFalhou, intervenção manual
     Cancelada --> Compensando: PagamentoConfirmado tardio, envia EstornarPagamento
+    Cancelada --> Cancelada: OrcamentoGerado/Aprovado tardio, reenvia CancelarOrcamento
     Concluida --> [*]
     Cancelada --> [*]
 ```
@@ -329,7 +330,10 @@ stateDiagram-v2
 Além do diagrama: `CancelamentoSolicitado` (cancelamento pelo atendente) leva
 `AguardandoOrcamento`, `AguardandoAprovacao` e `AguardandoPagamento` a `Cancelada`, enviando
 `CancelarOrcamento` ao Billing; nos estados seguintes ele é registrado na trilha como
-`Ignorado`. Se a decisão do cliente chega sem o `OrcamentoGerado` (o Billing caiu entre gravar
+`Ignorado`. Como o `CancelarOrcamento` pode ultrapassar o `GerarOrcamento` na fila do Billing
+(que o ignora se o orçamento ainda não existe), um `OrcamentoGerado` ou `OrcamentoAprovado` que
+chega com a saga em `Cancelada` faz a saga reenviar o `CancelarOrcamento` (o Billing cancela de
+forma idempotente), e o orçamento não fica vivo. Se a decisão do cliente chega sem o `OrcamentoGerado` (o Billing caiu entre gravar
 e publicar), a saga registra o orçamento como gerado e segue. Estado e trilha ficam no schema
 `saga`, correlacionados por `CorrelationId = OrdemServicoId`.
 
@@ -526,8 +530,10 @@ Billing e Execução têm o BDD próprio nos respectivos repositórios
   Fase 3 (transição de status da OS) continua.
 - **Correlação por `ordemServicoId`:** cada consumo de mensagem abre um escopo de log com
   `ordemServicoId` e `correlationId` e marca a transação do APM com `ordemServicoId`
-  (`FiltroCorrelacaoConsumo`); o `X-Correlation-Id` da requisição HTTP de abertura é propagado
-  para as mensagens. Para seguir uma OS de ponta a ponta:
+  (`FiltroCorrelacaoConsumo`). O `X-Correlation-Id` da requisição HTTP de abertura vai só nas
+  mensagens que a própria OS envia a partir dela (`OrdemServicoAberta` → `GerarOrcamento`); o
+  Billing e a Execução não o copiam para os seus eventos. A chave de correlação entre os
+  serviços é o `ordemServicoId`. Para seguir uma OS de ponta a ponta:
   `SELECT * FROM SagaOrdemServico, PagamentoEvento, ExecucaoEvento WHERE ordemServicoId = '<id>'`
   ou, nos logs, filtrar por `ordemServicoId`.
 - **Dashboard "Oficina Mecanica - Saga da OS"** e alertas (compensação disparada,
@@ -709,7 +715,9 @@ Segredos lidos do Secrets Manager pelo CD: `oficina/db_password`, `oficina/jwt_s
 
 1. **`EstornoFalhou` deixa a saga em `Compensando`.** Se o Mercado Pago recusar o estorno, a
    saga registra `CompensacaoFalhou` com o motivo e não muda a OS: exige **intervenção manual**.
-   O alerta Critical do New Relic (`oficina-infra-k8s`) avisa.
+   O alerta Critical do New Relic (`oficina-infra-k8s`) avisa. Um `EstornoFalhou` que chega com a
+   saga já em `Cancelada` (estorno de um segundo pagamento) também é registrado como
+   `CompensacaoFalhou`, com o motivo, sem mudar a OS.
 2. **Sem timeout de aprovação.** Um cliente que nunca responde deixa a OS em
    `AguardandoAprovacao` com o estoque reservado (não-objetivo da Fase 4); o atendente pode
    cancelar.
@@ -721,6 +729,8 @@ Segredos lidos do Secrets Manager pelo CD: `oficina/db_password`, `oficina/jwt_s
    cancelamento, ele é estornado.
 4. **OS abertas na Fase 3** (sem saga) continuam sendo canceladas na própria requisição (200),
    sem reserva a liberar; uma baixa manual antiga de estoque não é reposta automaticamente.
+   Uma OS da Fase 3 em `EmDiagnostico` ou `EmReparo` não pode mais avançar nem ser cancelada
+   (os endpoints manuais saíram); não há dados assim, pois a Fase 3 nunca foi aplicada na AWS.
 
 ### Herdadas da Fase 3 (continuam valendo)
 

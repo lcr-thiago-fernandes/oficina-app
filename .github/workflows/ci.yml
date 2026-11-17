@@ -333,7 +333,7 @@ jobs:
         with:
           category: "/language:csharp"
 
-  terraform:
+  terraform-validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

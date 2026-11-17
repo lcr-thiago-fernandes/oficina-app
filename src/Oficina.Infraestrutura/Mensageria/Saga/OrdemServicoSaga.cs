@@ -26,6 +26,13 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
     internal const string MotivoPagamentoNaoHonrado =
         "Pagamento confirmado com a OS cancelada ou a reserva de estoque liberada";
 
+    internal const string MotivoCancelamentoPadrao = "OS cancelada";
+
+    private static readonly string[] EventosTratadosEmCancelada =
+    {
+        nameof(PagamentoConfirmado), nameof(EstornoFalhou), nameof(OrcamentoGerado), nameof(OrcamentoAprovado),
+    };
+
     private const string DetalheSemOrcamentoGerado = "OrcamentoGerado não recebido: inferido da decisão do cliente";
 
     private static readonly string[] EventosAteOPagamento =
@@ -60,8 +67,9 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
                     nameof(StatusExecucaoAlterado), nameof(ExecucaoFinalizada),
                 }).ToArray(),
             [nameof(Concluida)] = TodosOsEventos(),
-            // PagamentoConfirmado é tratado: pagamento depois do cancelamento é estornado.
-            [nameof(Cancelada)] = TodosOsEventos().Where(e => e != nameof(PagamentoConfirmado)).ToArray(),
+            // Tratados em Cancelada: PagamentoConfirmado (estornado), EstornoFalhou (registrado) e
+            // OrcamentoGerado/OrcamentoAprovado (CancelarOrcamento reenviado).
+            [nameof(Cancelada)] = TodosOsEventos().Except(EventosTratadosEmCancelada).ToArray(),
         };
 
     private readonly NomesMensageria _nomes;
@@ -161,12 +169,7 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
             When(CancelamentoSolicitado)
                 .Then(ctx => ctx.Saga.Motivo = ctx.Message.Motivo)
                 .ThenAsync(ctx => Passos(ctx).CancelarAsync(ctx.Saga.CorrelationId, ctx.Saga.Motivo!, ctx.CancellationToken))
-                .ThenAsync(ctx => EnviarComCorrelacaoAsync(ctx, _nomes.EnderecoComandosBilling, new CancelarOrcamento
-                {
-                    OrdemServicoId = ctx.Saga.CorrelationId,
-                    OcorridoEm = DateTime.UtcNow,
-                    Motivo = ctx.Saga.Motivo!,
-                }))
+                .ThenAsync(ctx => EnviarComCorrelacaoAsync(ctx, _nomes.EnderecoComandosBilling, CriarCancelarOrcamento(ctx.Saga)))
                 .TransitionTo(Cancelada)
                 .Then(ctx => Registrar(ctx, PassosSaga.Cancelamento, PassosSaga.Compensado, true)));
 
@@ -228,7 +231,17 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
                         .Then(ctx => ctx.Saga.PagamentoId = ctx.Message.PagamentoId)
                         .ThenAsync(ctx => EnviarComCorrelacaoAsync(ctx, _nomes.EnderecoComandosBilling, CriarEstornarPagamento(ctx.Saga, MotivoPagamentoAposCancelamento)))
                         .TransitionTo(Compensando)
-                        .Then(ctx => Registrar(ctx, PassosSaga.EstornarPagamento, PassosSaga.Falha, true, ctx.Message.PagamentoId, MotivoPagamentoAposCancelamento))));
+                        .Then(ctx => Registrar(ctx, PassosSaga.EstornarPagamento, PassosSaga.Falha, true, ctx.Message.PagamentoId, MotivoPagamentoAposCancelamento))),
+            // Estorno de um segundo pagamento falhou depois que o primeiro concluiu a compensação: a OS
+            // continua cancelada, mas a falha vai para a trilha e para o New Relic (alerta Critical).
+            When(EstornoFalhou)
+                .Then(ctx => Registrar(ctx, PassosSaga.EstornarPagamento, PassosSaga.CompensacaoFalhou, true,
+                    ctx.Message.Motivo, "Estorno falhou: " + ctx.Message.Motivo)),
+            // CancelarOrcamento pode ultrapassar GerarOrcamento na fila do Billing (que o ignora sem
+            // orçamento): um orçamento gerado ou aprovado depois do cancelamento recebe o comando de novo,
+            // para não ficar vivo. O Billing cancela de forma idempotente (Cancelado/Rejeitado = no-op).
+            ReenviarCancelarOrcamento(When(OrcamentoGerado), nameof(OrcamentoGerado)),
+            ReenviarCancelarOrcamento(When(OrcamentoAprovado), nameof(OrcamentoAprovado)));
 
         foreach (var (estado, eventos) in EventosIgnoradosPorEstado)
             During(GetState(estado), eventos.Select(e => Ignore(((StateMachine)this).GetEvent(e))).ToArray());
@@ -276,6 +289,13 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
         nameof(StatusExecucaoAlterado), nameof(ExecucaoFinalizada),
         nameof(PagamentoEstornado), nameof(EstornoFalhou), nameof(CancelamentoSolicitado),
     };
+
+    private EventActivityBinder<EstadoSagaOrdemServico, T> ReenviarCancelarOrcamento<T>(
+        EventActivityBinder<EstadoSagaOrdemServico, T> binder, string evento) where T : class =>
+        binder
+            .ThenAsync(ctx => EnviarComCorrelacaoAsync(ctx, _nomes.EnderecoComandosBilling, CriarCancelarOrcamento(ctx.Saga)))
+            .Then(ctx => Registrar(ctx, PassosSaga.Cancelamento, PassosSaga.Compensado, true,
+                $"CancelarOrcamento reenviado: {evento} após o cancelamento"));
 
     private EventActivityBinder<EstadoSagaOrdemServico, T> RegistrarOrcamentoGeradoImplicito<T>(
         EventActivityBinder<EstadoSagaOrdemServico, T> binder) where T : class =>
@@ -369,6 +389,13 @@ public sealed class OrdemServicoSaga : MassTransitStateMachine<EstadoSagaOrdemSe
         Unidade = pedido.Unidade,
         Servicos = pedido.Servicos.Select(i => new ItemExecucao { Descricao = i.Descricao, Quantidade = i.Quantidade }).ToList(),
         Pecas = pedido.Pecas.Select(i => new ItemExecucao { Descricao = i.Descricao, Quantidade = i.Quantidade }).ToList(),
+    };
+
+    private static CancelarOrcamento CriarCancelarOrcamento(EstadoSagaOrdemServico saga) => new()
+    {
+        OrdemServicoId = saga.CorrelationId,
+        OcorridoEm = DateTime.UtcNow,
+        Motivo = saga.Motivo ?? MotivoCancelamentoPadrao,
     };
 
     private static EstornarPagamento CriarEstornarPagamento(EstadoSagaOrdemServico saga, string motivo) => new()

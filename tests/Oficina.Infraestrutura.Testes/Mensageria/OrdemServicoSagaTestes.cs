@@ -35,7 +35,7 @@ public sealed class OrdemServicoSagaTestes : IAsyncLifetime
         ["EmExecucao"] = new[] { "StatusExecucaoAlterado", "ExecucaoFinalizada", "CancelamentoSolicitado" },
         ["Compensando"] = new[] { "PagamentoConfirmado", "PagamentoEstornado", "EstornoFalhou", "CancelamentoSolicitado" },
         ["Concluida"] = Array.Empty<string>(),
-        ["Cancelada"] = new[] { "PagamentoConfirmado" },
+        ["Cancelada"] = new[] { "PagamentoConfirmado", "EstornoFalhou", "OrcamentoGerado", "OrcamentoAprovado" },
     };
 
     /// <summary>Eventos de etapa futura: não declarados → falham → retry/redelivery até a saga chegar lá.</summary>
@@ -575,6 +575,68 @@ public sealed class OrdemServicoSagaTestes : IAsyncLifetime
         TotalEnviados().Should().Be(enviadosAntes);
         _passos.VerifyNoOtherCalls();
         _registrador.Passos.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task EstornoFalhou_EmCancelada_RegistraCompensacaoFalhouComMotivoSemMudarEstado()
+    {
+        // Dois pagamentos em estorno: o PagamentoEstornado do primeiro leva a Cancelada; o EstornoFalhou do segundo chega depois.
+        await LevarSagaAteAsync("Compensando");
+        await PublicarSemErroAsync(Mensagem("PagamentoEstornado"));
+        await DeveEstarEmAsync("Cancelada");
+        _passos.Invocations.Clear();
+        _registrador.Limpar();
+        var motivoDoCancelamento = Saga().Motivo;
+        var enviadosAntes = TotalEnviados();
+
+        await PublicarSemErroAsync(new EstornoFalhou { OrdemServicoId = _id, OcorridoEm = DateTime.UtcNow, Motivo = "gateway indisponivel" });
+
+        await DeveEstarEmAsync("Cancelada");
+        _passos.VerifyNoOtherCalls();
+        TotalEnviados().Should().Be(enviadosAntes);
+        Saga().Motivo.Should().Be(motivoDoCancelamento);
+        _registrador.Registros.Should().Equal(
+            (PassosSaga.EstornarPagamento, PassosSaga.CompensacaoFalhou, true, "gateway indisponivel"));
+        _registrador.Motivos.Should().Equal("Estorno falhou: gateway indisponivel");
+        _registrador.Estados.Should().Equal("Cancelada");
+    }
+
+    [Theory]
+    [InlineData("OrcamentoGerado")]
+    [InlineData("OrcamentoAprovado")]
+    public async Task OrcamentoTardio_EmCancelada_ReenviaCancelarOrcamento(string evento)
+    {
+        // Corrida: CancelarOrcamento ultrapassa GerarOrcamento na fila do Billing, que o ignora e gera o orçamento depois.
+        await LevarSagaAteAsync("AguardandoOrcamento");
+        await PublicarSemErroAsync(new CancelamentoSolicitado { OrdemServicoId = _id, OcorridoEm = DateTime.UtcNow, Motivo = "Cliente desistiu" });
+        await DeveEstarEmAsync("Cancelada");
+        _passos.Invocations.Clear();
+        _registrador.Limpar();
+
+        await PublicarSemErroAsync(Mensagem(evento));
+
+        await DeveEstarEmAsync("Cancelada");
+        var cancelamentos = _harness.Sent.Select<CancelarOrcamento>().ToList();
+        cancelamentos.Should().HaveCount(2);
+        cancelamentos.Should().OnlyContain(c =>
+            c.Context.Message.OrdemServicoId == _id && c.Context.Message.Motivo == "Cliente desistiu" &&
+            c.Context.DestinationAddress!.AbsolutePath.EndsWith("teste-oficina-billing-comandos"));
+        _passos.VerifyNoOtherCalls();
+        _registrador.Registros.Should().Equal(
+            (PassosSaga.Cancelamento, PassosSaga.Compensado, true, $"CancelarOrcamento reenviado: {evento} após o cancelamento"));
+        _registrador.Estados.Should().Equal("Cancelada");
+    }
+
+    [Fact]
+    public async Task OrcamentoTardio_EmCanceladaSemMotivo_ReenviaCancelarOrcamentoComMotivoPadrao()
+    {
+        await LevarSagaAteAsync("Cancelada");
+        Saga().Motivo = null;
+
+        await PublicarSemErroAsync(Mensagem("OrcamentoGerado"));
+
+        await DeveEstarEmAsync("Cancelada");
+        _harness.Sent.Select<CancelarOrcamento>().Single().Context.Message.Motivo.Should().Be(OrdemServicoSaga.MotivoCancelamentoPadrao);
     }
 
     [Fact]
