@@ -19,6 +19,22 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # SNS + SQS locais. Nao cria nada na subida: o MassTransit da API cria filas e
+  # topicos (local-oficina-*) ao iniciar o bus.
+  localstack:
+    image: localstack/localstack:3.8.1
+    container_name: oficina-localstack
+    environment:
+      SERVICES: sns,sqs
+    ports:
+      - "4566:4566"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
   api:
     build:
       context: ..
@@ -38,10 +54,22 @@ services:
       # profiling (=1) e o Deployment do Kubernetes, nao o compose local.
       NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY:-}
       NEW_RELIC_APP_NAME: ${NEW_RELIC_APP_NAME:-oficina-api}
+      # Saga sobre SNS/SQS do LocalStack. Sem Billing e Execucao rodando, a OS
+      # aberta fica em Recebida com o GerarOrcamento na fila do Billing; o
+      # ambiente com os tres servicos e o docker-compose.fase4.yml.
+      Mensageria__Transporte: AmazonSqs
+      Mensageria__PrefixoAmbiente: local
+      Mensageria__Regiao: us-east-1
+      Mensageria__ServiceUrl: http://localstack:4566
+      # Credenciais ficticias: o LocalStack nao valida, mas o SDK AWS exige alguma.
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
     ports:
       - "8080:8080"
     depends_on:
       postgres:
+        condition: service_healthy
+      localstack:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]

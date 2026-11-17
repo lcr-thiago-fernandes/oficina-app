@@ -1,3 +1,6 @@
+### >>> HISTÓRICO (Fase 3). Na Fase 4 orçamento, aprovação, pagamento e execução saíram
+### >>> desta API (Billing e Execução, via saga): as partes desses passos NÃO rodam mais.
+### >>> Roteiro atual: http/fase4-demo.http.
 ### ============================================================
 ### DEMO TECH CHALLENGE — FIAP 15SOAT Fase 3 — repositório oficina-app
 ###

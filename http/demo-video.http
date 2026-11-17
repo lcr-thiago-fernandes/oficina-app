@@ -1,3 +1,6 @@
+### >>> HISTÓRICO (Fase 2). NÃO roda mais: POST /auth/login saiu na Fase 3 e orçamento,
+### >>> aprovação, pagamento e execução saíram desta API na Fase 4.
+### >>> Roteiro atual: http/fase4-demo.http.
 ### ============================================================
 ### DEMO TECH CHALLENGE — FIAP 15SOAT Fase 2
 ###

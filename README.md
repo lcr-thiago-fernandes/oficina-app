@@ -580,10 +580,16 @@ capacidade 0 (`CAPACIDADE_EXECUCAO=0`).
 ### Token para testes locais
 
 Esta API **não emite** token — quem emite é a Lambda `oficina-auth-api`, que não roda
-localmente. Gere um JWT HS256 com o mesmo segredo do `.env`
-(`JWT_SECRET`/`JWT_ISSUER`/`JWT_AUDIENCE`), usando
-`tests/Oficina.Integracao.Testes/Auth/GeradorTokenDeTeste.cs` como referência (claims `sub`,
-`perfil`, `nome`, `jti` e, para `Cliente`, `documento`; `iss=oficina-auth`, `aud=oficina-api`):
+localmente. O script [`scripts/gerar-token-dev.sh`](scripts/gerar-token-dev.sh) gera um JWT
+HS256 com o `JWT_SECRET` do `.env` e as mesmas claims de
+`tests/Oficina.Integracao.Testes/Auth/GeradorTokenDeTeste.cs` (`sub`, `perfil`, `nome`, `jti` e,
+para `Cliente`, `documento`; `iss=oficina-auth`, `aud=oficina-api`). O token vale nos três
+serviços do compose ponta a ponta:
+
+```bash
+./scripts/gerar-token-dev.sh Admin                 # ou Atendente
+./scripts/gerar-token-dev.sh Cliente 39053344705   # Cliente dono do documento
+```
 
 - `perfil=Admin` ou `perfil=Atendente` → rotas de gestão.
 - `perfil=Cliente` + claim `documento=<cpf>` → `/api/v1/me/*` e `/api/v1/consulta/{numeroOs}`.
@@ -755,7 +761,8 @@ oficina-app/
 │   ├── evidencias/        # cobertura-Summary.txt
 │   ├── rfc/               # RFCs (001-006)
 │   └── entrega/           # entregáveis das fases anteriores
-├── http/                  # coleções REST Client
+├── http/                  # coleções REST Client (fase4-demo.http = roteiro atual)
+├── scripts/              # gerar-token-dev.sh (JWT local), setup-branch-protection.sh
 ├── k8s/                   # namespace-hml/prd, configmap, serviceaccount, secret (contrato),
 │                          #   migration-job, deployment, service, hpa + README.md
 ├── terraform/             # role IRSA por ambiente + parâmetro SSM
@@ -821,11 +828,11 @@ A documentação central das Fases 3 e 4 vive neste repositório; os outros apon
 
 ## Nota sobre o gerador de token local
 
-Este README aponta para `tests/Oficina.Integracao.Testes/Auth/GeradorTokenDeTeste.cs` como
-referência para gerar tokens de teste, em vez de um utilitário `tools/GerarToken`. Criar esse
-utilitário significaria um novo projeto C# na solução, sem cobertura de testes própria; a
-classe de teste já existe, é exercitada pela suíte de integração e tem exatamente as claims e
-a assinatura corretas — basta copiá-la para um script descartável.
+O gerador local é um script shell ([`scripts/gerar-token-dev.sh`](scripts/gerar-token-dev.sh),
+`openssl` + `bash`), não um utilitário C# `tools/GerarToken`: um projeto novo na solução não
+teria cobertura própria. As claims e a assinatura seguem
+`tests/Oficina.Integracao.Testes/Auth/GeradorTokenDeTeste.cs`, que é exercitado pela suíte de
+integração.
 
 ---
 

@@ -96,11 +96,11 @@ jobs:
           eks_cluster_name=$(aws ssm get-parameter --name /oficina/eks/cluster_name --query Parameter.Value --output text)
           rds_endpoint=$(aws ssm get-parameter --name /oficina/db/endpoint --query Parameter.Value --output text)
 
-          # Role IRSA do ambiente (uma por ambiente), escrita pelo oficina-infra-k8s.
+          # Role IRSA do ambiente (uma por ambiente), escrita pelo terraform/ssm.tf deste repo (infra.yml).
           # Exige ssm:GetParameter em /oficina/os-service/* na role de deploy. Se o
           # parametro nao existir, a infra ainda nao foi aplicada: falha com mensagem clara.
           if ! irsa_role_arn=$(aws ssm get-parameter --name "/oficina/os-service/${AMBIENTE}/irsa_role_arn" --query Parameter.Value --output text); then
-            echo "::error::Parametro SSM /oficina/os-service/${AMBIENTE}/irsa_role_arn indisponivel (inexistente ou sem permissao ssm:GetParameter em /oficina/os-service/*). Aplique a infraestrutura (oficina-infra-k8s) antes do deploy." >&2
+            echo "::error::Parametro SSM /oficina/os-service/${AMBIENTE}/irsa_role_arn indisponivel (inexistente ou sem permissao ssm:GetParameter em /oficina/os-service/*). Aplique o terraform/ deste repositorio (workflow infra.yml) antes do deploy." >&2
             exit 1
           fi
           if [ -z "$irsa_role_arn" ] || [ "$irsa_role_arn" = "None" ]; then
